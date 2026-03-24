@@ -1,0 +1,12 @@
+{
+  "name": "punt-game-tracker",
+  "version": "1.0.0",
+  "description": "MLB Punt Game Tracker — 2026 Season",
+  "scripts": {
+    "dev": "vercel dev",
+    "build": "echo 'No build step required'"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.0"
+  }
+}
