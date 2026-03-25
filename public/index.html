@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Punt Game Tracker — MLB 2026</title>
+<title>MLB Punt Games — 2026 Season</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
@@ -166,6 +166,16 @@
     font-family: 'Bebas Neue', sans-serif; font-size: 14px; letter-spacing: 2px;
     padding: 5px 14px; border-radius: 6px;
   }
+  .punt-badge.calibration { background: rgba(255,255,255,0.07); color: #6a8aaa; border: 1px solid rgba(255,255,255,0.1); font-size: 11px; letter-spacing: 1px; }
+  .game-card.is-calibration { opacity: 0.82; }
+  .calibration-banner {
+    background: linear-gradient(90deg, rgba(29,100,180,0.15), rgba(29,100,180,0.05));
+    border: 1px solid rgba(29,100,180,0.25); border-radius: 10px;
+    padding: 12px 18px; margin-bottom: 20px;
+    display: flex; align-items: center; gap: 12px; font-size: 12px; color: #7aabdf;
+  }
+  .calibration-banner strong { color: #a0c8f0; }
+  .calibration-banner .cal-icon { font-size: 20px; flex-shrink: 0; }
   .punt-badge.flag { background: var(--red); color: #fff; box-shadow: 0 2px 12px rgba(212,43,43,0.5); }
   .punt-badge.review { background: var(--orange); color: #fff; }
   .punt-badge.clean { background: rgba(255,255,255,0.06); color: var(--text2); }
@@ -618,10 +628,11 @@
 </head>
 <body>
 
-<div class="auth-overlay" id="authOverlay">
-  <div class="auth-box">
-    <div class="auth-logo">&#9981; Punt Tracker</div>
-    <div class="auth-sub">MLB 2026 Season &middot; Sign in to save your data</div>
+<div class="auth-overlay" id="authOverlay" style="display:none">
+  <div class="auth-box" style="position:relative">
+    <button onclick="document.getElementById('authOverlay').style.display='none'" style="position:absolute;top:14px;right:16px;background:none;border:none;color:var(--text2);font-size:20px;cursor:pointer;line-height:1" title="Close">✕</button>
+    <div class="auth-logo">&#9881; MLB Punt Games</div>
+    <div class="auth-sub">Sign in to save your data permanently</div>
     <div class="auth-tabs">
       <button class="auth-tab active" onclick="switchAuthTab('signin')">Sign In</button>
       <button class="auth-tab" onclick="switchAuthTab('signup')">Create Account</button>
@@ -642,6 +653,7 @@
       Continue with Google
     </button>
     <div class="auth-error" id="authError"></div>
+    <button onclick="document.getElementById('authOverlay').style.display='none'" style="margin-top:14px;background:none;border:none;color:var(--muted);font-size:12px;cursor:pointer;text-decoration:underline">Continue without an account</button>
   </div>
 </div>
 
@@ -654,8 +666,8 @@
     <div class="logo">
       <div class="logo-icon">⚾</div>
       <div class="logo-text">
-        <h1>Punt Game Tracker</h1>
-        <p>MLB 2026 — Lineup Intelligence System</p>
+        <h1>MLB Punt Games</h1>
+        <p>2026 Season — Lineup Intelligence System</p>
       </div>
     </div>
     <div class="header-controls"><div class="user-bar"><span class="sync-dot" id="syncDot" title="Synced"></span><span class="user-email" id="userEmail"></span><button class="signout-btn" id="signoutBtn" onclick="handleSignout()" style="display:none">Sign Out</button></div>
@@ -692,11 +704,11 @@
   <div class="starred-panel" id="starredPanel">
     <div class="starred-panel-empty" id="starredEmpty">
       <div class="sp-icon">⭐</div>
-      <div><strong style="color:var(--text)">No teams starred yet</strong></div>
-      <div style="margin-top:4px;font-size:12px">Click the ☆ on any team card below to pin it here for quick tracking</div>
+      <div><strong style="color:var(--text)">No favorite teams yet</strong></div>
+      <div style="margin-top:4px;font-size:12px">Click the ☆ on any team card below to add it to your favorites</div>
     </div>
     <div class="starred-panel-inner" id="starredInner" style="display:none">
-      <div class="starred-panel-title">⭐ Your Starred Teams — Punt Tracker</div>
+      <div class="starred-panel-title">⭐ Your Favorite Teams — MLB Punt Games</div>
       <div class="starred-cards" id="starredCards"></div>
     </div>
   </div>
@@ -780,10 +792,11 @@
       </select>
       <select id="logFilterStatus" onchange="renderSeasonLog()">
         <option value="ALL">All Statuses</option>
-        <option value="punt">🟢 Punt</option>
-        <option value="review">🟠 Review</option>
+        <option value="punt">🚩 Punt</option>
+        <option value="review">🔍 Review</option>
         <option value="clean">⚪ Clean</option>
         <option value="manual-punt">🔴 Manual Punt</option>
+        <option value="calibration">📊 Calibration (Apr–May)</option>
       </select>
       <input type="text" id="logSearch" placeholder="Search matchup / notes…" oninput="renderSeasonLog()" style="width:200px" />
       <div class="log-legend">
@@ -847,7 +860,7 @@
       <h2>Punt Score Algorithm</h2>
       <div class="pill gold">2026 Season-Aware</div>
       <div class="divider"></div>
-      <span style="font-size:12px;color:var(--text2)">Threshold tunable after Month 2 · Updated with 2026 context</span>
+      <span style="font-size:12px;color:#7aabdf">📊 Calibration mode through May 31 · Detection activates June 1</span>
     </div>
     <div class="algo-grid">
       <div class="algo-item">
@@ -884,32 +897,27 @@
 
     <!-- TIMING MULTIPLIER TABLE -->
     <div style="margin-top:20px">
-      <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:var(--text2);margin-bottom:10px">⏱ Season Timing Multiplier — Punt Probability by Game #</div>
-      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px">
-        <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:8px;padding:10px 12px;text-align:center">
-          <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--muted)">×0.15</div>
-          <div style="font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-top:4px">Games 1–20</div>
-          <div style="font-size:10px;color:var(--text2);margin-top:4px">Early April<br>Near-zero punt probability</div>
-        </div>
-        <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:8px;padding:10px 12px;text-align:center">
-          <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--muted)">×0.40</div>
-          <div style="font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-top:4px">Games 21–45</div>
-          <div style="font-size:10px;color:var(--text2);margin-top:4px">April–late May<br>Standings not yet real</div>
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:var(--text2);margin-bottom:10px">⏱ Season Detection Timeline</div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
+        <div style="background:rgba(29,100,180,0.1);border:1px solid rgba(29,100,180,0.3);border-radius:8px;padding:10px 12px;text-align:center">
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;color:#6a8aaa">OFF</div>
+          <div style="font-size:9px;text-transform:uppercase;letter-spacing:1px;color:#6a8aaa;margin-top:4px">April &amp; May</div>
+          <div style="font-size:10px;color:var(--text2);margin-top:4px">Calibration only<br>No punt detection</div>
         </div>
         <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(240,165,0,0.2);border-radius:8px;padding:10px 12px;text-align:center">
-          <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--gold)">×0.70</div>
-          <div style="font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--gold);margin-top:4px">Games 46–80</div>
-          <div style="font-size:10px;color:var(--text2);margin-top:4px">June<br>Division races forming</div>
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--gold)">×0.65</div>
+          <div style="font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--gold);margin-top:4px">June</div>
+          <div style="font-size:10px;color:var(--text2);margin-top:4px">Detection begins<br>Calibration informs</div>
         </div>
         <div style="background:rgba(212,43,43,0.06);border:1px solid rgba(212,43,43,0.2);border-radius:8px;padding:10px 12px;text-align:center">
-          <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--gold)">×0.90</div>
-          <div style="font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--gold);margin-top:4px">Games 81–110</div>
-          <div style="font-size:10px;color:var(--text2);margin-top:4px">July–mid Aug<br>Prime punt season</div>
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--gold)">×0.85</div>
+          <div style="font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--gold);margin-top:4px">July – mid Aug</div>
+          <div style="font-size:10px;color:var(--text2);margin-top:4px">Prime punt season<br>Division races real</div>
         </div>
         <div style="background:rgba(212,43,43,0.1);border:1px solid rgba(212,43,43,0.3);border-radius:8px;padding:10px 12px;text-align:center">
           <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--red2)">×1.00</div>
-          <div style="font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--red2);margin-top:4px">Games 111–162</div>
-          <div style="font-size:10px;color:var(--text2);margin-top:4px">Late Aug–Sept<br>Peak — every game counts</div>
+          <div style="font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--red2);margin-top:4px">Mid-Aug – Sept</div>
+          <div style="font-size:10px;color:var(--text2);margin-top:4px">Full weight<br>Every game matters</div>
         </div>
       </div>
     </div>
@@ -978,32 +986,63 @@
 // SUPABASE — replace these two values from your Supabase dashboard
 // Dashboard > Settings > API > Project URL and anon/public key
 // ══════════════════════════════════════════════════════════
-const SUPABASE_URL  = 'https://pjbnsonfojyzbjjawpxu.supabase.co';
-const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBqYm5zb25mb2p5emJqamF3cHh1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzNzQ3NDAsImV4cCI6MjA4OTk1MDc0MH0.9iuxrJYKiYwMKkkKndMh5ap2F2wraookuaVB2G-m3_4';
+const SUPABASE_URL  = 'YOUR_SUPABASE_URL';
+const SUPABASE_ANON = 'YOUR_SUPABASE_ANON_KEY';
 
 const { createClient } = supabase;
 const db = createClient(SUPABASE_URL, SUPABASE_ANON);
 let currentUser = null;
 
 async function initAuth() {
+  // App loads immediately — no login required to browse
+  // Signing in enables permanent data saving across sessions
+  const dp = document.getElementById('datePicker');
+  dp.value = new Date().toISOString().split('T')[0];
+  renderTeamBreakdown();
+  updateStarredPanel();
+
+  // Check if already logged in from a previous session
   const { data: { session } } = await db.auth.getSession();
-  if (session?.user) await onUserLoggedIn(session.user);
-  else document.getElementById('authOverlay').style.display = 'flex';
+  if (session?.user) {
+    await onUserLoggedIn(session.user);
+  } else {
+    // Show sign-in option in header but don't block the app
+    showSignInPrompt();
+  }
+
   db.auth.onAuthStateChange(async (event, session) => {
     if (event === 'SIGNED_IN' && session?.user) await onUserLoggedIn(session.user);
     else if (event === 'SIGNED_OUT') onUserLoggedOut();
   });
 }
 
+function showSignInPrompt() {
+  // Show a subtle sign-in button in the header instead of a blocking overlay
+  const signoutBtn = document.getElementById('signoutBtn');
+  signoutBtn.textContent = 'Sign In to Save';
+  signoutBtn.style.display = '';
+  signoutBtn.style.borderColor = 'rgba(240,165,0,0.4)';
+  signoutBtn.style.color = 'var(--gold)';
+  signoutBtn.onclick = () => {
+    document.getElementById('authOverlay').style.display = 'flex';
+  };
+  document.getElementById('userEmail').textContent = 'Not signed in';
+  setSyncDot('error');
+  document.getElementById('syncDot').title = 'Sign in to save your data';
+}
+
 async function onUserLoggedIn(user) {
   currentUser = user;
   document.getElementById('authOverlay').style.display = 'none';
   document.getElementById('userEmail').textContent = user.email;
-  document.getElementById('signoutBtn').style.display = '';
+  const signoutBtn = document.getElementById('signoutBtn');
+  signoutBtn.textContent = 'Sign Out';
+  signoutBtn.style.borderColor = '';
+  signoutBtn.style.color = '';
+  signoutBtn.onclick = handleSignout;
+  signoutBtn.style.display = '';
   setSyncDot('synced');
   await loadUserData();
-  const dp = document.getElementById('datePicker');
-  dp.value = new Date().toISOString().split('T')[0];
   renderTeamBreakdown();
   updateStarredPanel();
 }
@@ -1012,9 +1051,8 @@ function onUserLoggedOut() {
   currentUser = null;
   state.gameLog = []; state.logComments = {}; state.logOverrides = {}; state.logResults = {};
   starredTeams = new Set();
-  document.getElementById('authOverlay').style.display = 'flex';
-  document.getElementById('userEmail').textContent = '';
-  document.getElementById('signoutBtn').style.display = 'none';
+  document.getElementById('authOverlay').style.display = 'none';
+  showSignInPrompt();
   renderSeasonLog(); renderTeamBreakdown(); updateStarredPanel();
 }
 
@@ -1148,8 +1186,47 @@ const BASE = 'https://statsapi.mlb.com/api/v1';
 const PUNT_THRESH = 6.0;
 const REVIEW_THRESH = 4.5;
 
-// ── INIT handled below with team breakdown ─────────────────
+// ── API HELPER ─────────────────────────────────────────────
+// Routes MLB API calls through our Vercel proxy (/api/mlb)
+// to avoid CORS restrictions on hosted deployments.
+// Falls back to direct call if running locally (file://).
+function mlbUrl(path) {
+  const isLocal = window.location.protocol === 'file:' ||
+                  window.location.hostname === 'localhost' ||
+                  window.location.hostname === '127.0.0.1';
+  if (isLocal) return `${BASE}${path}`;
+  // On Vercel: route through proxy
+  return `/api/mlb?path=${encodeURIComponent(path)}`;
+}
 
+async function apiFetch(url) {
+  // If URL is already a full MLB URL, convert it to proxy path
+  let fetchUrl = url;
+  const isLocal = window.location.protocol === 'file:' ||
+                  window.location.hostname === 'localhost' ||
+                  window.location.hostname === '127.0.0.1';
+
+  if (!isLocal && url.startsWith('https://statsapi.mlb.com/api/v1')) {
+    const path = url.replace('https://statsapi.mlb.com/api/v1', '');
+    fetchUrl = `/api/mlb?path=${encodeURIComponent(path)}`;
+  }
+
+  try {
+    const res = await fetch(fetchUrl);
+    if (!res.ok) {
+      const body = await res.text().catch(() => '');
+      throw new Error(`HTTP ${res.status} from MLB API. ${body.slice(0,200)}`);
+    }
+    return res.json();
+  } catch (err) {
+    if (err.name === 'TypeError' && err.message.includes('fetch')) {
+      throw new Error('Network error — check your internet connection.');
+    }
+    throw err;
+  }
+}
+
+// ── TOAST ──────────────────────────────────────────────────
 function showToast(msg, isError = false) {
   const t = document.getElementById('toast');
   t.textContent = msg;
@@ -1169,7 +1246,6 @@ async function fetchGames() {
   grid.innerHTML = `<div class="state-box" style="grid-column:1/-1"><div class="spinner"></div><h3>Pulling MLB Data</h3><p>Fetching lineups, pitching stats, and series context...</p></div>`;
 
   try {
-    // Fetch live standings for quality tier adjustments
     await fetchStandings();
 
     const schedule = await apiFetch(`${BASE}/schedule?sportId=1&date=${dateVal}&hydrate=probablePitcher,lineups,seriesStatus,team`);
@@ -1182,15 +1258,12 @@ async function fetchGames() {
 
     document.getElementById('statDate').textContent = formatDate(dateVal);
 
-    // Fetch normal lineup data for each unique team
     const teamIds = new Set();
     games.forEach(g => {
       teamIds.add(g.teams.home.team.id);
       teamIds.add(g.teams.away.team.id);
     });
     const normalLineups = await fetchNormalLineups([...teamIds]);
-
-    // Analyze each game
     const analyzed = await Promise.all(games.map(g => analyzeGame(g, normalLineups)));
 
     renderGames(analyzed);
@@ -1198,19 +1271,12 @@ async function fetchGames() {
     updateLeaderboard(analyzed);
 
   } catch (err) {
-    console.error(err);
+    console.error('fetchGames error:', err);
     grid.innerHTML = `<div class="state-box" style="grid-column:1/-1"><div class="icon">⚠️</div><h3>API Error</h3><p>${err.message}</p></div>`;
-    showToast('Failed to fetch MLB data. The API may be unavailable.', true);
+    showToast(err.message, true);
   } finally {
     btn.disabled = false; btn.textContent = 'Analyze Games';
   }
-}
-
-// ── API HELPER ─────────────────────────────────────────────
-async function apiFetch(url) {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`HTTP ${res.status}: ${url}`);
-  return res.json();
 }
 
 // ── NORMAL LINEUP (season-long most frequent) ──────────────
@@ -1292,6 +1358,7 @@ async function analyzeGame(game, normalLineups) {
   const awayAbsences = compareLineup(awayLineup, awayNormal);
 
   const gameDate = game.gameDate?.split('T')[0] || '';
+  const inCalibration = isCalibrationPeriod(gameDate);
 
   // Effective benched count — accounts for injuries + platoons
   const [homeEB, awayEB] = await Promise.all([
@@ -1299,25 +1366,30 @@ async function analyzeGame(game, normalLineups) {
     getEffectiveBenchedCount(awayTeam.id, awayTeam.name, awayAbsences.missing, homePitcherHand),
   ]);
 
-  // Compute punt scores
+  // Compute punt scores (always 0 during calibration)
   const homeScore = computePuntScore({
     effectiveBenched: homeEB.effectiveBenched,
     fipDelta: homeStats.fip - awayStats.fip,
     eraDelta: homeStats.era - awayStats.era,
-    isLastGame, clinched: false, gameDate,
+    isLastGame, clinched: false, gameDate, teamName: homeTeam.name,
   });
   const awayScore = computePuntScore({
     effectiveBenched: awayEB.effectiveBenched,
     fipDelta: awayStats.fip - homeStats.fip,
     eraDelta: awayStats.era - homeStats.era,
-    isLastGame, clinched: false, gameDate,
+    isLastGame, clinched: false, gameDate, teamName: awayTeam.name,
   });
 
   const topScore = Math.max(homeScore, awayScore);
   const puntSide = homeScore >= awayScore ? 'home' : 'away';
 
+  // During calibration: always log as 'calibration' — never punt/review
+  const flag = inCalibration
+    ? 'calibration'
+    : topScore >= PUNT_THRESH ? 'punt' : topScore >= REVIEW_THRESH ? 'review' : 'clean';
+
   return {
-    gid, date: game.gameDate?.split('T')[0],
+    gid, date: gameDate,
     home: homeTeam, away: awayTeam,
     homeSP: { name: homePitcher?.fullName || 'TBD', hand: homePitcherHand, ...homeStats },
     awaySP: { name: awayPitcher?.fullName || 'TBD', hand: awayPitcherHand, ...awayStats },
@@ -1326,7 +1398,7 @@ async function analyzeGame(game, normalLineups) {
     homeEB, awayEB,
     homeScore, awayScore, topScore, puntSide,
     seriesGame, seriesLength, isLastGame,
-    flag: topScore >= PUNT_THRESH ? 'punt' : topScore >= REVIEW_THRESH ? 'review' : 'clean',
+    inCalibration, flag,
   };
 }
 
@@ -1352,32 +1424,51 @@ function compareLineup(today, normal) {
   return { benched: missing.length, missing };
 }
 
-// ── PUNT SCORE ─────────────────────────────────────────────
-// Season timing: games before ~game 45 (late May) are suppressed.
-// Punt games almost never happen before Memorial Day. Teams don't
-// know where they stand in the division race, rosters aren't settled,
-// and injury absences are common and legitimate.
+// ══════════════════════════════════════════════════════════
+// CALIBRATION PERIOD — April & May (through May 31)
+//
+// No punt flags are issued during the first two months.
+// This period exists to:
+//   1. Build true "normal lineup" baselines per team (not projections)
+//   2. Let pitcher FIPs regress toward their real values
+//   3. Give managers time to establish their actual platoon patterns
+//   4. Let the standings become meaningful enough to motivate punting
+//
+// Data IS collected and logged during calibration — lineup changes,
+// FIP gaps, benched players — all tracked. Just never flagged as punts.
+// June 1 is when detection activates using those baselines.
+// ══════════════════════════════════════════════════════════
+
+const CALIBRATION_END = new Date('2026-06-01T00:00:00'); // June 1 = detection begins
+const OPENING_DAY     = new Date('2026-03-26T00:00:00');
+
+function isCalibrationPeriod(dateStr) {
+  if (!dateStr) return false;
+  const d = new Date(dateStr + 'T12:00:00');
+  return d < CALIBRATION_END;
+}
 
 function getSeasonGameNumber(dateStr) {
-  if (!dateStr) return 81; // assume mid-season if unknown
+  if (!dateStr) return 81;
   const d = new Date(dateStr + 'T12:00:00');
-  const openingDay = new Date('2026-03-26T12:00:00'); // full Opening Day
-  const diff = Math.floor((d - openingDay) / (1000 * 60 * 60 * 24));
-  // Rough estimate: ~1 game per day per team = diff days ≈ game number
+  const diff = Math.floor((d - OPENING_DAY) / (1000 * 60 * 60 * 24));
   return Math.max(1, Math.min(162, Math.round(diff * 0.85)));
 }
 
-function seasonTimingMultiplier(gameNum) {
-  // Before game 20 (~April): near-zero punt probability — cap score heavily
-  if (gameNum <= 20)  return 0.15;
-  // Games 21-45 (April–late May): low probability
-  if (gameNum <= 45)  return 0.40;
-  // Games 46-80 (June): moderate — standings becoming real
-  if (gameNum <= 80)  return 0.70;
-  // Games 81-110 (July–mid Aug): prime punt season begins
-  if (gameNum <= 110) return 0.90;
-  // Games 111-162 (late Aug–Sept): full weight — peak punt territory
-  return 1.0;
+function seasonTimingMultiplier(dateStr) {
+  // Hard zero during calibration — no punt detection April/May
+  if (isCalibrationPeriod(dateStr)) return 0;
+
+  const d = new Date(dateStr + 'T12:00:00');
+  // June: detection begins, but weighted conservatively — standings are real
+  // but teams are still establishing rhythm post-calibration
+  const juneEnd  = new Date('2026-07-01T00:00:00');
+  const augEnd   = new Date('2026-08-15T00:00:00');
+  const septStart= new Date('2026-08-15T00:00:00');
+
+  if (d < juneEnd)   return 0.65;  // June: calibration data informs detection
+  if (d < augEnd)    return 0.85;  // July–mid Aug: prime punt season
+  return 1.0;                       // Mid-Aug–Sept: full weight, every game matters
 }
 
 // ══════════════════════════════════════════════════════════
@@ -1848,32 +1939,26 @@ async function getEffectiveBenchedCount(teamId, teamName, missingPlayers, oppPit
 function computePuntScore({ effectiveBenched, fipDelta, eraDelta, isLastGame, clinched, gameDate, teamName }) {
   const tq = getLiveTeamQuality(teamName);
 
+  // Hard zero during calibration — no punt scoring April/May regardless of signals
+  if (isCalibrationPeriod(gameDate)) return 0;
+
   let score = 0;
 
-  // Benched signal — scaled by punt motivation
-  // A rebuilding team benching 3 players barely registers; a contender benching 3 is a major signal
   const benchedMultiplier = tq.puntMotivation;
   if (effectiveBenched >= 4)      score += 4.5 * benchedMultiplier;
   else if (effectiveBenched >= 3) score += 3.0 * benchedMultiplier;
   else if (effectiveBenched >= 2) score += 1.5 * benchedMultiplier;
   else if (effectiveBenched >= 1) score += 0.5 * benchedMultiplier;
 
-  // FIP signal — normalised against team's own rotation baseline
-  // Only flag when the SP is measurably worse than what the team NORMALLY sends out
-  // e.g. Rockies sending a 5.0 FIP guy is normal; Dodgers sending one is a punt
   const adjustedFipDelta = fipDelta - Math.max(0, tq.avgRotationFip - 3.80);
-  // (If a bad team's rotation avg is already inflated, we raise the bar for what counts as "unusual")
   if (adjustedFipDelta >= 1.5) score += 2.0;
   else if (adjustedFipDelta >= 0.75) score += 1.0;
 
-  // Series context — applies equally to all teams
   if (isLastGame) score += 2.5;
   if (clinched) score += 1.5;
   if (eraDelta >= 0.75 && adjustedFipDelta >= 0.75) score += 0.5;
 
-  // Season timing
-  const gameNum = getSeasonGameNumber(gameDate);
-  const timingMult = seasonTimingMultiplier(gameNum);
+  const timingMult = seasonTimingMultiplier(gameDate);
   score = score * timingMult;
 
   return Math.min(Math.round(score * 10) / 10, 10);
@@ -1889,15 +1974,29 @@ function renderGames(games) {
     return;
   }
 
-  // Sort: punts first, then reviews, then clean
-  const order = { punt: 0, review: 1, clean: 2 };
+  // Check if we're in calibration period
+  const inCal = games.length > 0 && games[0].inCalibration;
+
+  // Sort: punts first (post-calibration only), then reviews, then clean/calibration
+  const order = { punt: 0, review: 1, clean: 2, calibration: 3 };
   games.sort((a, b) => order[a.flag] - order[b.flag] || b.topScore - a.topScore);
 
-  grid.innerHTML = games.map((g, i) => renderCard(g, i)).join('');
+  // Show calibration banner if viewing April/May
+  const calBanner = inCal ? `
+    <div class="calibration-banner" style="grid-column:1/-1">
+      <span class="cal-icon">📊</span>
+      <div>
+        <strong>Calibration Period — No Punt Detection Active</strong><br>
+        April &amp; May data is collected to build lineup baselines and let pitcher FIPs stabilize.
+        Punt game detection activates <strong>June 1</strong>. Keep tracking — this data matters.
+      </div>
+    </div>` : '';
 
-  // Show pill if any punts
+  grid.innerHTML = calBanner + games.map((g, i) => renderCard(g, i)).join('');
+
+  // Only show punt pill for post-calibration punts
   const puntPill = document.getElementById('puntPill');
-  if (games.some(g => g.flag === 'punt')) {
+  if (!inCal && games.some(g => g.flag === 'punt')) {
     puntPill.style.display = '';
   } else {
     puntPill.style.display = 'none';
@@ -1908,9 +2007,10 @@ function renderCard(g, idx) {
   const delay = idx * 60;
   const isPunt = g.flag === 'punt';
   const isReview = g.flag === 'review';
-  const cardClass = isPunt ? 'is-punt' : isReview ? 'is-review' : '';
-  const badgeClass = isPunt ? 'flag' : isReview ? 'review' : 'clean';
-  const badgeText = isPunt ? '🚩 PUNT' : isReview ? '🔍 REVIEW' : '✓ CLEAN';
+  const isCal = g.flag === 'calibration';
+  const cardClass = isPunt ? 'is-punt' : isReview ? 'is-review' : isCal ? 'is-calibration' : '';
+  const badgeClass = isPunt ? 'flag' : isReview ? 'review' : isCal ? 'calibration' : 'clean';
+  const badgeText = isPunt ? '🚩 PUNT' : isReview ? '🔍 REVIEW' : isCal ? '📊 CALIBRATION' : '✓ CLEAN';
 
   const puntingTeam = g.puntSide === 'home' ? g.home : g.away;
   const puntScore = g.puntSide === 'home' ? g.homeScore : g.awayScore;
@@ -2030,14 +2130,19 @@ function renderScoreRing(score) {
 
 // ── STATS + LEADERBOARD ─────────────────────────────────────
 function updateStats(games, dateVal) {
-  const punts = games.filter(g => g.flag === 'punt').length;
+  const punts   = games.filter(g => g.flag === 'punt').length;
   const reviews = games.filter(g => g.flag === 'review').length;
-  document.getElementById('statPunt').textContent = punts;
-  document.getElementById('statReview').textContent = reviews;
+  const inCal   = games.length > 0 && games[0].inCalibration;
+
+  document.getElementById('statPunt').textContent = inCal ? '—' : punts;
+  document.getElementById('statReview').textContent = inCal ? '—' : reviews;
   document.getElementById('statGames').textContent = games.length;
   document.getElementById('statDate').textContent = formatDate(dateVal);
-  state.seasonPunts += punts;
-  document.getElementById('statSeason').textContent = state.seasonPunts;
+
+  if (!inCal) {
+    state.seasonPunts += punts;
+    document.getElementById('statSeason').textContent = state.seasonPunts;
+  }
 
   // Feed into season log
   addGamesToLog(games, dateVal);
