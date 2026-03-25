@@ -1,7 +1,17 @@
 {
   "version": 2,
-  "rewrites": [
-    { "source": "/api/mlb", "destination": "/api/mlb" },
-    { "source": "/(.*)", "destination": "/public/$1" }
+  "routes": [
+    {
+      "src": "/api/mlb",
+      "dest": "/api/mlb.js"
+    },
+    {
+      "src": "/api/mlb(.*)",
+      "dest": "/api/mlb.js"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/public/$1"
+    }
   ]
 }
