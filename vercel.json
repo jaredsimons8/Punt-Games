@@ -1,17 +1,8 @@
 {
   "version": 2,
   "routes": [
-    {
-      "src": "/api/mlb",
-      "dest": "/api/mlb.js"
-    },
-    {
-      "src": "/api/mlb(.*)",
-      "dest": "/api/mlb.js"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/public/$1"
-    }
+    { "src": "/api/mlb", "dest": "/api/mlb.js" },
+    { "src": "/api/mlb(.*)", "dest": "/api/mlb.js" },
+    { "src": "/(.*)", "dest": "/public/$1" }
   ]
 }
