@@ -2,7 +2,6 @@
   "name": "punt-game-tracker",
   "version": "1.0.0",
   "description": "MLB Punt Game Tracker — 2026 Season",
-  "type": "module",
   "scripts": {
     "dev": "vercel dev",
     "build": "echo 'No build step required'"
