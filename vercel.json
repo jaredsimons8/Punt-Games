@@ -7,10 +7,8 @@
     }
   ],
   "routes": [
-    { "src": "/api/mlb", "dest": "/api/mlb.js" },
-    { "src": "/api/mlb\\?(.*)", "dest": "/api/mlb.js" },
-    { "src": "/api/update-lineups", "dest": "/api/update-lineups.js" },
-    { "src": "/api/update-lineups\\?(.*)", "dest": "/api/update-lineups.js" },
+    { "src": "/api/mlb(.*)", "dest": "/api/mlb.js" },
+    { "src": "/api/update-lineups(.*)", "dest": "/api/update-lineups.js" },
     { "src": "/(.*)", "dest": "/public/$1" }
   ]
 }
