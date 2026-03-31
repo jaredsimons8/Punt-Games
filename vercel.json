@@ -6,9 +6,11 @@
       "schedule": "0 4 * * *"
     }
   ],
-  "rewrites": [
-    { "source": "/api/mlb", "destination": "/api/mlb.js" },
-    { "source": "/api/update-lineups", "destination": "/api/update-lineups.js" },
-    { "source": "/((?!api/).*)", "destination": "/public/$1" }
+  "routes": [
+    { "src": "/api/mlb", "dest": "/api/mlb.js" },
+    { "src": "/api/mlb\\?(.*)", "dest": "/api/mlb.js" },
+    { "src": "/api/update-lineups", "dest": "/api/update-lineups.js" },
+    { "src": "/api/update-lineups\\?(.*)", "dest": "/api/update-lineups.js" },
+    { "src": "/(.*)", "dest": "/public/$1" }
   ]
 }
