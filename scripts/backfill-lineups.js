@@ -1,202 +1,296 @@
-#!/usr/bin/env node
-// ═══════════════════════════════════════════════════════════════
-// The Punt Index — Season Backfill Script
-// Run ONCE manually to load all completed games from opening
-// day through today. After that, collect-lineups.js handles
-// the daily updates automatically.
-//
-// Usage:
-//   SUPABASE_URL=... SUPABASE_SERVICE_KEY=... node scripts/backfill-lineups.js
-//
-// Optional: override start date
-//   START_DATE=2026-03-26 node scripts/backfill-lineups.js
-// ═══════════════════════════════════════════════════════════════
+/**
+ * backfill-lineups.js
+ * 
+ * Fills ALL missing game data from Opening Day through yesterday.
+ * Run this once to fix gaps in shared_lineup_baselines.
+ * 
+ * Usage:
+ *   SUPABASE_URL=https://xxx.supabase.co SUPABASE_SERVICE_KEY=your_key node backfill-lineups.js
+ * 
+ * Or set them in a .env file and run: node -r dotenv/config backfill-lineups.js
+ * 
+ * Requires: npm install @supabase/supabase-js node-fetch
+ * (node-fetch only needed for Node < 18; Node 18+ has fetch built in)
+ */
 
-const https = require('https');
+const { createClient } = require('@supabase/supabase-js');
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
-const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY;
-const MLB_BASE     = 'https://statsapi.mlb.com/api/v1';
+const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
 
-if (!SUPABASE_URL || !SUPABASE_KEY) {
-  console.error('Missing SUPABASE_URL or SUPABASE_SERVICE_KEY env vars');
+if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
+  console.error('❌ Missing SUPABASE_URL or SUPABASE_SERVICE_KEY env vars');
   process.exit(1);
 }
 
-function get(url) {
-  return new Promise((resolve, reject) => {
-    https.get(url, { headers: { 'User-Agent': 'PuntIndex-Backfill/1.0' } }, res => {
-      let data = '';
-      res.on('data', chunk => data += chunk);
-      res.on('end', () => {
-        try { resolve(JSON.parse(data)); }
-        catch(e) { reject(new Error(`JSON parse error: ${e.message}`)); }
-      });
-    }).on('error', reject);
-  });
+const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+
+const MLB_API = 'https://statsapi.mlb.com/api/v1';
+const OPENING_DAY = '2026-03-26'; // Update if needed
+const SEASON = 2026;
+
+// Rate limiting: wait between API calls to avoid 429s
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+// Fetch with retry on 429/5xx
+async function fetchWithRetry(url, retries = 3, delay = 500) {
+  for (let i = 0; i < retries; i++) {
+    try {
+      const res = await fetch(url);
+      if (res.status === 429 || res.status >= 500) {
+        console.warn(`  ⚠️  HTTP ${res.status} — retrying in ${delay}ms...`);
+        await sleep(delay * (i + 1));
+        continue;
+      }
+      if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`);
+      return await res.json();
+    } catch (e) {
+      if (i === retries - 1) throw e;
+      await sleep(delay * (i + 1));
+    }
+  }
 }
 
-async function supabaseUpsert(rows) {
-  const body = JSON.stringify(rows);
-  return new Promise((resolve, reject) => {
-    const url = new URL(`${SUPABASE_URL}/rest/v1/shared_lineup_baselines`);
-    const options = {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': SUPABASE_KEY,
-        'Authorization': `Bearer ${SUPABASE_KEY}`,
-        'Prefer': 'resolution=merge-duplicates',
-        'Content-Length': Buffer.byteLength(body),
-      },
-    };
-    const req = https.request(url, options, res => {
-      let data = '';
-      res.on('data', chunk => data += chunk);
-      res.on('end', () => {
-        if (res.statusCode >= 200 && res.statusCode < 300) resolve({ status: res.statusCode });
-        else reject(new Error(`Supabase ${res.statusCode}: ${data.slice(0, 300)}`));
-      });
-    });
-    req.on('error', reject);
-    req.write(body);
-    req.end();
-  });
-}
-
-function extractLineup(boxscore, side) {
-  const team = boxscore?.teams?.[side];
-  if (!team) return [];
-  const battingOrder = team.battingOrder || [];
-  const players = team.players || {};
-  return battingOrder
-    .map(id => players[`ID${id}`]?.person?.fullName)
-    .filter(Boolean);
-}
-
-async function fetchPitcherStats(pitcherId, year) {
-  if (!pitcherId) return { era: null, fip: null };
-  try {
-    const data = await get(`${MLB_BASE}/people/${pitcherId}/stats?stats=season&group=pitching&season=${year}`);
-    const stat = data?.stats?.[0]?.splits?.[0]?.stat || {};
-    const era = parseFloat(stat.era);
-    const fip = parseFloat(stat.fieldingIndependentPitching);
-    return {
-      era: (era && era < 90) ? +era.toFixed(2) : null,
-      fip: (fip && fip < 90) ? +fip.toFixed(2) : null,
-    };
-  } catch { return { era: null, fip: null }; }
-}
-
-// Generate array of date strings from start to today
-function dateRange(start, end) {
+// Get all dates between start and yesterday (inclusive)
+function getDateRange(startDate) {
   const dates = [];
-  const cur = new Date(start + 'T12:00:00Z');
-  const last = new Date(end + 'T12:00:00Z');
-  while (cur <= last) {
-    dates.push(cur.toISOString().split('T')[0]);
-    cur.setDate(cur.getDate() + 1);
+  const start = new Date(startDate + 'T12:00:00Z');
+  const yesterday = new Date();
+  yesterday.setUTCDate(yesterday.getUTCDate() - 1);
+  yesterday.setUTCHours(12, 0, 0, 0);
+
+  let current = new Date(start);
+  while (current <= yesterday) {
+    dates.push(current.toISOString().split('T')[0]);
+    current.setUTCDate(current.getUTCDate() + 1);
   }
   return dates;
 }
 
-async function processDate(dateStr, year) {
-  let schedule;
-  try {
-    schedule = await get(
-      `${MLB_BASE}/schedule?sportId=1&date=${dateStr}&hydrate=probablePitcher,team&gameType=R`
-    );
-  } catch(e) {
-    console.warn(`  ✗ Schedule fetch failed for ${dateStr}: ${e.message}`);
-    return 0;
+// Load what's already in Supabase so we don't re-insert
+async function loadExistingRows() {
+  console.log('📥 Loading existing rows from Supabase...');
+  const existing = new Set();
+  let from = 0;
+  const pageSize = 1000;
+
+  while (true) {
+    const { data, error } = await supabase
+      .from('shared_lineup_baselines')
+      .select('team_name, game_date')
+      .gte('game_date', OPENING_DAY)
+      .range(from, from + pageSize - 1);
+
+    if (error) throw new Error(`Supabase read error: ${error.message}`);
+    if (!data || data.length === 0) break;
+
+    data.forEach(row => existing.add(`${row.team_name}::${row.game_date}`));
+    console.log(`  Loaded ${from + data.length} existing rows...`);
+
+    if (data.length < pageSize) break;
+    from += pageSize;
   }
 
-  const games = schedule?.dates?.[0]?.games || [];
-  const completed = games.filter(g => g.status?.abstractGameState === 'Final');
+  console.log(`✅ ${existing.size} existing (team, date) pairs loaded\n`);
+  return existing;
+}
 
-  if (!completed.length) return 0;
+// Get pitcher stats for a given person ID and season
+async function fetchPitcherStats(personId) {
+  try {
+    const data = await fetchWithRetry(
+      `${MLB_API}/people/${personId}/stats?stats=season&season=${SEASON}&group=pitching`
+    );
+    const stats = data?.stats?.[0]?.splits?.[0]?.stat || {};
+    return {
+      era: parseFloat(stats.era) || null,
+      fip: null, // FIP not in basic stats — would need advanced endpoint
+      starts: parseInt(stats.gamesStarted) || 0,
+    };
+  } catch {
+    return { era: null, fip: null, starts: 0 };
+  }
+}
 
+// Process a single game date
+async function processDate(dateStr, existing) {
   const rows = [];
 
-  for (const game of completed) {
-    const gid = game.gamePk;
-    const homeTeam = game.teams?.home?.team?.name;
-    const awayTeam = game.teams?.away?.team?.name;
-    const homePitcher = game.teams?.home?.probablePitcher;
-    const awayPitcher = game.teams?.away?.probablePitcher;
-
-    let boxscore;
-    try {
-      boxscore = await get(`${MLB_BASE}/game/${gid}/boxscore`);
-    } catch { continue; }
-
-    const homeLineup = extractLineup(boxscore, 'home');
-    const awayLineup = extractLineup(boxscore, 'away');
-
-    const [homeStats, awayStats] = await Promise.all([
-      fetchPitcherStats(homePitcher?.id, year),
-      fetchPitcherStats(awayPitcher?.id, year),
-    ]);
-
-    if (homeLineup.length >= 7) {
-      rows.push({
-        team_name: homeTeam, game_date: dateStr,
-        lineup: homeLineup,
-        sp_name: homePitcher?.fullName || null,
-        sp_fip: homeStats.fip, sp_era: homeStats.era,
-        opp_team: awayTeam,
-      });
-    }
-    if (awayLineup.length >= 7) {
-      rows.push({
-        team_name: awayTeam, game_date: dateStr,
-        lineup: awayLineup,
-        sp_name: awayPitcher?.fullName || null,
-        sp_fip: awayStats.fip, sp_era: awayStats.era,
-        opp_team: homeTeam,
-      });
-    }
-
-    await new Promise(r => setTimeout(r, 120));
+  // Fetch schedule with boxscore hydration
+  let schedData;
+  try {
+    schedData = await fetchWithRetry(
+      `${MLB_API}/schedule?sportId=1&date=${dateStr}&hydrate=boxscore,probablePitcher,team&gameType=R`
+    );
+  } catch (e) {
+    console.warn(`  ⚠️  Could not fetch schedule for ${dateStr}: ${e.message}`);
+    return rows;
   }
 
-  if (!rows.length) return 0;
+  const games = schedData?.dates?.[0]?.games || [];
+  if (!games.length) return rows;
 
-  try {
-    await supabaseUpsert(rows);
-    console.log(`  ✓ ${dateStr}: ${rows.length} entries (${completed.length} games)`);
-    return rows.length;
-  } catch(e) {
-    console.error(`  ✗ ${dateStr}: Supabase failed — ${e.message}`);
-    return 0;
+  for (const game of games) {
+    // Only process Final games (completed)
+    const abstractState = game.status?.abstractGameState;
+    if (abstractState !== 'Final') continue;
+
+    const homeTeamName = game.teams?.home?.team?.name;
+    const awayTeamName = game.teams?.away?.team?.name;
+    if (!homeTeamName || !awayTeamName) continue;
+
+    // Extract batting orders from boxscore
+    const boxscore = game.boxscore || game.liveData?.boxscore;
+    
+    // Try to get batting orders
+    const homeBattingOrder = boxscore?.teams?.home?.battingOrder || [];
+    const awayBattingOrder = boxscore?.teams?.away?.battingOrder || [];
+    
+    // Get player name map from boxscore
+    const homePlayers = boxscore?.teams?.home?.players || {};
+    const awayPlayers = boxscore?.teams?.away?.players || {};
+
+    function getPlayerName(players, id) {
+      const key = `ID${id}`;
+      return players[key]?.person?.fullName || null;
+    }
+
+    const homeLineup = homeBattingOrder
+      .map(id => getPlayerName(homePlayers, id))
+      .filter(Boolean);
+    const awayLineup = awayBattingOrder
+      .map(id => getPlayerName(awayPlayers, id))
+      .filter(Boolean);
+
+    // If batting order not in hydrated schedule, fetch boxscore directly
+    let homeLineupFinal = homeLineup;
+    let awayLineupFinal = awayLineup;
+
+    if (homeLineup.length < 7 || awayLineup.length < 7) {
+      try {
+        const boxData = await fetchWithRetry(
+          `${MLB_API}/game/${game.gamePk}/boxscore`
+        );
+        const hPlayers = boxData?.teams?.home?.players || {};
+        const aPlayers = boxData?.teams?.away?.players || {};
+        const hOrder = boxData?.teams?.home?.battingOrder || [];
+        const aOrder = boxData?.teams?.away?.battingOrder || [];
+
+        if (hOrder.length >= 7) {
+          homeLineupFinal = hOrder.map(id => getPlayerName(hPlayers, id)).filter(Boolean);
+        }
+        if (aOrder.length >= 7) {
+          awayLineupFinal = aOrder.map(id => getPlayerName(aPlayers, id)).filter(Boolean);
+        }
+        await sleep(100); // be gentle
+      } catch { /* use whatever we have */ }
+    }
+
+    // Get probable pitchers
+    const homePitcherId = game.teams?.home?.probablePitcher?.id;
+    const awayPitcherId = game.teams?.away?.probablePitcher?.id;
+    const homePitcherName = game.teams?.home?.probablePitcher?.fullName;
+    const awayPitcherName = game.teams?.away?.probablePitcher?.fullName;
+
+    // Fetch pitcher stats if we have IDs
+    let homeStats = { era: null, fip: null, starts: 0 };
+    let awayStats = { era: null, fip: null, starts: 0 };
+
+    if (homePitcherId) {
+      homeStats = await fetchPitcherStats(homePitcherId);
+      await sleep(80);
+    }
+    if (awayPitcherId) {
+      awayStats = await fetchPitcherStats(awayPitcherId);
+      await sleep(80);
+    }
+
+    // Build rows for home and away teams
+    const homeKey = `${homeTeamName}::${dateStr}`;
+    const awayKey = `${awayTeamName}::${dateStr}`;
+
+    if (!existing.has(homeKey) && homeLineupFinal.length >= 7) {
+      rows.push({
+        team_name: homeTeamName,
+        game_date: dateStr,
+        lineup: homeLineupFinal,
+        sp_name: homePitcherName || null,
+        sp_era: homeStats.era,
+        sp_fip: homeStats.fip,
+        opp_team: awayTeamName,
+      });
+    }
+
+    if (!existing.has(awayKey) && awayLineupFinal.length >= 7) {
+      rows.push({
+        team_name: awayTeamName,
+        game_date: dateStr,
+        lineup: awayLineupFinal,
+        sp_name: awayPitcherName || null,
+        sp_era: awayStats.era,
+        sp_fip: awayStats.fip,
+        opp_team: homeTeamName,
+      });
+    }
+  }
+
+  return rows;
+}
+
+// Upsert rows to Supabase in batches
+async function upsertRows(rows) {
+  if (!rows.length) return;
+  const BATCH = 50;
+  for (let i = 0; i < rows.length; i += BATCH) {
+    const batch = rows.slice(i, i + BATCH);
+    const { error } = await supabase
+      .from('shared_lineup_baselines')
+      .upsert(batch, { onConflict: 'team_name,game_date' });
+    if (error) {
+      console.error(`  ❌ Upsert error:`, error.message);
+    }
   }
 }
 
 async function main() {
-  const year = new Date().getFullYear();
-  const today = new Date().toISOString().split('T')[0];
-  const start = process.env.START_DATE || `${year}-03-20`;
+  console.log('🏟️  Punt Index — Lineup Backfill Script');
+  console.log(`📅 Date range: ${OPENING_DAY} through yesterday\n`);
 
-  console.log(`\nPunt Index Backfill — ${start} → ${today}`);
-  console.log(`Supabase: ${SUPABASE_URL}`);
-  console.log('─'.repeat(50));
+  const existing = await loadExistingRows();
+  const dates = getDateRange(OPENING_DAY);
+  console.log(`📆 Processing ${dates.length} dates...\n`);
 
-  const dates = dateRange(start, today);
-  console.log(`Processing ${dates.length} dates...\n`);
+  let totalInserted = 0;
+  let totalSkipped = 0;
+  let totalDates = 0;
 
-  let total = 0;
-  for (const d of dates) {
-    total += await processDate(d, year);
-    // Slightly longer delay between dates to be polite to MLB API
-    await new Promise(r => setTimeout(r, 300));
+  for (const dateStr of dates) {
+    process.stdout.write(`${dateStr}: `);
+
+    const rows = await processDate(dateStr, existing);
+    const newRows = rows.filter(r => !existing.has(`${r.team_name}::${r.game_date}`));
+
+    if (newRows.length === 0) {
+      process.stdout.write(`skip (0 new)\n`);
+      totalSkipped++;
+    } else {
+      await upsertRows(newRows);
+      newRows.forEach(r => existing.add(`${r.team_name}::${r.game_date}`));
+      process.stdout.write(`✅ inserted ${newRows.length} rows\n`);
+      totalInserted += newRows.length;
+    }
+
+    totalDates++;
+    await sleep(200); // ~5 dates/sec — well within API limits
   }
 
-  console.log('\n' + '─'.repeat(50));
-  console.log(`Backfill complete. ${total} lineup entries written to Supabase.`);
-  console.log('Visit the site — calibration progress will now show correctly.');
+  console.log(`\n🎉 Done!`);
+  console.log(`   Dates processed: ${totalDates}`);
+  console.log(`   Rows inserted:   ${totalInserted}`);
+  console.log(`   Dates skipped:   ${totalSkipped} (already had data)`);
 }
 
 main().catch(e => {
-  console.error('Fatal:', e.message);
+  console.error('Fatal error:', e);
   process.exit(1);
 });
