@@ -3,8 +3,8 @@ name: Daily Lineup Collection
 on:
   schedule:
     # 9am UTC = 5am ET (catches all west coast games that finished by midnight)
-    - cron: '0 9 * * *'
-  workflow_dispatch: # allow manual trigger from GitHub UI
+    - cron: '0 9 * * *'  # Runs at 09:00
+  workflow_dispatch:  # allow manual trigger from GitHub UI
 
 jobs:
   collect:
@@ -17,6 +17,9 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+
+      - name: Install dependencies
+        run: npm install
 
       - name: Run lineup collector
         env:
