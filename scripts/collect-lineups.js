@@ -1,10 +1,13 @@
 /**
  * collect-lineups.js
- * 
+ *
  * Runs daily via GitHub Actions (0 9 * * * = 5am ET).
  * Collects YESTERDAY'S completed game lineups and upserts to Supabase.
  * Also catches any games missed from the past 3 days (for postponements/makeup games).
- * 
+ *
+ * One row per GAME (keyed on team_name + game_pk) so both halves of a
+ * doubleheader are stored.
+ *
  * Required env vars:
  *   SUPABASE_URL
  *   SUPABASE_SERVICE_KEY
@@ -54,15 +57,16 @@ function getDatesToProcess() {
   return dates;
 }
 
+// Keyed on team_name + game_pk so doubleheaders aren't collapsed.
 async function loadExistingForDates(dates) {
   const existing = new Set();
   const { data, error } = await supabase
     .from('shared_lineup_baselines')
-    .select('team_name, game_date')
+    .select('team_name, game_pk')
     .in('game_date', dates);
 
   if (error) throw new Error(`Supabase read error: ${error.message}`);
-  (data || []).forEach(r => existing.add(`${r.team_name}::${r.game_date}`));
+  (data || []).forEach(r => { if (r.game_pk != null) existing.add(`${r.team_name}::${r.game_pk}`); });
   return existing;
 }
 
@@ -100,13 +104,14 @@ async function processDate(dateStr, existing) {
   for (const game of games) {
     if (game.status?.abstractGameState !== 'Final') continue;
 
+    const gamePk = game.gamePk;
     const homeTeam = game.teams?.home?.team?.name;
     const awayTeam = game.teams?.away?.team?.name;
-    if (!homeTeam || !awayTeam) continue;
+    if (!homeTeam || !awayTeam || !gamePk) continue;
 
-    // Skip if already stored
-    const homeKey = `${homeTeam}::${dateStr}`;
-    const awayKey = `${awayTeam}::${dateStr}`;
+    // Skip if this exact game (per team) is already stored
+    const homeKey = `${homeTeam}::${gamePk}`;
+    const awayKey = `${awayTeam}::${gamePk}`;
     const needHome = !existing.has(homeKey);
     const needAway = !existing.has(awayKey);
     if (!needHome && !needAway) continue;
@@ -119,7 +124,7 @@ async function processDate(dateStr, existing) {
 
     if (homeOrder.length < 7 || awayOrder.length < 7) {
       try {
-        const box = await fetchWithRetry(`${MLB_API}/game/${game.gamePk}/boxscore`);
+        const box = await fetchWithRetry(`${MLB_API}/game/${gamePk}/boxscore`);
         homePlayers = box?.teams?.home?.players || {};
         awayPlayers = box?.teams?.away?.players || {};
         homeOrder = box?.teams?.home?.battingOrder || [];
@@ -143,66 +148,3 @@ async function processDate(dateStr, existing) {
 
     if (homePitcherId) { homeStats = await fetchPitcherStats(homePitcherId); await sleep(80); }
     if (awayPitcherId) { awayStats = await fetchPitcherStats(awayPitcherId); await sleep(80); }
-
-    if (needHome && homeLineup.length >= 7) {
-      rows.push({
-        team_name: homeTeam,
-        game_date: dateStr,
-        lineup: homeLineup,
-        sp_name: homePitcherName,
-        sp_era: homeStats.era,
-        sp_fip: null,
-        opp_team: awayTeam,
-      });
-    }
-
-    if (needAway && awayLineup.length >= 7) {
-      rows.push({
-        team_name: awayTeam,
-        game_date: dateStr,
-        lineup: awayLineup,
-        sp_name: awayPitcherName,
-        sp_era: awayStats.era,
-        sp_fip: null,
-        opp_team: homeTeam,
-      });
-    }
-  }
-
-  return rows;
-}
-
-async function main() {
-  const dates = getDatesToProcess();
-  console.log(`🏟️  Collecting lineups for: ${dates.join(', ')}`);
-
-  const existing = await loadExistingForDates(dates);
-  console.log(`📊 ${existing.size} entries already in DB for these dates\n`);
-
-  let total = 0;
-
-  for (const date of dates) {
-    const rows = await processDate(date, existing);
-    if (rows.length === 0) {
-      console.log(`${date}: 0 new rows`);
-      continue;
-    }
-
-    const { error } = await supabase
-      .from('shared_lineup_baselines')
-      .upsert(rows, { onConflict: 'team_name,game_date' });
-
-    if (error) {
-      console.error(`${date}: ❌ Upsert failed: ${error.message}`);
-    } else {
-      console.log(`${date}: ✅ ${rows.length} rows upserted`);
-      total += rows.length;
-    }
-
-    await sleep(300);
-  }
-
-  console.log(`\n✅ Done — ${total} total rows written`);
-}
-
-main().catch(e => { console.error('Fatal:', e); process.exit(1); });
