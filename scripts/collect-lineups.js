@@ -148,3 +148,68 @@ async function processDate(dateStr, existing) {
 
     if (homePitcherId) { homeStats = await fetchPitcherStats(homePitcherId); await sleep(80); }
     if (awayPitcherId) { awayStats = await fetchPitcherStats(awayPitcherId); await sleep(80); }
+
+    if (needHome && homeLineup.length >= 7) {
+      rows.push({
+        team_name: homeTeam,
+        game_date: dateStr,
+        game_pk: gamePk,
+        lineup: homeLineup,
+        sp_name: homePitcherName,
+        sp_era: homeStats.era,
+        sp_fip: null,
+        opp_team: awayTeam,
+      });
+    }
+
+    if (needAway && awayLineup.length >= 7) {
+      rows.push({
+        team_name: awayTeam,
+        game_date: dateStr,
+        game_pk: gamePk,
+        lineup: awayLineup,
+        sp_name: awayPitcherName,
+        sp_era: awayStats.era,
+        sp_fip: null,
+        opp_team: homeTeam,
+      });
+    }
+  }
+
+  return rows;
+}
+
+async function main() {
+  const dates = getDatesToProcess();
+  console.log(`🏟️  Collecting lineups for: ${dates.join(', ')}`);
+
+  const existing = await loadExistingForDates(dates);
+  console.log(`📊 ${existing.size} entries already in DB for these dates\n`);
+
+  let total = 0;
+
+  for (const date of dates) {
+    const rows = await processDate(date, existing);
+    if (rows.length === 0) {
+      console.log(`${date}: 0 new rows`);
+      continue;
+    }
+
+    const { error } = await supabase
+      .from('shared_lineup_baselines')
+      .upsert(rows, { onConflict: 'team_name,game_pk' });
+
+    if (error) {
+      console.error(`${date}: ❌ Upsert failed: ${error.message}`);
+    } else {
+      console.log(`${date}: ✅ ${rows.length} rows upserted`);
+      total += rows.length;
+    }
+
+    await sleep(300);
+  }
+
+  console.log(`\n✅ Done — ${total} total rows written`);
+}
+
+main().catch(e => { console.error('Fatal:', e); process.exit(1); });
