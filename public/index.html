@@ -18,34 +18,35 @@
 <style>
   /* ── DESIGN SYSTEM ────────────────────────────────────────── */
   :root {
-    --bg:       #0A0A08;
-    --bg2:      #111110;
-    --bg3:      #181816;
-    --surface:  #1C1C19;
-    --surface2: #232320;
-    --border:   #2A2A26;
-    --border2:  #3A3A35;
+    --bg:       #080C13;
+    --bg2:      #0B1019;
+    --bg3:      #0F1520;
+    --surface:  #131C2B;
+    --surface2: #1A2538;
+    --border:   #1E2D42;
+    --border2:  #2C4060;
     --red:      #E05C2A;
-    --red2:     #F0703C;
-    --red-dim:  rgba(224,92,42,0.12);
+    --red2:     #F07040;
+    --red-dim:  rgba(224,92,42,0.13);
     --gold:     #E8B84B;
     --gold2:    #F0CB72;
-    --gold-dim: rgba(232,184,75,0.12);
-    --green:    #4ADE80;
-    --green-dim:rgba(74,222,128,0.10);
-    --blue:     #60A5FA;
-    --text:     #F5F0E8;
-    --text2:    #9A9488;
-    --text3:    #5E5A52;
-    --muted:    #2E2E29;
-    --card:     #111110;
+    --gold-dim: rgba(232,184,75,0.13);
+    --green:    #34D399;
+    --green-dim:rgba(52,211,153,0.10);
+    --blue:     #5B9CF6;
+    --text:     #E4E8EE;
+    --text2:    #7A8DA4;
+    --text3:    #3D506A;
+    --muted:    #1A2535;
+    --card:     #131C2B;
     --orange:   #E8B84B;
     --font-display: 'Space Grotesk', sans-serif;
     --font-body:    'Barlow', sans-serif;
     --font-mono:    'JetBrains Mono', monospace;
-    --r-sm: 2px; --r-md: 3px; --r-lg: 4px; --r-xl: 6px;
-    --shadow-sm: 0 1px 3px rgba(0,0,0,0.6);
-    --shadow-md: 0 4px 16px rgba(0,0,0,0.5);
+    --r-sm: 5px; --r-md: 11px; --r-lg: 16px; --r-xl: 22px;
+    --shadow-sm: 0 1px 4px rgba(0,0,0,0.9), 0 1px 2px rgba(0,0,0,0.5);
+    --shadow-md: 0 6px 28px rgba(0,0,0,0.8), 0 2px 8px rgba(0,0,0,0.5);
+    --shadow-lg: 0 16px 56px rgba(0,0,0,0.9), 0 4px 16px rgba(0,0,0,0.5);
   }
 
   /* ── RESET ── */
@@ -61,6 +62,8 @@
     line-height: 1.65;
     min-height: 100vh;
     overflow-x: clip;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
   /* ── BACKGROUND ── */
@@ -68,8 +71,19 @@
     content: '';
     position: fixed; inset: 0; z-index: 0; pointer-events: none;
     background:
-      radial-gradient(ellipse 55% 40% at 5% -5%, rgba(224,92,42,0.06) 0%, transparent 55%),
-      radial-gradient(ellipse 40% 30% at 95% 105%, rgba(232,184,75,0.04) 0%, transparent 50%);
+      radial-gradient(ellipse 75% 55% at 5% -5%, rgba(30,80,200,0.22) 0%, transparent 65%),
+      radial-gradient(ellipse 55% 45% at 108% 108%, rgba(224,92,42,0.14) 0%, transparent 62%),
+      radial-gradient(ellipse 45% 30% at -5% 100%, rgba(20,55,150,0.16) 0%, transparent 60%),
+      radial-gradient(ellipse 40% 28% at 85% 12%, rgba(18,50,140,0.12) 0%, transparent 55%),
+      radial-gradient(ellipse 30% 18% at 50% 102%, rgba(30,60,160,0.08) 0%, transparent 55%);
+  }
+  body::after {
+    content: '';
+    position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background-image: radial-gradient(circle, rgba(100,150,255,0.022) 1px, transparent 1px);
+    background-size: 30px 30px;
+    mask-image: radial-gradient(ellipse 90% 90% at 50% 40%, rgba(0,0,0,0.55) 0%, transparent 100%);
+    -webkit-mask-image: radial-gradient(ellipse 90% 90% at 50% 40%, rgba(0,0,0,0.55) 0%, transparent 100%);
   }
 
   /* ── LAYOUT ── */
@@ -78,43 +92,46 @@
   /* ── HEADER ── */
   header {
     display: flex; align-items: center; justify-content: space-between;
-    padding: 16px 0;
-    border-bottom: 1px solid var(--border);
+    padding: 14px 0;
+    border-bottom: 1px solid rgba(40,90,200,0.20);
+    box-shadow: 0 1px 0 rgba(30,70,180,0.10);
     margin-bottom: 40px;
     position: sticky; top: 0; z-index: 100;
-    background: rgba(10,10,8,0.96);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
+    background: rgba(8,12,19,0.97);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
     margin-left: -32px; margin-right: -32px;
     padding-left: 32px; padding-right: 32px;
   }
   .logo { display: flex; align-items: center; gap: 14px; }
-  .logo-icon { width: 44px; height: 44px; border-radius: 10px; flex-shrink: 0; background: transparent; display:flex; align-items:center; justify-content:center; }
-  .logo-icon img { width: 44px; height: 44px; border-radius: 10px; object-fit: cover; }
+  .logo-icon { width: 44px; height: 44px; border-radius: 11px; flex-shrink: 0; background: transparent; display:flex; align-items:center; justify-content:center; }
+  .logo-icon img { width: 44px; height: 44px; border-radius: 11px; object-fit: cover; }
   .logo-text h1 {
     font-family: var(--font-display);
-    font-size: 22px; font-weight: 800; letter-spacing: -0.3px;
+    font-size: 21px; font-weight: 800; letter-spacing: -0.5px;
     line-height: 1; color: #fff;
   }
-  .logo-text p { font-size: 10px; color: var(--text3); letter-spacing: 2px; text-transform: uppercase; margin-top: 3px; font-family: var(--font-mono); }
+  .logo-text p { font-size: 9.5px; color: var(--text3); letter-spacing: 2.5px; text-transform: uppercase; margin-top: 4px; font-family: var(--font-mono); }
   .header-controls { display: flex; gap: 10px; align-items: center; }
   .date-btn {
     background: var(--surface); border: 1px solid var(--border2);
-    color: var(--text); padding: 9px 16px; border-radius: var(--r-md);
-    font-family: var(--font-mono); font-size: 12px;
+    color: var(--text2); padding: 8px 15px; border-radius: var(--r-md);
+    font-family: var(--font-mono); font-size: 11.5px;
     cursor: pointer; transition: all 0.15s;
   }
-  .date-btn:hover { border-color: var(--gold); }
+  .date-btn:hover { border-color: var(--gold); color: var(--text); }
   input[type="date"].date-btn { cursor: text; }
   .fetch-btn {
-    background: var(--red); border: none;
+    background: linear-gradient(135deg, #E8643A 0%, #D94F20 100%);
+    border: none; border-top: 1px solid rgba(255,255,255,0.12);
     color: #fff; padding: 9px 22px; border-radius: var(--r-md);
-    font-family: var(--font-body); font-weight: 600; font-size: 13px;
-    cursor: pointer; transition: all 0.15s; letter-spacing: 0.3px;
+    font-family: var(--font-body); font-weight: 700; font-size: 13px;
+    cursor: pointer; transition: all 0.18s; letter-spacing: 0.2px;
+    box-shadow: 0 2px 10px rgba(224,92,42,0.35), 0 1px 3px rgba(0,0,0,0.4);
     touch-action: manipulation; -webkit-tap-highlight-color: transparent;
   }
-  .fetch-btn:hover { background: var(--red2); transform: translateY(-1px); }
-  .fetch-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+  .fetch-btn:hover { background: linear-gradient(135deg, #F07040 0%, #E05C2A 100%); transform: translateY(-1px); box-shadow: 0 4px 16px rgba(224,92,42,0.45), 0 2px 6px rgba(0,0,0,0.4); }
+  .fetch-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow: none; }
   .div-btn, .about-toggle { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
 
   /* ── SIGN IN / OUT ── */
@@ -136,38 +153,44 @@
 
   /* ── SECTION HEADER ── */
   .section-hdr {
-    display: flex; align-items: center; gap: 12px; margin-bottom: 16px;
+    display: flex; align-items: center; gap: 12px; margin-bottom: 18px;
   }
   .section-hdr h2 {
-    font-family: var(--font-display); font-size: 11px; font-weight: 800;
-    letter-spacing: 3px; text-transform: uppercase; color: var(--text3);
+    font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+    letter-spacing: 2.5px; text-transform: uppercase; color: var(--text3);
+    white-space: nowrap;
   }
   .section-hdr .divider { flex: 1; height: 1px; background: var(--border); }
   .pill {
-    font-size: 9px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase;
-    padding: 3px 9px; border-radius: 4px; font-family: var(--font-mono);
+    font-size: 9.5px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase;
+    padding: 3px 10px; border-radius: 5px; font-family: var(--font-mono);
     border: 1px solid transparent;
   }
   .pill.gold { background: var(--gold-dim); color: var(--gold); border-color: rgba(232,184,75,0.25); }
   .pill.red  { background: var(--red-dim);  color: var(--red);  border-color: rgba(224,92,42,0.25); }
-  .pill.green{ background: var(--green-dim);color: var(--green);border-color: rgba(74,222,128,0.25); }
+  .pill.green{ background: var(--green-dim);color: var(--green);border-color: rgba(52,211,153,0.25); }
   .pill.blue { background: rgba(59,130,246,0.1); color: var(--blue); border-color: rgba(59,130,246,0.25); }
 
   /* ── STAT STRIP ── */
   .stat-strip { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; margin-bottom: 52px; }
   .stat-card {
     background: var(--surface); border: 1px solid var(--border);
-    border-radius: var(--r-lg); padding: 16px 20px; transition: border-color 0.15s;
+    border-radius: var(--r-lg); padding: 18px 22px; transition: border-color 0.18s, transform 0.18s, box-shadow 0.18s;
     position: relative; overflow: hidden;
   }
   .stat-card::before { content:''; position:absolute; inset:0; opacity:0; transition:opacity 0.15s; }
-  .stat-card:hover { border-color: var(--border2); }
-  .stat-card .label { font-size: 10px; text-transform: uppercase; letter-spacing: 2px; color: var(--text3); margin-bottom: 10px; font-family: var(--font-mono); font-weight: 600; }
-  .stat-card .value { font-family: var(--font-display); font-size: 38px; font-weight: 800; letter-spacing: -1px; line-height: 1; }
-  .stat-card .sub { font-size: 10px; color: var(--text3); margin-top: 8px; font-family: var(--font-mono); font-weight: 500; }
+  .stat-card:hover { border-color: var(--border2); transform: translateY(-2px); box-shadow: var(--shadow-md); }
+  .stat-card .label { font-size: 9.5px; text-transform: uppercase; letter-spacing: 2px; color: var(--text3); margin-bottom: 12px; font-family: var(--font-mono); font-weight: 700; }
+  .stat-card .value { font-family: var(--font-display); font-size: 42px; font-weight: 800; letter-spacing: -1.5px; line-height: 1; }
+  .stat-card .sub { font-size: 10px; color: var(--text3); margin-top: 10px; font-family: var(--font-mono); font-weight: 500; }
+  .stat-card.red  { background: linear-gradient(150deg, rgba(224,92,42,0.14) 0%, var(--surface) 55%); border-color: rgba(224,92,42,0.35); }
+  .stat-card.gold { background: linear-gradient(150deg, rgba(232,184,75,0.11) 0%, var(--surface) 55%); border-color: rgba(232,184,75,0.32); }
+  .stat-card.green{ background: linear-gradient(150deg, rgba(52,211,153,0.11) 0%, var(--surface) 55%); border-color: rgba(52,211,153,0.30); }
+  .stat-card.blue { background: linear-gradient(150deg, rgba(91,156,246,0.12) 0%, var(--surface) 55%); border-color: rgba(91,156,246,0.32); }
   .stat-card.red .value { color: var(--red2); }
   .stat-card.gold .value { color: var(--gold); }
   .stat-card.green .value { color: var(--green); }
+  .stat-card.blue .value { color: #60A5FA; }
 
   /* ── TWO COLUMN ── */
   .two-col { display: grid; grid-template-columns: 1fr min(320px,100%); gap: 20px; align-items: start; }
@@ -178,25 +201,35 @@
   /* ── GAME CARD ── */
   .game-card {
     background: var(--surface); border: 1px solid var(--border);
-    border-radius: var(--r-md); overflow: hidden;
-    transition: border-color 0.15s, box-shadow 0.15s;
-    animation: fadeUp 0.3s ease both;
+    border-radius: var(--r-lg); overflow: hidden;
+    transition: border-color 0.18s, box-shadow 0.2s, transform 0.18s;
+    animation: fadeUp 0.35s ease both;
   }
-  .game-card:hover { border-color: var(--border2); box-shadow: 0 4px 24px rgba(0,0,0,0.25); transform: none; }
-  .game-card.is-punt { border-color: rgba(224,92,42,0.35); background: linear-gradient(135deg, var(--surface) 0%, rgba(224,92,42,0.04) 100%); }
-  .game-card.is-review { border-color: rgba(232,184,75,0.3); background: linear-gradient(135deg, var(--surface) 0%, rgba(245,166,35,0.04) 100%); }
+  .game-card:hover { border-color: var(--border2); box-shadow: 0 8px 32px rgba(0,0,0,0.55), 0 2px 8px rgba(0,0,0,0.3); transform: translateY(-2px); }
+  .game-card.is-punt {
+    border-color: rgba(224,92,42,0.60);
+    background: linear-gradient(165deg, rgba(224,92,42,0.14) 0%, var(--surface) 50%);
+    box-shadow: inset 0 1px 0 rgba(224,92,42,0.20), 0 0 20px rgba(224,92,42,0.06);
+  }
+  .game-card.is-punt:hover { border-color: rgba(224,92,42,0.80); box-shadow: 0 10px 40px rgba(224,92,42,0.20), 0 2px 8px rgba(0,0,0,0.5), inset 0 1px 0 rgba(224,92,42,0.25); }
+  .game-card.is-review {
+    border-color: rgba(232,184,75,0.50);
+    background: linear-gradient(165deg, rgba(232,184,75,0.11) 0%, var(--surface) 50%);
+    box-shadow: inset 0 1px 0 rgba(232,184,75,0.16), 0 0 18px rgba(232,184,75,0.05);
+  }
+  .game-card.is-review:hover { border-color: rgba(232,184,75,0.70); box-shadow: 0 10px 40px rgba(232,184,75,0.14), 0 2px 8px rgba(0,0,0,0.5), inset 0 1px 0 rgba(232,184,75,0.22); }
   .game-card.is-calibration { border-color: rgba(59,130,246,0.2); }
-  .game-card.is-postponed { border-color: rgba(255,255,255,0.08); opacity: 0.75; }
+  .game-card.is-postponed { border-color: rgba(255,255,255,0.06); opacity: 0.65; }
 
   /* ── Succinct verdict-first card (pc2) ── */
   .pc2 { padding: 0; cursor: pointer; }
   .pc2-head {
     display: flex; align-items: center; justify-content: space-between; gap: 10px;
-    padding: 12px 16px; border-bottom: 1px solid var(--border);
-    background: linear-gradient(to bottom, rgba(255,255,255,0.015), transparent);
+    padding: 13px 16px; border-bottom: 1px solid var(--border);
+    background: linear-gradient(to bottom, rgba(255,255,255,0.025), transparent);
   }
   .pc2-matchup { display: flex; align-items: center; gap: 8px; min-width: 0; }
-  .pc2-matchup .team-logo, .pc2-matchup .team-logo-fallback { width: 26px; height: 26px; }
+  .pc2-matchup .team-logo, .pc2-matchup .team-logo-fallback { width: 34px; height: 34px; }
   .pc2-abbr { font-family: var(--font-display); font-size: 16px; font-weight: 800; letter-spacing: -0.3px; color: var(--text); }
   .pc2-at { font-family: var(--font-mono); font-size: 11px; color: var(--text3); margin: 0 2px; }
   .pc2-tags { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; justify-content: flex-end; }
@@ -204,11 +237,13 @@
   .pc2-verdict { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 16px 16px 4px; }
   .pc2-verdict .punt-badge { font-size: 12px; padding: 5px 12px; }
   .pc2-score { margin-left: auto; display: flex; align-items: baseline; gap: 1px; line-height: 1; }
-  .pc2-score-num { font-family: var(--font-display); font-size: 34px; font-weight: 800; color: var(--text); letter-spacing: -1px; }
+  .pc2-score-num { font-family: var(--font-display); font-size: 46px; font-weight: 800; color: var(--text); letter-spacing: -2px; line-height: 1; }
   .is-punt .pc2-score-num { color: var(--red2); }
   .is-review .pc2-score-num { color: var(--gold); }
-  .pc2-score-den { font-family: var(--font-mono); font-size: 12px; color: var(--text3); }
-  .pc2-cal { margin-left: auto; font-family: var(--font-display); font-size: 22px; font-weight: 800; color: #7da6ff; }
+  .is-punt .pc2-score-num { color: var(--red2); }
+  .is-review .pc2-score-num { color: var(--gold); }
+  .pc2-score-den { font-family: var(--font-mono); font-size: 13px; color: var(--text3); }
+  .pc2-cal { margin-left: auto; font-family: var(--font-display); font-size: 24px; font-weight: 800; color: #7da6ff; letter-spacing: -0.5px; }
   .pc2-cal-den { font-family: var(--font-mono); font-size: 11px; color: var(--text3); font-weight: 400; margin-left: 3px; }
   .pc2-result { font-family: var(--font-mono); font-size: 10px; font-weight: 700; padding: 3px 9px; border-radius: 999px; letter-spacing: 0.5px; }
   .pc2-result.won  { color: var(--green); background: rgba(74,222,128,0.10); border: 1px solid rgba(74,222,128,0.30); }
@@ -218,10 +253,10 @@
   .pc2-narrative.pc2-muted { color: var(--text3); font-size: 13px; }
 
   .pc2-how { padding: 10px 16px 4px; }
-  .pc2-how-label { font-family: var(--font-mono); font-size: 8px; text-transform: uppercase; letter-spacing: 1.8px; color: var(--text3); margin-bottom: 6px; }
+  .pc2-how-label { font-family: var(--font-mono); font-size: 9px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text2); margin-bottom: 8px; font-weight: 600; }
   .pc2-reason { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
   .pc2-reason:last-child { border-bottom: none; }
-  .pc2-reason-label { font-family: var(--font-body); font-size: 13px; color: var(--text2); }
+  .pc2-reason-label { font-family: var(--font-body); font-size: 13px; color: var(--text); }
   .pc2-pts { font-family: var(--font-mono); font-size: 12px; font-weight: 700; color: var(--red2); flex-shrink: 0; }
   .is-review .pc2-pts { color: var(--gold); }
 
@@ -233,11 +268,12 @@
   .pc2-foot { padding: 0 16px 14px; }
 
   /* ── Review Queue ── */
-  .rq-panel { background: var(--surface); border: 1px solid rgba(232,184,75,0.35); border-radius: var(--r-lg); overflow: hidden; }
-  .rq-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 14px 18px; border-bottom: 1px solid var(--border); background: rgba(232,184,75,0.05); }
-  .rq-title { font-family: var(--font-display); font-size: 14px; font-weight: 800; color: var(--text); display: flex; align-items: center; gap: 9px; }
-  .rq-count { font-family: var(--font-mono); font-size: 10px; font-weight: 700; color: var(--gold); background: rgba(232,184,75,0.12); border: 1px solid rgba(232,184,75,0.3); border-radius: 999px; padding: 2px 9px; white-space: nowrap; }
-  .rq-row { display: grid; grid-template-columns: 1fr minmax(150px, 1.1fr) auto; gap: 12px; align-items: center; padding: 11px 18px; border-bottom: 1px solid var(--border); }
+  .rq-panel { background: var(--surface); border: 1px solid rgba(232,184,75,0.40); border-radius: var(--r-lg); overflow: hidden; box-shadow: 0 0 0 1px rgba(232,184,75,0.06) inset; }
+  .rq-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 14px 18px; border-bottom: 1px solid var(--border); background: linear-gradient(to right, rgba(232,184,75,0.06) 0%, transparent 60%); }
+  .rq-title { font-family: var(--font-display); font-size: 13px; font-weight: 800; color: var(--text); display: flex; align-items: center; gap: 9px; letter-spacing: -0.2px; }
+  .rq-count { font-family: var(--font-mono); font-size: 9.5px; font-weight: 700; color: var(--gold); background: rgba(232,184,75,0.14); border: 1px solid rgba(232,184,75,0.35); border-radius: 999px; padding: 2px 9px; white-space: nowrap; }
+  .rq-row { display: grid; grid-template-columns: 1fr minmax(150px, 1.1fr) auto; gap: 12px; align-items: center; padding: 12px 18px; border-bottom: 1px solid var(--border); transition: background 0.1s; }
+  .rq-row:hover { background: rgba(255,255,255,0.02); }
   .rq-row:last-child { border-bottom: none; }
   .rq-game { min-width: 0; }
   .rq-matchup { font-family: var(--font-display); font-size: 14px; font-weight: 700; color: var(--text); }
@@ -286,15 +322,15 @@
   }
   .matchup-meta { display: flex; align-items: center; gap: 6px; margin-top: 2px; }
   .punt-badge {
-    font-size: 9px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase;
-    padding: 4px 10px; border-radius: 5px; font-family: var(--font-mono);
+    font-size: 9.5px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase;
+    padding: 4px 11px; border-radius: 6px; font-family: var(--font-mono);
     border: 1px solid transparent;
   }
-  .punt-badge.flag   { background: var(--red-dim);  color: var(--red2); border-color: rgba(224,92,42,0.3); }
-  .punt-badge.review { background: var(--gold-dim);  color: var(--gold); border-color: rgba(232,184,75,0.3); }
+  .punt-badge.flag   { background: rgba(224,92,42,0.18); color: var(--red2); border-color: rgba(224,92,42,0.45); box-shadow: 0 0 8px rgba(224,92,42,0.12); }
+  .punt-badge.review { background: rgba(232,184,75,0.15); color: var(--gold); border-color: rgba(232,184,75,0.45); box-shadow: 0 0 8px rgba(232,184,75,0.10); }
   .punt-badge.clean  { background: rgba(255,255,255,0.04); color: var(--text3); border-color: var(--border); }
   .punt-badge.calibration { background: rgba(59,130,246,0.1); color: #7AA8F0; border-color: rgba(59,130,246,0.25); }
-  .punt-badge.postponed { background: rgba(255,255,255,0.05); color: var(--text3); border-color: rgba(255,255,255,0.1); }
+  .punt-badge.postponed { background: rgba(255,255,255,0.04); color: var(--text3); border-color: rgba(255,255,255,0.08); }
 
   .card-body {
     display: flex; gap: 0; padding: 12px 14px; border-bottom: 1px solid var(--border);
@@ -330,12 +366,12 @@
 
   /* ── SCORE RING ── */
   .score-ring {
-    width: 50px; height: 50px; position: relative; flex-shrink: 0; margin-left: 12px;
+    width: 56px; height: 56px; position: relative; flex-shrink: 0; margin-left: 12px;
   }
-  .score-ring svg { position: absolute; top: 0; left: 0; transform: rotate(-90deg); width: 50px; height: 50px; }
+  .score-ring svg { position: absolute; top: 0; left: 0; transform: rotate(-90deg); width: 56px; height: 56px; }
   .score-ring .score-num {
     position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
-    font-family: var(--font-display); font-size: 15px; font-weight: 800; letter-spacing: -0.5px;
+    font-family: var(--font-display); font-size: 16px; font-weight: 800; letter-spacing: -0.5px;
   }
   .score-ring .score-num.high { color: var(--red2); }
   .score-ring .score-num.mid  { color: var(--gold); }
@@ -344,19 +380,21 @@
   .punt-watch-panel {
     background: var(--surface); border: 1px solid var(--border);
     border-radius: var(--r-lg); overflow: hidden; position: sticky; top: 72px;
+    box-shadow: var(--shadow-sm);
   }
   .pw-header {
     padding: 14px 16px; border-bottom: 1px solid var(--border);
     display: flex; align-items: center; justify-content: space-between;
+    background: linear-gradient(to bottom, rgba(255,255,255,0.02), transparent);
   }
-  .pw-title { font-family: var(--font-display); font-size: 11px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; }
+  .pw-title { font-family: var(--font-mono); font-size: 9.5px; font-weight: 700; letter-spacing: 2.5px; text-transform: uppercase; color: var(--text3); }
   .pw-body { padding: 0; }
   .pw-empty { padding: 32px 20px; text-align: center; color: var(--text3); font-size: 12px; }
   .pw-card { padding: 14px 16px; border-bottom: 1px solid var(--border); cursor: default; transition: background 0.15s; }
   .pw-card:hover { background: var(--bg3); }
   .pw-matchup { font-family: var(--font-display); font-size: 15px; font-weight: 800; margin-bottom: 5px; }
   .pw-meta { font-size: 10px; color: var(--text3); margin-bottom: 8px; font-family: var(--font-mono); }
-  .pw-score { font-family: var(--font-display); font-size: 26px; font-weight: 800; }
+  .pw-score { font-family: var(--font-display); font-size: 30px; font-weight: 800; letter-spacing: -1px; }
   .pw-score.punt { color: var(--red2); }
   .pw-score.review { color: var(--gold); }
   .pw-bar { height: 3px; background: var(--border); border-radius: 2px; margin-top: 8px; overflow: hidden; }
@@ -408,10 +446,11 @@
   .about-section { margin-bottom: 36px; }
   .about-card {
     background: var(--surface); border: 1px solid var(--border);
-    border-radius: var(--r-lg); padding: 28px 32px;
+    border-radius: var(--r-xl); padding: 32px 36px;
+    box-shadow: var(--shadow-sm);
   }
   .about-title { font-family: var(--font-display); font-size: 24px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 10px; }
-  .about-lead { font-size: 13px; color: var(--text2); line-height: 1.7; }
+  .about-lead { font-size: 13px; color: var(--text2); line-height: 1.75; }
   .about-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px,1fr)); gap: 14px; margin-top: 20px; }
   .about-card-inner {
     background: var(--bg3); border: 1px solid var(--border);
@@ -446,10 +485,10 @@
   .log-sheet-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); overflow: hidden; }
   .log-sheet-scroll { overflow-x: auto; }
   .log-sheet { width: 100%; border-collapse: collapse; font-family: var(--font-mono); font-size: 11px; }
-  .log-sheet th { background: var(--bg3); color: var(--text3); padding: 10px 16px; text-align: left; font-size: 9px; text-transform: uppercase; letter-spacing: 2px; border-bottom: 1px solid var(--border); font-weight: 600; white-space: nowrap; }
-  .log-sheet td { padding: 10px 16px; border-bottom: 1px solid var(--border); color: var(--text2); vertical-align: middle; white-space: nowrap; }
+  .log-sheet th { background: var(--bg2); color: var(--text3); padding: 10px 16px; text-align: left; font-size: 8.5px; text-transform: uppercase; letter-spacing: 2px; border-bottom: 1px solid var(--border); font-weight: 700; white-space: nowrap; }
+  .log-sheet td { padding: 10px 16px; border-bottom: 1px solid var(--border); color: var(--text2); vertical-align: middle; white-space: nowrap; font-size: 11.5px; }
   .log-sheet tr:last-child td { border-bottom: none; }
-  .log-sheet tr:hover td { background: var(--bg3); }
+  .log-sheet tr:hover td { background: rgba(255,255,255,0.015); }
   .log-empty { padding: 48px 24px; text-align: center; color: var(--text3); font-size: 13px; }
 
   /* ── ROSTER ── */
@@ -492,13 +531,13 @@
   .teams-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px,1fr)); gap: 12px; }
   .team-card {
     background: var(--surface); border: 1px solid var(--border);
-    border-radius: var(--r-lg); padding: 0; cursor: pointer; transition: all 0.18s;
+    border-radius: var(--r-lg); padding: 0; cursor: pointer; transition: all 0.2s;
     position: relative; overflow: hidden; display: flex; flex-direction: column;
-    animation: fadeUp 0.3s ease both;
+    animation: fadeUp 0.35s ease both;
   }
-  .team-card:hover { border-color: var(--border2); transform: translateY(-2px); box-shadow: 0 8px 28px rgba(0,0,0,0.3); }
-  .team-card.has-punts { border-color: rgba(224,92,42,0.28); }
-  .team-card.has-punts:hover { border-color: rgba(224,92,42,0.5); }
+  .team-card:hover { border-color: var(--border2); transform: translateY(-3px); box-shadow: 0 12px 40px rgba(0,0,0,0.55), 0 2px 8px rgba(0,0,0,0.3); }
+  .team-card.has-punts { border-color: rgba(224,92,42,0.32); }
+  .team-card.has-punts:hover { border-color: rgba(224,92,42,0.55); box-shadow: 0 12px 40px rgba(224,92,42,0.10), 0 2px 8px rgba(0,0,0,0.35); }
 
   /* Card header strip */
   .tc-header {
@@ -656,16 +695,19 @@
   /* ── ALGORITHM PANEL ── */
   .algo-panel {
     background: var(--surface); border: 1px solid var(--border);
-    border-radius: var(--r-xl); padding: 28px 32px; margin-top: 48px;
+    border-radius: var(--r-xl); padding: 32px 36px; margin-top: 48px;
+    box-shadow: var(--shadow-sm);
   }
-  .algo-panel h2 { font-family: var(--font-display); font-size: 18px; font-weight: 800; margin-bottom: 8px; letter-spacing: -0.3px; }
+  .algo-panel h2 { font-family: var(--font-display); font-size: 20px; font-weight: 800; margin-bottom: 8px; letter-spacing: -0.5px; }
   .algo-panel > p { font-size: 13px; color: var(--text2); line-height: 1.75; margin-bottom: 28px; max-width: 680px; }
   .algo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px,1fr)); gap: 12px; margin-bottom: 28px; }
   .algo-item {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: var(--r-md); padding: 16px 18px;
+    background: var(--bg3); border: 1px solid var(--border);
+    border-radius: var(--r-md); padding: 18px 20px;
+    transition: border-color 0.15s;
   }
-  .ai-val { font-family: var(--font-display); font-size: 26px; font-weight: 800; color: var(--red2); margin-bottom: 8px; letter-spacing: -0.5px; }
+  .algo-item:hover { border-color: var(--border2); }
+  .ai-val { font-family: var(--font-display); font-size: 30px; font-weight: 800; color: var(--red2); margin-bottom: 8px; letter-spacing: -1px; }
   .ai-title { font-size: 11px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
   .ai-desc { font-size: 11px; color: var(--text3); line-height: 1.5; }
   .algo-weight-table { width: 100%; border-collapse: collapse; font-size: 12px; }
@@ -699,28 +741,30 @@
 
   /* ── TOAST ── */
   .toast {
-    position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%);
+    position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(6px);
     background: var(--surface2); border: 1px solid var(--border2);
     color: var(--text); padding: 10px 20px; border-radius: var(--r-md);
-    font-size: 12px; font-family: var(--font-mono);
-    opacity: 0; pointer-events: none; transition: opacity 0.2s; z-index: 9999;
+    font-size: 11.5px; font-family: var(--font-mono);
+    opacity: 0; pointer-events: none; transition: opacity 0.2s, transform 0.2s; z-index: 9999;
     white-space: nowrap; max-width: 90vw;
+    box-shadow: var(--shadow-md);
   }
-  .toast.visible { opacity: 1; }
-  .toast.err { border-color: var(--red); color: var(--red2); }
+  .toast.visible { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .toast.err { border-color: rgba(224,92,42,0.5); color: var(--red2); background: rgba(224,92,42,0.08); }
 
   /* ── AUTH ── */
   .auth-overlay {
-    position: fixed; inset: 0; z-index: 1000; background: rgba(8,12,20,0.92);
-    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    position: fixed; inset: 0; z-index: 1000; background: rgba(8,12,19,0.96);
+    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
     display: flex; align-items: center; justify-content: center; padding: 24px;
   }
   .auth-box {
     background: var(--surface); border: 1px solid var(--border2);
-    border-radius: var(--r-xl); padding: 36px 40px; width: 100%; max-width: 400px; text-align: center;
+    border-radius: var(--r-xl); padding: 40px 44px; width: 100%; max-width: 400px; text-align: center;
+    box-shadow: var(--shadow-lg), 0 0 0 1px rgba(40,100,220,0.08) inset;
   }
-  .auth-logo { font-family: var(--font-display); font-size: 28px; font-weight: 800; color: #fff; margin-bottom: 4px; }
-  .auth-sub { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 28px; font-family: var(--font-mono); }
+  .auth-logo { font-family: var(--font-display); font-size: 30px; font-weight: 800; color: #fff; margin-bottom: 4px; letter-spacing: -0.5px; }
+  .auth-sub { font-size: 9.5px; color: var(--text3); text-transform: uppercase; letter-spacing: 2.5px; margin-bottom: 28px; font-family: var(--font-mono); }
   .auth-tabs { display: flex; margin-bottom: 20px; border: 1px solid var(--border); border-radius: var(--r-md); overflow: hidden; }
   .auth-tab { flex: 1; padding: 10px; background: none; border: none; color: var(--text3); font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.15s; }
   .auth-tab.active { background: var(--red); color: #fff; }
@@ -766,7 +810,7 @@
   .state-box .icon { font-size: 28px; margin-bottom: 10px; }
   .state-box h3 { font-family: var(--font-display); font-size: 16px; font-weight: 800; margin-bottom: 6px; letter-spacing: -0.3px; }
   .state-box p { font-size: 12px; color: var(--text3); line-height: 1.6; max-width: 340px; margin: 0 auto; font-family: var(--font-mono); }
-  .spinner { width: 28px; height: 28px; border: 2px solid var(--border); border-top-color: var(--red); border-radius: 50%; animation: spin 0.7s linear infinite; margin: 0 auto 12px; }
+  .spinner { width: 28px; height: 28px; border: 2px solid var(--border2); border-top-color: var(--red); border-radius: 50%; animation: spin 0.65s linear infinite; margin: 0 auto 12px; }
 
   /* ── CALIBRATION BANNER ── */
   .calibration-banner {
@@ -814,10 +858,12 @@
   footer a:hover { color: var(--gold); }
 
   /* ── ANIMATIONS ── */
-  @keyframes fadeUp { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+  @keyframes fadeUp { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+  @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
   @keyframes spin { to { transform: rotate(360deg); } }
   @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
   @keyframes pulseDot { 0%,100% { opacity:1; transform:scale(1); } 50% { opacity:0.4; transform:scale(0.7); } }
+  @keyframes shimmer { from { background-position: -200% 0; } to { background-position: 200% 0; } }
 
   /* ── RESPONSIVE 600px ── */
   @media (max-width: 900px) {
@@ -886,9 +932,9 @@
   .roster-body { border-radius: var(--r-md); }
 
   /* ── SCROLLBAR ── */
-  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
   ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: var(--muted); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
   ::-webkit-scrollbar-thumb:hover { background: var(--text3); }
 
   /* ── ROSTER ── */
@@ -984,7 +1030,7 @@
   .leader-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--r-lg); overflow:hidden; transition:all 0.15s; }
   .leader-card:hover { border-color:var(--border2); }
   .leader-card-header { padding:12px 16px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
-  .leader-card-title { font-size:9px; text-transform:uppercase; letter-spacing:2px; color:var(--text3); font-family:var(--font-mono); font-weight:600; }
+  .leader-card-title { font-size:10px; text-transform:uppercase; letter-spacing:1.8px; color:var(--text2); font-family:var(--font-mono); font-weight:600; }
   .leader-row { display:flex; align-items:center; gap:12px; padding:9px 16px; border-bottom:1px solid var(--border); transition:background 0.1s; }
   .leader-row:last-child { border-bottom:none; }
   .leader-row:hover { background:var(--bg3); }
@@ -1093,13 +1139,13 @@
   @media (min-width:601px) { .mobile-nav { display:none; } }
 
   /* ── TOP NAV TABS ── */
-  .top-nav { display:flex; align-items:center; gap:2px; background:var(--bg2); border-bottom:1px solid var(--border); padding:0 24px; overflow-x:auto; scrollbar-width:none; -ms-overflow-style:none; position:sticky; top:0; z-index:100; backdrop-filter:blur(12px); }
+  .top-nav { display:flex; align-items:center; gap:0; background:rgba(8,12,19,0.97); border-bottom:1px solid rgba(40,90,200,0.20); box-shadow:0 1px 0 rgba(30,70,180,0.10); padding:0 32px; overflow-x:auto; scrollbar-width:none; -ms-overflow-style:none; position:sticky; top:0; z-index:100; backdrop-filter:blur(24px); -webkit-backdrop-filter:blur(24px); }
   .top-nav::-webkit-scrollbar { display:none; }
-  .top-nav-tab { display:flex; align-items:center; gap:7px; padding:14px 18px; font-size:12px; font-family:var(--font-mono); font-weight:600; letter-spacing:0.8px; text-transform:uppercase; color:var(--text3); cursor:pointer; border:none; background:transparent; border-bottom:2px solid transparent; margin-bottom:-1px; white-space:nowrap; transition:all 0.15s; flex-shrink:0; }
-  .top-nav-tab:hover { color:var(--text2); }
-  .top-nav-tab.active { color:var(--text); border-bottom-color:var(--red2); }
-  .top-nav-tab .nav-icon { font-size:14px; line-height:1; }
-  .top-nav-tab .nav-badge { font-size:9px; background:var(--red-dim); color:var(--red2); border:1px solid rgba(224,92,42,0.3); border-radius:8px; padding:1px 6px; font-weight:700; }
+  .top-nav-tab { display:flex; align-items:center; gap:6px; padding:14px 18px; font-size:12.5px; font-family:var(--font-body); font-weight:500; letter-spacing:0.1px; text-transform:none; color:var(--text3); cursor:pointer; border:none; background:transparent; border-bottom:2px solid transparent; margin-bottom:-1px; white-space:nowrap; transition:color 0.15s, background 0.15s; flex-shrink:0; }
+  .top-nav-tab:hover { color:var(--text2); background:rgba(80,130,255,0.04); }
+  .top-nav-tab.active { color:var(--text); border-bottom-color:var(--red); font-weight:600; background:rgba(80,130,255,0.06); }
+  .top-nav-tab .nav-icon { display:none; }
+  .top-nav-tab .nav-badge { font-size:9px; background:var(--red-dim); color:var(--red2); border:1px solid rgba(224,92,42,0.3); border-radius:8px; padding:1px 6px; font-weight:700; font-family:var(--font-mono); }
   /* ── PAGE WRAPPERS ── */
   .page { display:none; }
   .page.active { display:block; }
@@ -1179,7 +1225,7 @@
   /* ── HEADER REDESIGN ── */
   header {
     border-bottom: 1px solid var(--border) !important;
-    background: rgba(10,10,8,0.98) !important;
+    background: rgba(8,12,19,0.98) !important;
     padding-top: 20px !important; padding-bottom: 20px !important;
   }
   header::after {
@@ -1263,15 +1309,15 @@
     box-shadow: 0 16px 48px rgba(0,0,0,0.5), 0 0 0 1px var(--border2) !important;
   }
   .game-card.is-punt {
-    border-color: rgba(224,92,42,0.5) !important;
-    background: linear-gradient(160deg, var(--surface) 60%, rgba(224,92,42,0.07) 100%) !important;
+    border-color: rgba(224,92,42,0.55) !important;
+    background: linear-gradient(160deg, var(--surface) 45%, rgba(224,92,42,0.13) 100%) !important;
   }
   .game-card.is-punt:hover {
-    box-shadow: 0 16px 48px rgba(224,92,42,0.15), 0 0 0 1px rgba(224,92,42,0.4) !important;
+    box-shadow: 0 16px 48px rgba(224,92,42,0.2), 0 0 0 1px rgba(224,92,42,0.45) !important;
   }
   .game-card.is-review {
-    border-color: rgba(232,184,75,0.4) !important;
-    background: linear-gradient(160deg, var(--surface) 60%, rgba(232,184,75,0.06) 100%) !important;
+    border-color: rgba(232,184,75,0.45) !important;
+    background: linear-gradient(160deg, var(--surface) 45%, rgba(232,184,75,0.12) 100%) !important;
   }
   .card-top {
     padding: 14px 16px !important; background: none !important;
@@ -1288,8 +1334,8 @@
     font-family: var(--font-mono) !important; letter-spacing: 1px !important;
   }
   .punt-badge {
-    font-size: 8px !important; letter-spacing: 2px !important;
-    padding: 4px 10px !important; border-radius: 2px !important;
+    font-size: 9px !important; letter-spacing: 1.5px !important;
+    padding: 5px 12px !important; border-radius: 5px !important;
     font-weight: 700 !important;
   }
   .punt-badge.flag { background: var(--red) !important; color: #fff !important; border: none !important; }
@@ -1328,7 +1374,7 @@
   /* ── FETCH BUTTON REDESIGN ── */
   .fetch-btn {
     background: var(--red) !important; color: #fff !important;
-    border-radius: 2px !important; font-family: var(--font-mono) !important;
+    border-radius: 7px !important; font-family: var(--font-mono) !important;
     font-size: 11px !important; letter-spacing: 2px !important;
     text-transform: uppercase !important; font-weight: 600 !important;
     padding: 10px 24px !important;
@@ -1341,7 +1387,7 @@
     transform: none !important;
   }
   .date-btn {
-    border-radius: 2px !important; border: 1px solid var(--border2) !important;
+    border-radius: 7px !important; border: 1px solid var(--border2) !important;
     background: var(--bg2) !important; font-size: 11px !important;
     font-family: var(--font-mono) !important;
   }
@@ -1405,6 +1451,27 @@
     0%, 100% { opacity: 0.3; } 50% { opacity: 0.8; }
   }
 
+  /* ── SCORE BAR ── */
+  .pc2-scorebar {
+    height: 3px;
+    background: rgba(255,255,255,0.05);
+    overflow: hidden;
+    position: relative;
+    flex-shrink: 0;
+  }
+  .pc2-scorebar-fill {
+    position: absolute;
+    left: 0; top: 0; height: 100%;
+    background: linear-gradient(90deg,
+      #4ADE80   0%,
+      #E8B84B  35%,
+      #F0703C  57.5%,
+      #E05C2A  100%
+    );
+    border-radius: 0 2px 2px 0;
+    transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
   /* ── SCORE RING ENHANCEMENT ── */
   .score-ring { margin-left: 16px !important; }
 
@@ -1454,9 +1521,8 @@
     .app { padding: 0 10px 40px; }
 
     /* ── Top nav — compact + scrollable ── */
-    .top-nav { padding: 0 8px; gap: 0; }
-    .top-nav-tab { padding: 11px 10px; font-size: 10px; letter-spacing: 0.3px; gap: 4px; }
-    .top-nav-tab .nav-icon { font-size: 13px; }
+    .top-nav { padding: 0 8px; }
+    .top-nav-tab { padding: 11px 10px; font-size: 11px; letter-spacing: 0; }
 
     /* ── Header ── */
     header { padding: 12px 10px; flex-direction: column; align-items: flex-start; gap: 10px; }
@@ -1570,8 +1636,7 @@
 
   /* Extra small phones (< 380px) */
   @media (max-width: 380px) {
-    .top-nav-tab { padding: 10px 7px; font-size: 9px; gap: 3px; }
-    .top-nav-tab .nav-icon { display: none; }
+    .top-nav-tab { padding: 10px 7px; font-size: 9.5px; }
     .teams-grid { grid-template-columns: 1fr !important; }
     .stat-strip { grid-template-columns: 1fr !important; }
     .app { padding: 0 8px 40px; }
@@ -1643,31 +1708,14 @@
 
   <!-- TOP NAV TABS -->
   <nav class="top-nav" id="topNav">
-    <button class="top-nav-tab active" id="tab-today" onclick="showPage('today')">
-      <span class="nav-icon">⚾</span> Today
-    </button>
-    <button class="top-nav-tab" id="tab-teams" onclick="showPage('teams')">
-      <span class="nav-icon">🏆</span> Team Punts
-    </button>
-    <button class="top-nav-tab" id="tab-lineups" onclick="showPage('lineups')">
-      <span class="nav-icon">📋</span> Calibrated Lineup
-    </button>
-    <button class="top-nav-tab" id="tab-roster" onclick="showPage('roster')">
-      <span class="nav-icon">🏥</span> Injuries
-    </button>
-    <button class="top-nav-tab" id="tab-gameflow" onclick="showPage('gameflow')">
-      <span class="nav-icon">📈</span> Gameflow
-    </button>
-    <button class="top-nav-tab" id="tab-scaling" onclick="showPage('scaling')">
-      <span class="nav-icon">⚖️</span> Scaling
-    </button>
-    <button class="top-nav-tab" id="tab-reviews" onclick="showPage('reviews')">
-      <span class="nav-icon">📝</span> Reviews
-      <span class="nav-badge" id="reviewBadge" style="display:none"></span>
-    </button>
-    <button class="top-nav-tab" id="tab-about" onclick="showPage('about')">
-      <span class="nav-icon">ℹ️</span> About
-    </button>
+    <button class="top-nav-tab active" id="tab-today" onclick="showPage('today')">Today</button>
+    <button class="top-nav-tab" id="tab-teams" onclick="showPage('teams')">Team Punts</button>
+    <button class="top-nav-tab" id="tab-lineups" onclick="showPage('lineups')">Lineup</button>
+    <button class="top-nav-tab" id="tab-roster" onclick="showPage('roster')">Injuries</button>
+    <button class="top-nav-tab" id="tab-gameflow" onclick="showPage('gameflow')">Gameflow</button>
+    <button class="top-nav-tab" id="tab-scaling" onclick="showPage('scaling')">Scaling</button>
+    <button class="top-nav-tab" id="tab-reviews" onclick="showPage('reviews')">Reviews <span class="nav-badge" id="reviewBadge" style="display:none"></span></button>
+    <button class="top-nav-tab" id="tab-about" onclick="showPage('about')">About</button>
   </nav>
 
   <!-- PAGE: TODAY -->
@@ -1763,7 +1811,7 @@
         </div>
         <div style="background:var(--surface);padding:24px 26px">
           <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:var(--text3);font-family:var(--font-mono);margin-bottom:10px">The Score</div>
-          <p style="font-size:13px;color:var(--text2);line-height:1.75">Every game is scored on a <strong style="color:var(--text)">0–80 scale</strong> across two independent tracks. The <strong style="color:var(--text)">pre-game score</strong> evaluates lineup and pitching decisions before first pitch / if it reaches 52, the game is a confirmed punt and that verdict is locked. The <strong style="color:var(--text)">in-game score</strong> evaluates behavioral signals during play and can independently confirm a punt even if pre-game looked clean. <strong style="color:var(--red2)">≥ 52 = Punt · ≥ 36 = Review · Under 36 = Clean.</strong></p>
+          <p style="font-size:13px;color:var(--text2);line-height:1.75">Every game is scored on a <strong style="color:var(--text)">0–80 scale</strong> across two independent tracks. The <strong style="color:var(--text)">pre-game score</strong> evaluates lineup and pitching decisions before first pitch / if it reaches 46, the game is a confirmed punt and that verdict is locked. The <strong style="color:var(--text)">in-game score</strong> evaluates behavioral signals during play and can independently confirm a punt even if pre-game looked clean. <strong style="color:var(--red2)">≥ 46 = Punt · ≥ 28 = Review · Under 28 = Clean.</strong></p>
         </div>
         <div style="background:var(--surface);padding:24px 26px">
           <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:var(--text3);font-family:var(--font-mono);margin-bottom:10px">Why It Matters</div>
@@ -1983,7 +2031,7 @@
     <div style="margin-top:16px;background:rgba(212,43,43,0.06);border:1px solid rgba(212,43,43,0.2);border-radius:10px;padding:14px 18px;font-size:12px;color:var(--text2);line-height:1.8">
       <strong style="color:var(--red2)">🔒 Pre-Game Lock + Independent In-Game Track</strong><br>
       Pre-game and in-game are scored on separate 0–80 scales and evaluated independently.<br><br>
-      <strong style="color:var(--text)">Pre-game punt (≥ 52):</strong> Locked. A game confirmed before first pitch stays a punt regardless of in-game outcome. In-game signals add a small bonus but cannot reduce the classification.<br><br>
+      <strong style="color:var(--text)">Pre-game punt (≥ 46):</strong> Locked. A game confirmed before first pitch stays a punt regardless of in-game outcome. In-game signals add a small bonus but cannot reduce the classification.<br><br>
       <strong style="color:var(--text)">In-game punt:</strong> A clean or review pre-game can still become a punt from in-game behavior alone. The badge reads <span style="color:#f59e0b;font-family:var(--font-mono)">PUNT · IN-GAME</span> to distinguish it.<br><br>
       <strong style="color:var(--text)">Blended (neither confirmed):</strong> Pre-game dominates early, shifting toward in-game as innings accumulate. Final games weight in-game at 35%.
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px;font-size:11px">
@@ -2039,13 +2087,13 @@
 
     <div style="margin-top:16px;display:flex;gap:12px;flex-wrap:wrap">
       <div style="background:rgba(212,43,43,0.15);border:1px solid rgba(212,43,43,0.3);border-radius:8px;padding:10px 18px;font-size:12px">
-        <span style="color:var(--red2);font-weight:600">🚩 PUNT GAME</span> &nbsp;Score ≥ 52 <span style="color:var(--text3);font-size:10px">(of 80)</span>
+        <span style="color:var(--red2);font-weight:600">🚩 PUNT GAME</span> &nbsp;Score ≥ 46 <span style="color:var(--text3);font-size:10px">(of 80)</span>
       </div>
       <div style="background:rgba(230,126,34,0.12);border:1px solid rgba(230,126,34,0.3);border-radius:8px;padding:10px 18px;font-size:12px">
-        <span style="color:var(--orange);font-weight:600">🔍 MANUAL REVIEW</span> &nbsp;Score 36–51
+        <span style="color:var(--orange);font-weight:600">🔍 MANUAL REVIEW</span> &nbsp;Score 28–45
       </div>
       <div style="background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:8px;padding:10px 18px;font-size:12px;color:var(--text2)">
-        ✓ CLEAN &nbsp;Score &lt; 36
+        ✓ CLEAN &nbsp;Score &lt; 28
       </div>
     </div>
   </div>
@@ -2441,9 +2489,10 @@
       <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
         <div>
           <div style="font-family:var(--font-display);font-weight:700;font-size:14px;color:var(--text)">Score entire season</div>
-          <div style="font-size:11px;color:var(--text3);font-family:var(--font-mono);margin-top:2px">Walks every date from Opening Day to today, scores every MLB game, and logs it — so the review queue covers the whole season. Takes several minutes; your punt / not-punt decisions are kept. Safe to re-run.</div>
+          <div style="font-size:11px;color:var(--text3);font-family:var(--font-mono);margin-top:2px">Walks every date from Opening Day to today, scores every MLB game, and logs it — so the review queue covers the whole season. Takes several minutes; your punt / not-punt decisions are kept. Progress is saved after each day — if it stops (rate limit, closed tab), click Resume to pick up where it left off.</div>
         </div>
         <button id="rebuildBtn" onclick="rebuildSeasonLog()" style="background:var(--red2);border:none;color:#fff;border-radius:var(--r-md);padding:9px 16px;cursor:pointer;font-family:var(--font-mono);font-size:12px;font-weight:700;white-space:nowrap">↻ Score entire season</button>
+        <button id="rebuildClearBtn" onclick="clearRebuildCheckpoint();updateRebuildBtn()" style="display:none;background:transparent;border:1px solid var(--border);color:var(--text2);border-radius:var(--r-md);padding:9px 16px;cursor:pointer;font-family:var(--font-mono);font-size:12px;font-weight:700;white-space:nowrap;margin-left:6px">Start over</button>
       </div>
       <div id="rebuildProgress" style="margin-top:10px;font-size:12px;color:var(--text2);font-family:var(--font-mono);display:none"></div>
     </div>
@@ -2537,7 +2586,7 @@ const state = {
   logOverrides: {},
   logResults: {},
   teamData: {},
-  aceFipTracker: {},
+  aceEraTracker: {},
   retrograded: new Set(), // teams whose calibration games have been retroactively scored
 };
 const standingsCache = { lastFetch: null, data: {} };
@@ -3407,10 +3456,10 @@ async function analyzeDateSilent(dateVal, normalLineups) {
     games.flatMap(g => [g.teams.home.probablePitcher?.id, g.teams.away.probablePitcher?.id]).filter(Boolean)
   )];
   await prefetchPitcherStats(uniquePitcherIds);
-  // Analyze in small batches (not all ~15 at once) so we don't fire ~45
-  // simultaneous API calls per day and trip MLB's rate limiter.
+  // Analyze 2 games at a time with 300ms between batches — gentler on the
+  // MLB rate limiter than the 4/150ms used during live rendering.
   const analyzed = [];
-  const BATCH = 4;
+  const BATCH = 2;
   for (let i = 0; i < games.length; i += BATCH) {
     const slice = games.slice(i, i + BATCH);
     const res = await Promise.all(slice.map(g =>
@@ -3420,7 +3469,7 @@ async function analyzeDateSilent(dateVal, normalLineups) {
       })
     ));
     analyzed.push(...res.filter(Boolean));
-    if (i + BATCH < games.length) await new Promise(r => setTimeout(r, 150));
+    if (i + BATCH < games.length) await new Promise(r => setTimeout(r, 300));
   }
   return analyzed;
 }
@@ -3448,23 +3497,60 @@ function eachSeasonDate(start, end) {
 }
 
 let rebuildInProgress = false;
+
+const REBUILD_CKPT_KEY = () => `rebuildCheckpoint_${new Date().getFullYear()}`;
+function getRebuildCheckpoint() {
+  try { return JSON.parse(localStorage.getItem(REBUILD_CKPT_KEY()) || 'null'); } catch { return null; }
+}
+function setRebuildCheckpoint(cp) {
+  try { localStorage.setItem(REBUILD_CKPT_KEY(), JSON.stringify(cp)); } catch {}
+}
+function clearRebuildCheckpoint() {
+  try { localStorage.removeItem(REBUILD_CKPT_KEY()); } catch {}
+}
+function updateRebuildBtn() {
+  const btn = document.getElementById('rebuildBtn');
+  const clr = document.getElementById('rebuildClearBtn');
+  if (!btn) return;
+  const cp = getRebuildCheckpoint();
+  if (cp?.lastCompletedDate) {
+    btn.textContent = `↻ Resume from ${cp.lastCompletedDate}`;
+    if (clr) clr.style.display = 'inline';
+  } else {
+    btn.textContent = '↻ Score entire season';
+    if (clr) clr.style.display = 'none';
+  }
+}
+
 async function rebuildSeasonLog() {
   if (!isAdmin()) return;
   if (rebuildInProgress) return;
   if (!currentUser) { showToast('Sign in first', true); return; }
 
-  // FULL SEASON: every date from opening day to today — not just dates already
-  // in the log. New games are added and scored; existing ones are re-scored.
   const dates = eachSeasonDate(seasonStartDate(), localTodayStr());
   if (!dates.length) { showToast('No dates to process', true); return; }
+
+  // Resume from checkpoint if one exists from a previous interrupted run.
+  const cp = getRebuildCheckpoint();
+  const resumeFrom = cp?.lastCompletedDate || null;
+  const datesToProcess = resumeFrom ? dates.filter(d => d > resumeFrom) : [...dates];
+  const skippedDates = dates.length - datesToProcess.length;
 
   rebuildInProgress = true;
   const btn = document.getElementById('rebuildBtn');
   const prog = document.getElementById('rebuildProgress');
+  const clr = document.getElementById('rebuildClearBtn');
   if (btn) { btn.disabled = true; btn.style.opacity = '0.6'; btn.textContent = 'Scoring season…'; }
-  if (prog) { prog.style.display = 'block'; prog.textContent = `Loading current standings & lineups… (this scores all ${dates.length} days of the season and can take several minutes — keep this tab open)`; }
+  if (clr) clr.style.display = 'none';
+  if (prog) {
+    prog.style.display = 'block';
+    prog.textContent = resumeFrom
+      ? `Resuming from ${resumeFrom} — skipping ${skippedDates} already-scored days… (loading lineups)`
+      : `Loading current standings & lineups… (this scores all ${dates.length} days of the season and can take several minutes — keep this tab open)`;
+  }
 
-  let added = 0, rescored = 0, datesDone = 0, datesWithGames = 0, datesFailed = 0;
+  let added = 0, rescored = 0, datesDone = skippedDates, datesWithGames = 0, datesFailed = 0;
+  let completedNormally = false;
 
   try {
     // Fetch standings once, and normal (season-long) lineups once for ALL teams —
@@ -3476,7 +3562,7 @@ async function rebuildSeasonLog() {
     const fakeGames = allTeams.map(t => ({ teams: { home: { team: { id: t.id, name: t.name } }, away: { team: { id: t.id, name: t.name } } } }));
     const normalLineups = await fetchNormalLineups(allTeams.map(t => t.id), fakeGames);
 
-    for (const date of dates) {
+    for (const date of datesToProcess) {
       datesDone++;
       if (prog) prog.textContent = `Scoring ${date} … (day ${datesDone}/${dates.length} · ${added} added · ${rescored} updated)`;
 
@@ -3486,6 +3572,9 @@ async function rebuildSeasonLog() {
       } catch (e) {
         datesFailed++;
         console.error('[rebuild] date failed', date, e);
+        const msg = String(e?.message || e);
+        // Pause longer after a rate-limit hit before the next date.
+        await new Promise(r => setTimeout(r, msg.includes('429') || msg.includes('rate') ? 3000 : 600));
         continue;
       }
       if (analyzed.length) datesWithGames++;
@@ -3506,43 +3595,62 @@ async function rebuildSeasonLog() {
         // Existing game — re-score. logOverrides / logComments are separate
         // maps keyed by id and are NOT touched, so manual verdicts survive.
         const newFlag = g.flag, newScore = g.topScore;
-        const changed = entry.flag !== newFlag || entry.score !== newScore;
-        entry.flag = newFlag;
+        // If the admin has already decided this review game, keep flag='review'
+        // so it stays visible in the review queue even after rescoring.
+        const preservedFlag = (entry.flag === 'review' && state.logOverrides[id] !== undefined) ? 'review' : newFlag;
+        const changed = entry.flag !== preservedFlag || entry.score !== newScore;
+        entry.flag = preservedFlag;
         entry.score = newScore;
         entry.puntSide = g.puntSide;
-        entry.puntTeam = (newFlag === 'punt' || newFlag === 'review')
+        entry.puntTeam = (preservedFlag === 'punt' || preservedFlag === 'review')
           ? (g.puntSide === 'home' ? g.home.name : g.away.name) : '—';
         entry.breakdown = (typeof buildScoreBreakdown === 'function' ? buildScoreBreakdown(g) : []) || [];
         if (changed) { rescored++; saveIds.push(id); }
       }
 
-      // Persist this day's changes before moving on, so progress is durable
-      // even if a later day fails or rate-limits.
+      // Persist this day's changes before moving on.
       for (const id of saveIds) {
         try { await saveGameLogEntry(id); } catch (e) { console.error('[rebuild] save failed', id, e); }
       }
 
-      // Gentle pacing between days to stay under MLB API rate limits.
-      await new Promise(r => setTimeout(r, 400));
+      // Save checkpoint so the next run can skip this date.
+      setRebuildCheckpoint({ lastCompletedDate: date });
+
+      // 600ms between days — gentler than the previous 400ms.
+      await new Promise(r => setTimeout(r, 600));
     }
+    completedNormally = true;
   } catch (e) {
     console.error('[rebuild] fatal', e);
-    showToast('Scoring hit an error — see console. Progress so far was saved; you can run it again to finish.', true);
+    showToast('Scoring hit an error — see console. Progress was saved; click Resume to continue.', true);
   }
+
+  // Clear checkpoint only on a clean run (no fatal error, no per-date failures).
+  if (completedNormally && datesFailed === 0) clearRebuildCheckpoint();
 
   rebuildInProgress = false;
   state.gameLog.sort((a, b) => a.date.localeCompare(b.date) || b.score - a.score);
   rebuildTeamData();
   renderReviewQueue();
   updateReviewBadge();
-  if (btn) { btn.disabled = false; btn.style.opacity = '1'; btn.textContent = '↻ Score entire season'; }
+  if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
+  updateRebuildBtn();
 
   const reviewNow = state.gameLog.filter(e => e.flag === 'review' && state.logOverrides[e.id] === undefined).length;
   const puntNow = state.gameLog.filter(e => effectiveFlag(e) === 'punt').length;
-  if (prog) prog.textContent = `Done — ${datesWithGames} game days processed · ${added} games added · ${rescored} re-scored`
-    + `${datesFailed ? ` · ${datesFailed} days failed (run again to finish them)` : ''}. `
-    + `Log now holds ${state.gameLog.length} games · ${reviewNow} awaiting your review · ${puntNow} punts.`;
-  showToast(`Season scored — ${reviewNow} games in the review queue`);
+  if (prog) {
+    if (completedNormally && datesFailed === 0) {
+      prog.textContent = `Done — ${datesWithGames} game days processed · ${added} games added · ${rescored} re-scored. `
+        + `Log now holds ${state.gameLog.length} games · ${reviewNow} awaiting your review · ${puntNow} punts.`;
+    } else {
+      prog.textContent = `Paused at day ${datesDone}/${dates.length} · ${added} added · ${rescored} updated`
+        + `${datesFailed ? ` · ${datesFailed} days failed` : ''}. `
+        + `Click "Resume" to continue from where it stopped.`;
+    }
+  }
+  showToast(completedNormally && datesFailed === 0
+    ? `Season scored — ${reviewNow} games in the review queue`
+    : `Scoring paused — ${added} added, ${rescored} updated. Click Resume to finish.`);
 }
 // In-memory cache of historical lineups loaded from Supabase.
 // Structure: { teamName: [ { date, lineup: [], sp, spFip, spEra, opp } ] }
@@ -4231,7 +4339,7 @@ async function analyzeGame(game, normalLineups) {
   // less than 16hrs between games / stronger rest signal than generic B2B.
   // Detect by checking if today's game time is before 4pm local.
   const gameTime = game.gameDate ? new Date(game.gameDate) : null;
-  const isDayGame = gameTime ? gameTime.getUTCHours() < 20 : false; // before ~4pm ET = day game
+  const isDayGame = gameTime ? gameTime.getUTCHours() < 22 : false; // before ~6pm ET / catches West Coast 1pm starts
   const homeDayAfterNight = isDayGame && homePlayedYesterday;
   const awayDayAfterNight = isDayGame && awayPlayedYesterday;
 
@@ -4629,6 +4737,17 @@ function getLiveTeamQuality(teamName) {
     tier = 'rebuilding'; // keep tier for context labels
   }
 
+  // Wild card race: a team currently holding a playoff spot has less incentive
+  // to punt — every game genuinely matters when you're fighting to stay in.
+  // Only applies when the team isn't already clinched or eliminated.
+  // Caps motivation at 0.72 to prevent a .500 WC team from registering the
+  // same punt pressure as a division-leading contender.
+  if (live.wildCardEligible === true &&
+      live.clinched !== true && live.divisionChamp !== true &&
+      live.eliminationNumber !== 'E') {
+    puntMotivation = Math.min(puntMotivation, 0.72);
+  }
+
   return { ...base, tier, puntMotivation };
 }
 
@@ -4825,7 +4944,7 @@ function buildPlayerRecencyWeights(teamName) {
 }
 
 // ── PUNT SCORE / TEAM-QUALITY-AWARE ──────────────────────
-// Scale: 0–80. PUNT ≥ 52, REVIEW ≥ 36, CLEAN < 36.
+// Scale: 0–80. PUNT ≥ 46, REVIEW ≥ 28, CLEAN < 28.
 //
 // Fix #1: Ace disqualifier relative margin only applies after 3+ starts
 // Fix #2: FIP pitching signal weighted down when < 4 starts (noisy sample)
@@ -4835,7 +4954,7 @@ function buildPlayerRecencyWeights(teamName) {
 // Fix #6: Back-to-back game adds moderate fatigue bonus (motivation-scaled)
 // Fix #7: West→East same-day travel adds structural fatigue bonus
 // Fix #8: clinched vs eliminated tracked separately (label fix in breakdown)
-function computePuntScore({ effectiveBenched, fipDelta, eraDelta, isLastGame, isFirstGame,
+function computePuntScore({ effectiveBenched, eraDelta, isLastGame, isFirstGame,
   isDHNightcap, clinched, eliminated, gameDate, teamName,
   spFip, spEra, spStarts, seriesLength, isBackToBack, hasTravelFatigue,
   isDayAfterNight, consecutiveStreak }) {
@@ -5326,6 +5445,8 @@ function renderCard(g, idx) {
       ${inGameHTML}
 
       ${(isPunt || isReview) ? `<div class="pc2-foot"><button class="share-btn" onclick="event.stopPropagation();shareGame('${g.gid || idx}')">↗ Share</button></div>` : ''}
+
+      ${isPostponedF ? '' : `<div class="pc2-scorebar"><div class="pc2-scorebar-fill" style="width:${Math.min(100,(g.topScore/80*100)).toFixed(1)}%"></div></div>`}
     </div>
   `;
 }
@@ -6576,8 +6697,6 @@ async function fetchInGamePuntSignals(gid, puntSide, gameStatus) {
     const oppRuns  = puntSide === 'home' ? awayRuns : homeRuns;
     const runDiff  = puntRuns - oppRuns;
 
-    // Decisions (winning/losing pitcher) from boxscore
-    const decisions = boxscore?.info?.find ? null : null;
     const wp = boxscore?.decisions?.winner;
     const lp = boxscore?.decisions?.loser;
     const sv = boxscore?.decisions?.save;
@@ -7147,23 +7266,25 @@ function renderReviewQueue() {
     el.innerHTML = `<div class="rq-panel"><div class="rq-head"><div class="rq-title">Review Queue</div></div><div class="rq-empty">Sign in to review games and save your punt / no-punt decisions.</div></div>`;
     return;
   }
-  if (!isAdmin()) { el.innerHTML = ''; return; }   // signed in but not an admin
-  const games = getUnmarkedReviewGames();
-  if (!games.length) {
+  if (!isAdmin()) { el.innerHTML = ''; return; }
+
+  // All review-band games — both pending and already-decided — newest first.
+  const allReview = state.gameLog
+    .filter(e => e.flag === 'review')
+    .sort((a, b) => b.date.localeCompare(a.date) || (b.score || 0) - (a.score || 0));
+  const pending = allReview.filter(e => state.logOverrides[e.id] === undefined);
+  const decided = allReview.filter(e => state.logOverrides[e.id] !== undefined);
+
+  if (!allReview.length) {
     const totalLogged = state.gameLog.length;
-    const reviewTotal = state.gameLog.filter(e => e.flag === 'review').length;
-    let msg;
-    if (totalLogged === 0) {
-      msg = 'No games are in your season log yet. Only dates you actually open get logged — browse dates on the Today tab (or pick past dates) to populate it. If you HAVE opened dates and still see this, your saves may be failing — check the sync indicator and the browser console.';
-    } else if (reviewTotal === 0) {
-      msg = `No review-band games in your log of ${totalLogged} logged game${totalLogged === 1 ? '' : 's'}. Browse more dates to surface games that score 28–45.`;
-    } else {
-      msg = 'All review games have a decision. ✓ New review-band games (score 28–45) will appear here.';
-    }
-    el.innerHTML = `<div class="rq-panel"><div class="rq-head"><div class="rq-title">✓ Review Queue</div></div><div class="rq-empty">${msg}</div></div>`;
+    const msg = totalLogged === 0
+      ? 'No games are in your season log yet. Only dates you actually open get logged — browse dates on the Today tab (or pick past dates) to populate it. If you HAVE opened dates and still see this, your saves may be failing — check the sync indicator and the browser console.'
+      : `No review-band games in your log of ${totalLogged} logged game${totalLogged === 1 ? '' : 's'}. Browse more dates to surface games that score 28–45.`;
+    el.innerHTML = `<div class="rq-panel"><div class="rq-head"><div class="rq-title">Review Queue</div></div><div class="rq-empty">${msg}</div></div>`;
     return;
   }
-  const rows = games.map(g => {
+
+  const pendingRows = pending.map(g => {
     const idAttr = String(g.id).replace(/"/g, '&quot;');
     const idJs = String(g.id).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
     return `<div class="rq-row">
@@ -7178,12 +7299,42 @@ function renderReviewQueue() {
       </div>
     </div>`;
   }).join('');
+
+  const decidedRows = decided.map(g => {
+    const idJs = String(g.id).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+    const ov = state.logOverrides[g.id];
+    const vLabel = ov === true ? 'Punt' : 'Not a Punt';
+    const vColor = ov === true ? 'var(--red2)' : 'var(--green)';
+    return `<div class="rq-row" style="opacity:0.72">
+      <div class="rq-game" style="cursor:pointer" onclick="openReviewDetail('${idJs}')" title="Open box score & factors">
+        <div class="rq-matchup">${abbr(g.away)} @ ${abbr(g.home)} <span style="font-size:11px;color:var(--text3);font-weight:400">›</span></div>
+        <div class="rq-meta">${g.date} · leaning ${abbr(g.puntTeam)} · ${g.score}/80</div>
+      </div>
+      <div style="font-family:var(--font-mono);font-size:11px;color:${vColor};font-weight:700;padding:0 8px;white-space:nowrap">${vLabel} ✓</div>
+      <div class="rq-actions">
+        <button class="rq-btn" style="color:var(--text3);border-color:var(--border)" onclick="decideReview('${idJs}','revert')">Revert</button>
+      </div>
+    </div>`;
+  }).join('');
+
+  const decidedSep = decided.length
+    ? `<div style="padding:7px 18px;font-family:var(--font-mono);font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1.5px;background:rgba(255,255,255,0.015);border-top:1px solid var(--border)">Decided — ${decided.length} game${decided.length === 1 ? '' : 's'}</div>`
+    : '';
+
+  const headerTitle = pending.length
+    ? `Review Queue <span style="font-weight:400;font-size:11px;color:var(--text3);font-family:var(--font-mono)">— ${pending.length} need${pending.length === 1 ? 's' : ''} a decision</span>`
+    : `Review Queue <span style="font-weight:400;font-size:11px;color:var(--green);font-family:var(--font-mono)">— all decided ✓</span>`;
+  const headerCount = pending.length
+    ? `<span class="rq-count">${pending.length} pending</span>`
+    : `<span class="rq-count" style="color:var(--green);background:rgba(52,211,153,0.10);border-color:rgba(52,211,153,0.3)">${allReview.length} total</span>`;
+
   el.innerHTML = `<div class="rq-panel">
     <div class="rq-head">
-      <div class="rq-title">⚠️ Review Queue <span style="font-weight:400;font-size:11px;color:var(--text3);font-family:var(--font-mono)">needs a decision</span></div>
-      <span class="rq-count">${games.length} pending</span>
+      <div class="rq-title">${headerTitle}</div>
+      ${headerCount}
     </div>
-    ${rows}
+    ${pendingRows}
+    ${decided.length ? decidedSep + decidedRows : ''}
   </div>`;
 }
 
@@ -7198,6 +7349,7 @@ async function openReviewDetail(id) {
   if (!e) { el.innerHTML = ''; return; }
   reviewDetailId = id;
   const gamePk = String(id).split('_').pop();
+  const isValidGamePk = /^\d+$/.test(gamePk);
 
   // Scaling factors stored at log time.
   let factors = e.breakdown;
@@ -7206,33 +7358,84 @@ async function openReviewDetail(id) {
   const factorRows = factors.filter(f => f && f.val > 0).sort((a, b) => b.val - a.val)
     .map(f => `<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border)"><span style="color:var(--text2);font-size:12px">${f.label}</span><span style="color:var(--red2);font-family:var(--font-mono);font-size:12px;font-weight:700">+${f.val}</span></div>`).join('');
   const aceNote = factors.find(f => f && f.isAceNote);
+  const breakdownContent = factorRows
+    ? factorRows + (aceNote ? `<div style="margin-top:8px;font-size:11px;color:var(--text3);font-family:var(--font-mono)">${aceNote.label}</div>` : '')
+    : '<span style="color:var(--text3);font-size:12px;font-family:var(--font-mono)">Recomputing factors…</span>';
+
+  const rdBadgeClass  = e.flag === 'punt' ? 'flag' : e.flag === 'review' ? 'review' : 'clean';
+  const rdBadgeText   = e.flag === 'punt' ? 'Punt' : e.flag === 'review' ? 'Review' : 'Clean';
+  const rdScoreColor  = e.flag === 'punt' ? 'var(--red2)' : e.flag === 'review' ? 'var(--gold)' : 'var(--text2)';
+  const rdBorderColor = e.flag === 'punt' ? 'rgba(224,92,42,0.45)' : e.flag === 'review' ? 'rgba(232,184,75,0.35)' : 'var(--border)';
+  const rdBg = e.flag === 'punt'
+    ? 'linear-gradient(160deg, rgba(224,92,42,0.07) 0%, var(--surface) 40%)'
+    : e.flag === 'review'
+    ? 'linear-gradient(160deg, rgba(232,184,75,0.07) 0%, var(--surface) 40%)'
+    : 'var(--surface)';
 
   el.innerHTML = `
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);overflow:hidden">
+    <div style="background:${rdBg};border:1px solid ${rdBorderColor};border-radius:var(--r-lg);overflow:hidden">
       <div style="padding:16px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
-        <div>
-          <div style="font-family:var(--font-display);font-size:18px;font-weight:800;color:var(--text)">${abbr(e.away)} @ ${abbr(e.home)}</div>
-          <div style="font-family:var(--font-mono);font-size:11px;color:var(--text3);margin-top:2px">${e.date} · leaning ${abbr(e.puntTeam)} · algorithm score ${e.score}/80</div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+            <div style="font-family:var(--font-display);font-size:18px;font-weight:800;color:var(--text)">${abbr(e.away)} @ ${abbr(e.home)}</div>
+            <span class="punt-badge ${rdBadgeClass}">${rdBadgeText}</span>
+          </div>
+          <div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap">
+            <span style="font-family:var(--font-display);font-size:28px;font-weight:800;color:${rdScoreColor};letter-spacing:-1px;line-height:1">${e.score}</span>
+            <span style="font-family:var(--font-mono);font-size:13px;color:var(--text3)">/80</span>
+            <span style="font-family:var(--font-mono);font-size:11px;color:var(--text3)">${e.date} · ${abbr(e.puntTeam)} leaning punt</span>
+          </div>
         </div>
-        <div style="display:flex;gap:8px">
-          <button onclick="openGameflowForLog('${gamePk}','${e.date}')" style="background:var(--red2);border:none;color:#fff;border-radius:var(--r-md);padding:6px 12px;cursor:pointer;font-family:var(--font-mono);font-size:11px;font-weight:700">📈 Gameflow →</button>
-          <button onclick="closeReviewDetail()" style="background:transparent;border:1px solid var(--border2);color:var(--text2);border-radius:var(--r-md);padding:6px 12px;cursor:pointer;font-family:var(--font-mono);font-size:11px">✕ Close</button>
-        </div>
+        <button onclick="closeReviewDetail()" style="background:transparent;border:1px solid var(--border2);color:var(--text2);border-radius:var(--r-md);padding:6px 12px;cursor:pointer;font-family:var(--font-mono);font-size:11px">✕ Close</button>
       </div>
       <div style="padding:16px 18px;border-bottom:1px solid var(--border)">
         <div style="font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);font-family:var(--font-mono);margin-bottom:10px">Box Score</div>
         <div id="reviewBox-${gamePk}" style="overflow-x:auto"><span style="color:var(--text3);font-size:12px;font-family:var(--font-mono)">Loading box score…</span></div>
       </div>
       <div style="padding:16px 18px;border-bottom:1px solid var(--border)">
+        <div style="font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);font-family:var(--font-mono);margin-bottom:12px">Inning-by-Inning Gameflow</div>
+        <div id="reviewInlineGameflow-${gamePk}" style="background:var(--bg);border:1px solid var(--border);border-radius:var(--r-md);padding:20px;min-height:180px;display:flex;align-items:center;justify-content:center;gap:8px">
+          <div class="spinner"></div>
+          <span style="color:var(--text3);font-size:12px;font-family:var(--font-mono)">Loading gameflow…</span>
+        </div>
+      </div>
+      <div style="padding:16px 18px;border-bottom:1px solid var(--border)">
         <div style="font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);font-family:var(--font-mono);margin-bottom:10px">Scaling factors that contributed</div>
-        ${factorRows || '<span style="color:var(--text3);font-size:12px;font-family:var(--font-mono)">No factor breakdown stored for this game (older entry).</span>'}
-        ${aceNote ? `<div style="margin-top:8px;font-size:11px;color:var(--text3);font-family:var(--font-mono)">${aceNote.label}</div>` : ''}
+        <div id="reviewBreakdown-${gamePk}">${breakdownContent}</div>
       </div>
       <div id="reviewVerdictBlock" style="padding:16px 18px"></div>
     </div>`;
 
   renderReviewVerdictBlock(id);
   loadReviewBoxScore(gamePk, e);
+  if (!factorRows && isValidGamePk) recomputeReviewBreakdown(id, e, gamePk);
+  if (isValidGamePk) loadAndRenderGameflowInline(gamePk, e);
+}
+
+async function loadAndRenderGameflowInline(gamePk, logEntry) {
+  const container = document.getElementById('reviewInlineGameflow-' + gamePk);
+  if (!container) return;
+  const date = logEntry.date;
+  try {
+    if (!gameflowGamesCache[date]) {
+      const data = await apiFetch(`${BASE}/schedule?sportId=1&date=${date}&hydrate=probablePitcher,team,game(doubleHeader,gameNumber,dayNight)&gameType=R`);
+      const games = data?.dates?.[0]?.games || [];
+      gameflowGamesCache[date] = games.map(g => ({
+        gamePk: g.gamePk,
+        homeTeam: g.teams.home.team.name,
+        awayTeam: g.teams.away.team.name,
+        status: g.status?.detailedState || '',
+        isLive: g.status?.abstractGameState === 'Live',
+        isFinal: g.status?.abstractGameState === 'Final',
+        label: `${abbr(g.teams.away.team.name)} @ ${abbr(g.teams.home.team.name)}`,
+        rawGame: g,
+      }));
+    }
+    await renderGameflowChart(false, { gamePk, date, container });
+  } catch(err) {
+    if (container) container.innerHTML = `<div style="color:var(--text3);font-size:12px;font-family:var(--font-mono);text-align:center;padding:20px">Could not load gameflow chart.</div>`;
+    console.warn('loadAndRenderGameflowInline error:', err);
+  }
 }
 
 function closeReviewDetail() {
@@ -7264,29 +7467,102 @@ function renderReviewVerdictBlock(id) {
     <textarea oninput="saveVerdictReason('${sid}', this.value)" placeholder="Why is / isn't this a punt? (recorded as tuning feedback)" style="width:100%;min-height:70px;resize:vertical;background:var(--bg);border:1px solid var(--border);border-radius:var(--r-md);padding:10px 12px;color:var(--text);font-family:var(--font-body);font-size:13px;line-height:1.5;box-sizing:border-box">${reason}</textarea>`;
 }
 
+// Lazily-fetched season-long normal lineups, shared by the box-score detail
+// and the season rebuilder so we don't re-fetch on every panel open.
+let _normalLineupsCache = null;
+async function getCachedNormalLineups() {
+  if (_normalLineupsCache) return _normalLineupsCache;
+  await fetchStandings().catch(() => {});
+  const year = new Date().getFullYear();
+  const teamsData = await apiFetch(`${BASE}/teams?sportId=1&season=${year}`);
+  const allTeams = (teamsData?.teams || []).filter(t => t && t.id);
+  const fakeGames = allTeams.map(t => ({ teams: { home: { team: { id: t.id, name: t.name } }, away: { team: { id: t.id, name: t.name } } } }));
+  _normalLineupsCache = await fetchNormalLineups(allTeams.map(t => t.id), fakeGames);
+  return _normalLineupsCache;
+}
+
+// Re-score a single game on the fly and populate the breakdown panel.
+// Called when a log entry has no stored breakdown (pre-dates the feature).
+async function recomputeReviewBreakdown(id, e, gamePk) {
+  const breakdownEl = document.getElementById('reviewBreakdown-' + gamePk);
+  if (!breakdownEl) return;
+  try {
+    const normalLineups = await getCachedNormalLineups();
+    const sched = await apiFetch(`${BASE}/schedule?sportId=1&date=${e.date}&hydrate=probablePitcher,team,game(doubleHeader,gameNumber,dayNight)&gameType=R`);
+    const games = sched?.dates?.[0]?.games || [];
+    const targetGame = games.find(g => String(g.gamePk) === String(gamePk));
+    if (!targetGame) {
+      if (document.getElementById('reviewBreakdown-' + gamePk) === breakdownEl)
+        breakdownEl.innerHTML = '<span style="color:var(--text3);font-size:12px;font-family:var(--font-mono)">Could not locate game on MLB schedule.</span>';
+      return;
+    }
+    const analyzed = await analyzeGame(targetGame, normalLineups);
+    const newBreakdown = (typeof buildScoreBreakdown === 'function' ? buildScoreBreakdown(analyzed) : []) || [];
+    // Save back so it won't need recomputing next time this entry is opened.
+    const logEntry = state.gameLog.find(x => x.id === id);
+    if (logEntry) { logEntry.breakdown = newBreakdown; saveGameLogEntry(id).catch(() => {}); }
+    if (document.getElementById('reviewBreakdown-' + gamePk) !== breakdownEl) return;
+    const rows = newBreakdown.filter(f => f && f.val > 0).sort((a, b) => b.val - a.val)
+      .map(f => `<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border)"><span style="color:var(--text2);font-size:12px">${f.label}</span><span style="color:var(--red2);font-family:var(--font-mono);font-size:12px;font-weight:700">+${f.val}</span></div>`).join('');
+    const aceNote = newBreakdown.find(f => f && f.isAceNote);
+    breakdownEl.innerHTML = rows
+      ? rows + (aceNote ? `<div style="margin-top:8px;font-size:11px;color:var(--text3);font-family:var(--font-mono)">${aceNote.label}</div>` : '')
+      : '<span style="color:var(--text3);font-size:12px;font-family:var(--font-mono)">No scoring factors found (game scored below threshold).</span>';
+  } catch (err) {
+    console.error('[breakdown recompute]', err);
+    const el2 = document.getElementById('reviewBreakdown-' + gamePk);
+    if (el2) el2.innerHTML = '<span style="color:var(--text3);font-size:12px;font-family:var(--font-mono)">Could not recompute factors — see console.</span>';
+  }
+}
+
 async function loadReviewBoxScore(gamePk, e) {
   const box = document.getElementById('reviewBox-' + gamePk);
   if (!box) return;
+
+  // A Math.random() fingerprint in the id means the gamePk was never stored;
+  // the MLB API will always 404. Show a clear message rather than "rate-limiting."
+  if (!/^\d+$/.test(String(gamePk))) {
+    box.innerHTML = '<span style="color:var(--text3);font-size:12px;font-family:var(--font-mono)">Game ID not stored (entry pre-dates fix). Re-run the season scorer to repair.</span>';
+    return;
+  }
+
+  const fetchLinescore = () => apiFetch(`${BASE}/game/${gamePk}/linescore`, 6);
+
+  let ls;
   try {
-    const ls = await apiFetch(`${BASE}/game/${gamePk}/linescore`);
-    if (!ls || !ls.innings || !ls.innings.length) {
-      box.innerHTML = '<span style="color:var(--text3);font-size:12px;font-family:var(--font-mono)">No box score available (game may not have started).</span>';
+    ls = await fetchLinescore();
+  } catch (err1) {
+    // Auto-retry once after 4 s before giving up.
+    box.innerHTML = '<span style="color:var(--text3);font-size:12px;font-family:var(--font-mono)">Retrying…</span>';
+    await new Promise(r => setTimeout(r, 4000));
+    if (document.getElementById('reviewBox-' + gamePk) !== box) return; // panel closed while waiting
+    try {
+      ls = await fetchLinescore();
+    } catch (err2) {
+      const msg = String(err2?.message || err2);
+      const hint = msg.includes('429') ? 'rate limit — try again in a moment'
+        : msg.includes('404') ? 'game not found on MLB API'
+        : msg.slice(0, 80);
+      box.innerHTML = `<span style="color:var(--text3);font-size:12px;font-family:var(--font-mono)">Could not load box score (${hint}). <a onclick="retryReviewBox()" style="color:var(--red2);cursor:pointer;text-decoration:underline">Retry</a></span>`;
+      console.error('[reviewBox]', err2);
       return;
     }
-    const innings = ls.innings;
-    const cell = v => `<td style="padding:4px 8px;text-align:center;font-family:var(--font-mono);font-size:12px;color:var(--text2)">${v ?? '-'}</td>`;
-    const head = `<th style="padding:4px 8px;text-align:left"></th>` +
-      innings.map(i => `<th style="padding:4px 8px;text-align:center;font-size:10px;color:var(--text3);font-family:var(--font-mono)">${i.num}</th>`).join('') +
-      `<th style="padding:4px 10px;text-align:center;font-size:10px;color:var(--text);font-family:var(--font-mono)">R</th><th style="padding:4px 8px;text-align:center;font-size:10px;color:var(--text3);font-family:var(--font-mono)">H</th><th style="padding:4px 8px;text-align:center;font-size:10px;color:var(--text3);font-family:var(--font-mono)">E</th>`;
-    const row = (side, name) => `<tr><td style="padding:4px 8px;font-family:var(--font-display);font-weight:700;font-size:12px;color:var(--text)">${name}</td>` +
-      innings.map(i => cell(i[side]?.runs)).join('') +
-      `<td style="padding:4px 10px;text-align:center;font-family:var(--font-mono);font-size:13px;font-weight:700;color:var(--text)">${ls.teams?.[side]?.runs ?? '-'}</td>` +
-      cell(ls.teams?.[side]?.hits) + cell(ls.teams?.[side]?.errors) + `</tr>`;
-    box.innerHTML = `<table style="border-collapse:collapse;min-width:100%"><thead><tr>${head}</tr></thead><tbody>${row('away', abbr(e.away))}${row('home', abbr(e.home))}</tbody></table>`;
-  } catch (err) {
-    box.innerHTML = '<span style="color:var(--text3);font-size:12px;font-family:var(--font-mono)">Could not load box score (the MLB API may be rate-limiting). <a onclick="retryReviewBox()" style="color:var(--red2);cursor:pointer;text-decoration:underline">Retry</a></span>';
-    console.error('[reviewBox]', err);
   }
+
+  if (!ls || !ls.innings || !ls.innings.length) {
+    box.innerHTML = '<span style="color:var(--text3);font-size:12px;font-family:var(--font-mono)">No box score available (game may not have started).</span>';
+    return;
+  }
+  const innings = ls.innings;
+  const cell = v => `<td style="padding:4px 8px;text-align:center;font-family:var(--font-mono);font-size:12px;color:var(--text2)">${v ?? '-'}</td>`;
+  const head = `<th style="padding:4px 8px;text-align:left"></th>` +
+    innings.map(i => `<th style="padding:4px 8px;text-align:center;font-size:10px;color:var(--text3);font-family:var(--font-mono)">${i.num}</th>`).join('') +
+    `<th style="padding:4px 10px;text-align:center;font-size:10px;color:var(--text);font-family:var(--font-mono)">R</th><th style="padding:4px 8px;text-align:center;font-size:10px;color:var(--text3);font-family:var(--font-mono)">H</th><th style="padding:4px 8px;text-align:center;font-size:10px;color:var(--text3);font-family:var(--font-mono)">E</th>`;
+  const row = (side, name) => `<tr><td style="padding:4px 8px;font-family:var(--font-display);font-weight:700;font-size:12px;color:var(--text)">${name}</td>` +
+    innings.map(i => cell(i[side]?.runs)).join('') +
+    `<td style="padding:4px 10px;text-align:center;font-family:var(--font-mono);font-size:13px;font-weight:700;color:var(--text)">${ls.teams?.[side]?.runs ?? '-'}</td>` +
+    cell(ls.teams?.[side]?.hits) + cell(ls.teams?.[side]?.errors) + `</tr>`;
+  box.innerHTML = `<table style="border-collapse:collapse;min-width:100%"><thead><tr>${head}</tr></thead><tbody>${row('away', abbr(e.away))}${row('home', abbr(e.home))}</tbody></table>`;
 }
 
 function retryReviewBox() {
@@ -7694,7 +7970,7 @@ function renderWatchList(games) {
         team, score, eb, reasons,
         logoUrl: getTeamLogo(team.name),
         opp: side === 'home' ? g.away : g.home,
-        risk: score >= 52 ? 'high' : 'med',
+        risk: score >= PUNT_THRESH ? 'high' : 'med',
       });
     });
   });
@@ -7821,7 +8097,7 @@ function buildSparkline(history, width = 120, height = 28) {
     const y = height - 4 - ((s / max) * (height - 8));
     return `${x},${y}`;
   }).join(' ');
-  const color = scores[scores.length - 1] >= 52 ? 'var(--red2)' : scores[scores.length - 1] >= 36 ? 'var(--gold)' : 'var(--text3)';
+  const color = scores[scores.length - 1] >= PUNT_THRESH ? 'var(--red2)' : scores[scores.length - 1] >= REVIEW_THRESH ? 'var(--gold)' : 'var(--text3)';
   return `<svg viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
     <polyline points="${pts}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.8"/>
     <circle cx="${pts.split(' ').pop().split(',')[0]}" cy="${pts.split(' ').pop().split(',')[1]}" r="2.5" fill="${color}"/>
@@ -7931,7 +8207,7 @@ function showPage(page) {
     renderReviewQueue();
     updateReviewBadge();
     const rd = document.getElementById('reviewDetail'); if (rd) rd.innerHTML = '';
-    const rb = document.getElementById('rebuildBar'); if (rb) rb.style.display = isAdmin() ? 'block' : 'none';
+    const rb = document.getElementById('rebuildBar'); if (rb) rb.style.display = isAdmin() ? 'block' : 'none'; if (isAdmin()) updateRebuildBtn();
   }
 }
 
@@ -8094,15 +8370,17 @@ async function loadGameflowGames() {
   }
 }
 
-async function renderGameflowChart(silent = false) {
+async function renderGameflowChart(silent = false, inlineOpts = null) {
   const sel = document.getElementById('gameflowGameSelect');
-  const gamePk = sel?.value;
+  const gamePk = inlineOpts?.gamePk ?? sel?.value;
   const dp = document.getElementById('gameflowDatePicker');
-  const date = dp?.value;
-  const container = document.getElementById('gameflowContainer');
-  const meta = document.getElementById('gameflowMeta');
+  const date = inlineOpts?.date ?? dp?.value;
+  const container = inlineOpts?.container ?? document.getElementById('gameflowContainer');
+  const meta = inlineOpts ? null : document.getElementById('gameflowMeta');
+  const canvasId = inlineOpts ? `gameflowCanvas-${gamePk}` : 'gameflowCanvas';
+  const sigLogId = inlineOpts ? `gameflowSignalLog-${gamePk}` : 'gameflowSignalLog';
   if (!gamePk || !container) return;
-  if (!silent) { const _vp = document.getElementById('gameflowVerdict'); if (_vp) _vp.innerHTML = ''; }
+  if (!silent && !inlineOpts) { const _vp = document.getElementById('gameflowVerdict'); if (_vp) _vp.innerHTML = ''; }
 
   const games = gameflowGamesCache[date] || [];
   const gameInfo = games.find(g => String(g.gamePk) === String(gamePk));
@@ -8315,12 +8593,12 @@ async function renderGameflowChart(silent = false) {
             <span style="font-size:11px;color:var(--text3);font-family:var(--font-mono)">PUNT threshold (${PUNT_THRESH})</span>
           </div>
         </div>
-        <canvas id="gameflowCanvas" style="width:100%;display:block"></canvas>
-        <div id="gameflowSignalLog" style="margin-top:16px"></div>
+        <canvas id="${canvasId}" style="width:100%;display:block"></canvas>
+        <div id="${sigLogId}" style="margin-top:16px"></div>
       </div>`;
 
     await new Promise(r => setTimeout(r, 10));
-    const canvas = document.getElementById('gameflowCanvas');
+    const canvas = document.getElementById(canvasId);
     if (!canvas) return;
 
     const dpr = window.devicePixelRatio || 1;
@@ -8509,7 +8787,7 @@ async function renderGameflowChart(silent = false) {
     ctx.fillText('INNING', PAD.left + cW / 2, H - 6);
 
     // ── Signal log below chart ──
-    const sigLog = document.getElementById('gameflowSignalLog');
+    const sigLog = document.getElementById(sigLogId);
     if (sigLog) {
       const allSigs = points.flatMap(p =>
         (p.signals || []).map(s => ({ ...s, inning: p.inning, ptsLabel: `+${s.weight}` }))
@@ -8536,16 +8814,16 @@ async function renderGameflowChart(silent = false) {
         </div>` : `<div style="font-size:12px;color:var(--text3);padding:12px 0">No in-game signals detected — score driven by pre-game analysis only.</div>`;
     }
 
-    // ── Polling ──
-    if (gameInfo?.isLive && String(gamePk) !== String(gameflowActivePk)) {
-      startGameflowPolling(gamePk);
-    } else if (gameInfo?.isFinal) {
-      stopGameflowPolling();
-      gameflowActivePk = null;
+    // ── Polling + verdict panel (gameflow tab only, not inline in review detail) ──
+    if (!inlineOpts) {
+      if (gameInfo?.isLive && String(gamePk) !== String(gameflowActivePk)) {
+        startGameflowPolling(gamePk);
+      } else if (gameInfo?.isFinal) {
+        stopGameflowPolling();
+        gameflowActivePk = null;
+      }
+      if (!silent) renderVerdictPanel(logEntry);
     }
-
-    // ── Analyst verdict panel (skip on silent live-polls so a reason being typed isn't wiped) ──
-    if (!silent) renderVerdictPanel(logEntry);
 
   } catch(e) {
     if (!silent) container.innerHTML = '<div style="text-align:center;color:var(--text3);font-size:13px;padding:48px">⚠️ Could not load game data.</div>';
