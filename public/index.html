@@ -7218,24 +7218,28 @@ function saveComment(id, val) {
 // reason. The verdict overrides the algorithm in every punt count, and the
 // reason is stored as labeled tuning feedback.
 function setManualVerdict(id, verdict) {
-  if (!id || !isAdmin()) return;
-  if (verdict === 'punt')       state.logOverrides[id] = true;
-  else if (verdict === 'clean') state.logOverrides[id] = false;
-  else                          delete state.logOverrides[id];
+  if (!id || !isAdmin()) { showToast('Permission denied — sign in as admin', true); return; }
+  try {
+    if (verdict === 'punt')       state.logOverrides[id] = true;
+    else if (verdict === 'clean') state.logOverrides[id] = false;
+    else                          delete state.logOverrides[id];
 
-  // Reflect in every punt count immediately.
-  rebuildTeamData();
-  state.seasonPunts = state.gameLog.filter(e => effectiveFlag(e) === 'punt').length;
-  const ss = document.getElementById('statSeason'); if (ss) ss.textContent = state.seasonPunts;
-  if (typeof renderTeamBreakdown === 'function') renderTeamBreakdown();
-  if (typeof renderLeaders === 'function') renderLeaders();
+    rebuildTeamData();
+    state.seasonPunts = state.gameLog.filter(e => effectiveFlag(e) === 'punt').length;
+    const ss = document.getElementById('statSeason'); if (ss) ss.textContent = state.seasonPunts;
+    if (typeof renderTeamBreakdown === 'function') renderTeamBreakdown();
+    if (typeof renderLeaders === 'function') renderLeaders();
 
-  saveGameLogEntry(id);
-  renderVerdictPanel(state.gameLog.find(e => e.id === id) || { id });
-  if (typeof renderReviewQueue === 'function') renderReviewQueue();
-  if (typeof updateReviewBadge === 'function') updateReviewBadge();
-  if (typeof renderReviewVerdictBlock === 'function' && reviewDetailId === id) renderReviewVerdictBlock(id);
-  showToast(verdict === 'punt' ? 'Marked as PUNT — counts updated' : verdict === 'clean' ? 'Marked NOT a punt' : 'Reverted to algorithm verdict');
+    saveGameLogEntry(id);
+    renderVerdictPanel(state.gameLog.find(e => e.id === id) || { id });
+    if (typeof renderReviewQueue === 'function') renderReviewQueue();
+    if (typeof updateReviewBadge === 'function') updateReviewBadge();
+    if (typeof renderReviewVerdictBlock === 'function' && reviewDetailId === id) renderReviewVerdictBlock(id);
+    showToast(verdict === 'punt' ? 'Marked as PUNT — counts updated' : verdict === 'clean' ? 'Marked NOT a punt' : 'Reverted to algorithm verdict');
+  } catch(err) {
+    console.error('setManualVerdict error:', err);
+    showToast('Error saving verdict: ' + (err.message || err), true);
+  }
 }
 
 // ── Review Queue: every review-band game needs a punt / no-punt decision ──
@@ -7455,16 +7459,16 @@ function renderReviewVerdictBlock(id) {
   const chip = ov === true ? '<span style="color:var(--red2);font-weight:700">🚩 PUNT</span>'
     : ov === false ? '<span style="color:var(--green);font-weight:700">✓ Not a punt</span>'
     : '<span style="color:var(--text3)">No decision yet</span>';
-  const btn = (label, v, a, col) => `<button onclick="setManualVerdict('${sid}','${v}')" style="flex:1;padding:9px 10px;border-radius:var(--r-md);cursor:pointer;font-family:var(--font-mono);font-size:11px;font-weight:700;border:1px solid ${a ? col : 'var(--border2)'};background:${a ? col + '22' : 'transparent'};color:${a ? col : 'var(--text2)'}">${label}</button>`;
+  const mkBtn = (label, v, a, col, bgDim) => `<button onclick="setManualVerdict('${sid}','${v}')" style="flex:1;padding:9px 10px;border-radius:var(--r-md);cursor:pointer;font-family:var(--font-mono);font-size:11px;font-weight:700;border:1px solid ${a ? col : 'var(--border2)'};background:${a ? bgDim : 'transparent'};color:${a ? col : 'var(--text2)'}">${label}</button>`;
   el.innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
       <div style="font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);font-family:var(--font-mono)">Your review</div>
       <div style="font-size:12px;font-family:var(--font-mono)">${chip}</div>
     </div>
     <div style="display:flex;gap:8px;margin-bottom:12px">
-      ${btn('🚩 Mark PUNT', 'punt', ov === true, 'var(--red2)')}
-      ${btn('✓ Not a Punt', 'clean', ov === false, 'var(--green)')}
-      ${btn('↺ Use Algorithm', 'auto', ov === undefined, 'var(--text3)')}
+      ${mkBtn('🚩 Mark PUNT', 'punt', ov === true, 'var(--red2)', 'var(--red-dim)')}
+      ${mkBtn('✓ Not a Punt', 'clean', ov === false, 'var(--green)', 'var(--green-dim)')}
+      ${mkBtn('↺ Use Algorithm', 'auto', ov === undefined, 'var(--text2)', 'var(--muted)')}
     </div>
     <textarea oninput="saveVerdictReason('${sid}', this.value)" placeholder="Why is / isn't this a punt? (recorded as tuning feedback)" style="width:100%;min-height:70px;resize:vertical;background:var(--bg);border:1px solid var(--border);border-radius:var(--r-md);padding:10px 12px;color:var(--text);font-family:var(--font-body);font-size:13px;line-height:1.5;box-sizing:border-box">${reason}</textarea>`;
 }
@@ -7627,7 +7631,7 @@ function renderVerdictPanel(logEntry) {
       flex:1;padding:9px 10px;border-radius:var(--r-md);cursor:pointer;font-family:var(--font-mono);
       font-size:11px;font-weight:700;letter-spacing:0.5px;transition:all .15s;
       border:1px solid ${isActive ? activeColor : 'var(--border2)'};
-      background:${isActive ? activeColor + '22' : 'transparent'};
+      background:${isActive ? (activeColor === 'var(--red2)' ? 'var(--red-dim)' : activeColor === 'var(--green)' ? 'var(--green-dim)' : 'var(--muted)') : 'transparent'};
       color:${isActive ? activeColor : 'var(--text2)'}">${label}</button>`;
 
   el.innerHTML = `
