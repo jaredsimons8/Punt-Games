@@ -4150,7 +4150,7 @@ async function fetchLineupOPS(playerNames, teamId) {
   if (!playerNames?.length || !teamId) return {};
   try {
     const year = new Date().getFullYear();
-    const data = await apiFetch(`${BASE}/teams/${teamId}/roster?rosterType=active&season=${year}&hydrate=person(stats(type=season,group=hitting))`);
+    const data = await apiFetch(`${BASE}/teams/${teamId}/roster?rosterType=40Man&season=${year}&hydrate=person(stats(type=season,group=hitting))`);
     const result = {};
     (data.roster || []).forEach(p => {
       const name = p.person?.fullName;
