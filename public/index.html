@@ -3595,9 +3595,11 @@ async function rebuildSeasonLog() {
         // Existing game — re-score. logOverrides / logComments are separate
         // maps keyed by id and are NOT touched, so manual verdicts survive.
         const newFlag = g.flag, newScore = g.topScore;
-        // If the admin has already decided this review game, keep flag='review'
-        // so it stays visible in the review queue even after rescoring.
-        const preservedFlag = (entry.flag === 'review' && state.logOverrides[id] !== undefined) ? 'review' : newFlag;
+        // Once a game is in the review band, preserve that flag so it stays
+        // in the admin queue. Only the admin's override changes its effective verdict.
+        // This applies to BOTH decided and undecided review games — removing a game
+        // from the queue should be an explicit admin decision, not a side-effect of rescoring.
+        const preservedFlag = entry.flag === 'review' ? 'review' : newFlag;
         const changed = entry.flag !== preservedFlag || entry.score !== newScore;
         entry.flag = preservedFlag;
         entry.score = newScore;
