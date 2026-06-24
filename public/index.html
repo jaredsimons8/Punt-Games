@@ -5541,6 +5541,7 @@ function buildLogEntry(g, dateVal) {
     homeSPFip: g.homeSP.fip,
     benched: g.puntSide === 'home' ? g.homeAbsences.benched : g.awayAbsences.benched,
     score: g.topScore,
+    preGameScore: g.preGameScore ?? g.topScore,
     flag: g.flag,
     breakdown: (typeof buildScoreBreakdown === 'function' ? buildScoreBreakdown(g) : []) || [],
   };
@@ -8439,12 +8440,16 @@ async function renderGameflowChart(silent = false, inlineOpts = null) {
     const homeName = gameInfo?.homeTeam || 'Home';
 
     // ── Step 2: look up scored game from state.gameLog ──
-    // Match by gamePk (last segment of gid) or by teams + date
+    // Match by gamePk (last segment of gid) or by teams + date.
+    // Supabase-loaded entries have e.home/e.away as plain strings; in-session
+    // entries may have objects with .name. Handle both.
     let logEntry = state.gameLog.find(e => {
       if (e.gid && String(e.gid).includes(String(gamePk))) return true;
       if (e.date === date) {
-        const homeMatch = e.home?.name === homeName || abbr(e.home?.name||'') === abbr(homeName);
-        const awayMatch = e.away?.name === awayName || abbr(e.away?.name||'') === abbr(awayName);
+        const eHome = typeof e.home === 'string' ? e.home : (e.home?.name || '');
+        const eAway = typeof e.away === 'string' ? e.away : (e.away?.name || '');
+        const homeMatch = eHome === homeName || abbr(eHome) === abbr(homeName);
+        const awayMatch = eAway === awayName || abbr(eAway) === abbr(awayName);
         return homeMatch && awayMatch;
       }
       return false;
@@ -8479,9 +8484,11 @@ async function renderGameflowChart(silent = false, inlineOpts = null) {
 
     // ── Step 3: determine which side is the punt candidate ──
     const puntSide = logEntry?.puntSide || 'home';
-    const preGameScore = logEntry?.preGameScore ?? 0;
+    // Old Supabase entries lack preGameScore; fall back to score (the final score,
+    // which equals preGameScore when there are no in-game signals).
+    const preGameScore = logEntry?.preGameScore ?? logEntry?.score ?? 0;
     const inGameSignals = logEntry?.inGameSignals || [];
-    const totalScore = logEntry?.topScore ?? preGameScore;
+    const totalScore = logEntry?.topScore ?? logEntry?.score ?? preGameScore;
 
     // ── Step 4: build inning-by-inning punt score timeline ──
     // Pre-game score is the baseline at inning 0.
