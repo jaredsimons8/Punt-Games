@@ -7393,15 +7393,15 @@ async function openReviewDetail(id) {
         <div id="reviewBox-${gamePk}" style="overflow-x:auto"><span style="color:var(--text3);font-size:12px;font-family:var(--font-mono)">Loading box score…</span></div>
       </div>
       <div style="padding:16px 18px;border-bottom:1px solid var(--border)">
-        <div style="font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);font-family:var(--font-mono);margin-bottom:10px">Scaling factors that contributed</div>
-        <div id="reviewBreakdown-${gamePk}">${breakdownContent}</div>
-      </div>
-      <div style="padding:16px 18px;border-bottom:1px solid var(--border)">
         <div style="font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);font-family:var(--font-mono);margin-bottom:12px">Inning-by-Inning Gameflow</div>
         <div id="reviewInlineGameflow-${gamePk}" style="background:var(--bg);border:1px solid var(--border);border-radius:var(--r-md);padding:20px;min-height:180px;display:flex;align-items:center;justify-content:center;gap:8px">
           <div class="spinner"></div>
           <span style="color:var(--text3);font-size:12px;font-family:var(--font-mono)">Loading gameflow…</span>
         </div>
+      </div>
+      <div style="padding:16px 18px;border-bottom:1px solid var(--border)">
+        <div style="font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);font-family:var(--font-mono);margin-bottom:10px">Scaling factors that contributed</div>
+        <div id="reviewBreakdown-${gamePk}">${breakdownContent}</div>
       </div>
       <div id="reviewVerdictBlock" style="padding:16px 18px"></div>
     </div>`;
