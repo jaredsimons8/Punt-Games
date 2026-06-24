@@ -3595,11 +3595,14 @@ async function rebuildSeasonLog() {
         // Existing game — re-score. logOverrides / logComments are separate
         // maps keyed by id and are NOT touched, so manual verdicts survive.
         const newFlag = g.flag, newScore = g.topScore;
-        const changed = entry.flag !== newFlag || entry.score !== newScore;
-        entry.flag = newFlag;
+        // If the admin has already decided this review game, keep flag='review'
+        // so it stays visible in the review queue even after rescoring.
+        const preservedFlag = (entry.flag === 'review' && state.logOverrides[id] !== undefined) ? 'review' : newFlag;
+        const changed = entry.flag !== preservedFlag || entry.score !== newScore;
+        entry.flag = preservedFlag;
         entry.score = newScore;
         entry.puntSide = g.puntSide;
-        entry.puntTeam = (newFlag === 'punt' || newFlag === 'review')
+        entry.puntTeam = (preservedFlag === 'punt' || preservedFlag === 'review')
           ? (g.puntSide === 'home' ? g.home.name : g.away.name) : '—';
         entry.breakdown = (typeof buildScoreBreakdown === 'function' ? buildScoreBreakdown(g) : []) || [];
         if (changed) { rescored++; saveIds.push(id); }
@@ -7263,23 +7266,25 @@ function renderReviewQueue() {
     el.innerHTML = `<div class="rq-panel"><div class="rq-head"><div class="rq-title">Review Queue</div></div><div class="rq-empty">Sign in to review games and save your punt / no-punt decisions.</div></div>`;
     return;
   }
-  if (!isAdmin()) { el.innerHTML = ''; return; }   // signed in but not an admin
-  const games = getUnmarkedReviewGames();
-  if (!games.length) {
+  if (!isAdmin()) { el.innerHTML = ''; return; }
+
+  // All review-band games — both pending and already-decided — newest first.
+  const allReview = state.gameLog
+    .filter(e => e.flag === 'review')
+    .sort((a, b) => b.date.localeCompare(a.date) || (b.score || 0) - (a.score || 0));
+  const pending = allReview.filter(e => state.logOverrides[e.id] === undefined);
+  const decided = allReview.filter(e => state.logOverrides[e.id] !== undefined);
+
+  if (!allReview.length) {
     const totalLogged = state.gameLog.length;
-    const reviewTotal = state.gameLog.filter(e => e.flag === 'review').length;
-    let msg;
-    if (totalLogged === 0) {
-      msg = 'No games are in your season log yet. Only dates you actually open get logged — browse dates on the Today tab (or pick past dates) to populate it. If you HAVE opened dates and still see this, your saves may be failing — check the sync indicator and the browser console.';
-    } else if (reviewTotal === 0) {
-      msg = `No review-band games in your log of ${totalLogged} logged game${totalLogged === 1 ? '' : 's'}. Browse more dates to surface games that score 28–45.`;
-    } else {
-      msg = 'All review games have a decision. ✓ New review-band games (score 28–45) will appear here.';
-    }
-    el.innerHTML = `<div class="rq-panel"><div class="rq-head"><div class="rq-title">✓ Review Queue</div></div><div class="rq-empty">${msg}</div></div>`;
+    const msg = totalLogged === 0
+      ? 'No games are in your season log yet. Only dates you actually open get logged — browse dates on the Today tab (or pick past dates) to populate it. If you HAVE opened dates and still see this, your saves may be failing — check the sync indicator and the browser console.'
+      : `No review-band games in your log of ${totalLogged} logged game${totalLogged === 1 ? '' : 's'}. Browse more dates to surface games that score 28–45.`;
+    el.innerHTML = `<div class="rq-panel"><div class="rq-head"><div class="rq-title">Review Queue</div></div><div class="rq-empty">${msg}</div></div>`;
     return;
   }
-  const rows = games.map(g => {
+
+  const pendingRows = pending.map(g => {
     const idAttr = String(g.id).replace(/"/g, '&quot;');
     const idJs = String(g.id).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
     return `<div class="rq-row">
@@ -7294,12 +7299,42 @@ function renderReviewQueue() {
       </div>
     </div>`;
   }).join('');
+
+  const decidedRows = decided.map(g => {
+    const idJs = String(g.id).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+    const ov = state.logOverrides[g.id];
+    const vLabel = ov === true ? 'Punt' : 'Not a Punt';
+    const vColor = ov === true ? 'var(--red2)' : 'var(--green)';
+    return `<div class="rq-row" style="opacity:0.72">
+      <div class="rq-game" style="cursor:pointer" onclick="openReviewDetail('${idJs}')" title="Open box score & factors">
+        <div class="rq-matchup">${abbr(g.away)} @ ${abbr(g.home)} <span style="font-size:11px;color:var(--text3);font-weight:400">›</span></div>
+        <div class="rq-meta">${g.date} · leaning ${abbr(g.puntTeam)} · ${g.score}/80</div>
+      </div>
+      <div style="font-family:var(--font-mono);font-size:11px;color:${vColor};font-weight:700;padding:0 8px;white-space:nowrap">${vLabel} ✓</div>
+      <div class="rq-actions">
+        <button class="rq-btn" style="color:var(--text3);border-color:var(--border)" onclick="decideReview('${idJs}','revert')">Revert</button>
+      </div>
+    </div>`;
+  }).join('');
+
+  const decidedSep = decided.length
+    ? `<div style="padding:7px 18px;font-family:var(--font-mono);font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1.5px;background:rgba(255,255,255,0.015);border-top:1px solid var(--border)">Decided — ${decided.length} game${decided.length === 1 ? '' : 's'}</div>`
+    : '';
+
+  const headerTitle = pending.length
+    ? `Review Queue <span style="font-weight:400;font-size:11px;color:var(--text3);font-family:var(--font-mono)">— ${pending.length} need${pending.length === 1 ? 's' : ''} a decision</span>`
+    : `Review Queue <span style="font-weight:400;font-size:11px;color:var(--green);font-family:var(--font-mono)">— all decided ✓</span>`;
+  const headerCount = pending.length
+    ? `<span class="rq-count">${pending.length} pending</span>`
+    : `<span class="rq-count" style="color:var(--green);background:rgba(52,211,153,0.10);border-color:rgba(52,211,153,0.3)">${allReview.length} total</span>`;
+
   el.innerHTML = `<div class="rq-panel">
     <div class="rq-head">
-      <div class="rq-title">⚠️ Review Queue <span style="font-weight:400;font-size:11px;color:var(--text3);font-family:var(--font-mono)">needs a decision</span></div>
-      <span class="rq-count">${games.length} pending</span>
+      <div class="rq-title">${headerTitle}</div>
+      ${headerCount}
     </div>
-    ${rows}
+    ${pendingRows}
+    ${decided.length ? decidedSep + decidedRows : ''}
   </div>`;
 }
 
