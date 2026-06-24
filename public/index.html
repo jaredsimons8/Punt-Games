@@ -5591,7 +5591,7 @@ function rebuildTeamData() {
     const entries = state.gameLog.filter(e =>
       (e.away === t.name || e.home === t.name) && e.flag !== 'postponed'
     );
-    const punts = entries.filter(e => effectiveFlag(e) === 'punt');
+    const punts = entries.filter(e => effectiveFlag(e) === 'punt' && e.puntTeam === t.name);
 
     // Derive W/L record specifically on punt games using logResults
     let puntW = 0, puntL = 0;
