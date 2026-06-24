@@ -7534,11 +7534,15 @@ async function recomputeReviewBreakdown(id, e, gamePk) {
       return;
     }
     const analyzed = await analyzeGame(targetGame, normalLineups);
-    const newBreakdown = (typeof buildScoreBreakdown === 'function' ? buildScoreBreakdown(analyzed) : []) || [];
+    const freshBreakdown = (typeof buildScoreBreakdown === 'function' ? buildScoreBreakdown(analyzed) : []) || [];
 
-    // Save pre-game breakdown back so it won't need recomputing next time.
+    // Save back if fresh recompute has content; otherwise keep what was stored.
     const logEntry = state.gameLog.find(x => x.id === id);
-    if (logEntry) { logEntry.breakdown = newBreakdown; saveGameLogEntry(id).catch(() => {}); }
+    const storedBreakdown = (logEntry?.breakdown || []);
+    const newBreakdown = freshBreakdown.some(f => f && f.val > 0) ? freshBreakdown : storedBreakdown;
+    if (logEntry && freshBreakdown.some(f => f && f.val > 0)) {
+      logEntry.breakdown = newBreakdown; saveGameLogEntry(id).catch(() => {});
+    }
     if (document.getElementById('reviewBreakdown-' + gamePk) !== breakdownEl) return;
 
     const preGameRows = newBreakdown.filter(f => f && f.val > 0).sort((a, b) => b.val - a.val)
@@ -8865,12 +8869,13 @@ async function renderGameflowChart(silent = false, inlineOpts = null) {
 
       const preGameBreakdown = logEntry?.breakdown || [];
 
-      sigLog.innerHTML = allSigs.length || preGameBreakdown.length ? `
+      const hasChartData = allSigs.length || preGameBreakdown.length || preGameScore > 0;
+      sigLog.innerHTML = hasChartData ? `
         <div style="font-size:9px;text-transform:uppercase;letter-spacing:2px;color:var(--text3);font-family:var(--font-mono);margin-bottom:8px">Score Breakdown</div>
         <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r-md);overflow:hidden">
           ${preGameScore > 0 ? `<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 14px;border-bottom:1px solid var(--border)">
-            <span style="font-size:12px;color:var(--text2)">Pre-game signals</span>
-            <span style="font-family:var(--font-mono);font-size:11px;color:var(--text3)">${preGameScore} pts baseline</span>
+            <span style="font-size:12px;color:var(--text2)">Pre-game assessment</span>
+            <span style="font-family:var(--font-mono);font-size:11px;color:var(--text3)">${preGameScore} pts${allSigs.length === 0 ? ' — no in-game signals (close game)' : ''}</span>
           </div>` : ''}
           ${allSigs.map(s => `
           <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 14px;border-bottom:1px solid var(--border)">
@@ -8881,7 +8886,7 @@ async function renderGameflowChart(silent = false, inlineOpts = null) {
             <span style="font-size:12px;color:var(--text);font-weight:600">Final Score</span>
             <span style="font-family:var(--font-mono);font-size:13px;color:${totalScore >= PUNT_THRESH ? 'var(--red2)' : totalScore >= REVIEW_THRESH ? 'var(--gold)' : 'var(--text2)'};font-weight:700">${totalScore} / 80</span>
           </div>
-        </div>` : `<div style="font-size:12px;color:var(--text3);padding:12px 0">No in-game signals detected — score driven by pre-game analysis only.</div>`;
+        </div>` : `<div style="font-size:12px;color:var(--text3);padding:12px 0">No gameflow data available.</div>`;
     }
 
     // ── Polling + verdict panel (gameflow tab only, not inline in review detail) ──
