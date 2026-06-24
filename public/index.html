@@ -7347,6 +7347,18 @@ function renderReviewQueue() {
 // ── Review detail: full box score + scaling factors + verdict/notes ──
 let reviewDetailId = null;
 
+// Looks up the real MLB gamePk for a log entry that was saved without one.
+async function resolveGamePkForEntry(e) {
+  const data = await apiFetch(`${BASE}/schedule?sportId=1&date=${e.date}&hydrate=team&gameType=R`);
+  const games = data?.dates?.[0]?.games || [];
+  const match = games.find(g => {
+    const a = g.teams?.away?.team?.name || '';
+    const h = g.teams?.home?.team?.name || '';
+    return abbr(a) === abbr(e.away) && abbr(h) === abbr(e.home);
+  });
+  return match?.gamePk ? String(match.gamePk) : null;
+}
+
 async function openReviewDetail(id) {
   if (!isAdmin()) return;
   const el = document.getElementById('reviewDetail');
@@ -7354,8 +7366,16 @@ async function openReviewDetail(id) {
   const e = state.gameLog.find(x => x.id === id);
   if (!e) { el.innerHTML = ''; return; }
   reviewDetailId = id;
-  const gamePk = String(id).split('_').pop();
-  const isValidGamePk = /^\d+$/.test(gamePk);
+  let gamePk = String(id).split('_').pop();
+  let isValidGamePk = /^\d+$/.test(gamePk);
+
+  // Old entries used Math.random() instead of the real gamePk. Resolve it
+  // automatically from the MLB schedule so nothing requires a re-run.
+  if (!isValidGamePk) {
+    el.innerHTML = `<div style="padding:24px;color:var(--text3);font-size:12px;font-family:var(--font-mono)">Resolving game data for ${abbr(e.away)} @ ${abbr(e.home)} on ${e.date}…</div>`;
+    const resolved = await resolveGamePkForEntry(e).catch(() => null);
+    if (resolved) { gamePk = resolved; isValidGamePk = true; }
+  }
 
   // Scaling factors stored at log time.
   let factors = e.breakdown;
@@ -7532,10 +7552,8 @@ async function loadReviewBoxScore(gamePk, e) {
   const box = document.getElementById('reviewBox-' + gamePk);
   if (!box) return;
 
-  // A Math.random() fingerprint in the id means the gamePk was never stored;
-  // the MLB API will always 404. Show a clear message rather than "rate-limiting."
   if (!/^\d+$/.test(String(gamePk))) {
-    box.innerHTML = '<span style="color:var(--text3);font-size:12px;font-family:var(--font-mono)">Game ID not stored (entry pre-dates fix). Re-run the season scorer to repair.</span>';
+    box.innerHTML = '<span style="color:var(--text3);font-size:12px;font-family:var(--font-mono)">Could not resolve game ID — try refreshing.</span>';
     return;
   }
 
