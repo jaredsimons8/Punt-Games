@@ -3429,10 +3429,10 @@ async function analyzeDateSilent(dateVal, normalLineups) {
     games.flatMap(g => [g.teams.home.probablePitcher?.id, g.teams.away.probablePitcher?.id]).filter(Boolean)
   )];
   await prefetchPitcherStats(uniquePitcherIds);
-  // Analyze in small batches (not all ~15 at once) so we don't fire ~45
-  // simultaneous API calls per day and trip MLB's rate limiter.
+  // Analyze 2 games at a time with 300ms between batches — gentler on the
+  // MLB rate limiter than the 4/150ms used during live rendering.
   const analyzed = [];
-  const BATCH = 4;
+  const BATCH = 2;
   for (let i = 0; i < games.length; i += BATCH) {
     const slice = games.slice(i, i + BATCH);
     const res = await Promise.all(slice.map(g =>
@@ -3442,7 +3442,7 @@ async function analyzeDateSilent(dateVal, normalLineups) {
       })
     ));
     analyzed.push(...res.filter(Boolean));
-    if (i + BATCH < games.length) await new Promise(r => setTimeout(r, 150));
+    if (i + BATCH < games.length) await new Promise(r => setTimeout(r, 300));
   }
   return analyzed;
 }
@@ -7278,6 +7278,7 @@ async function openReviewDetail(id) {
   if (!e) { el.innerHTML = ''; return; }
   reviewDetailId = id;
   const gamePk = String(id).split('_').pop();
+  const isValidGamePk = /^\d+$/.test(gamePk);
 
   // Scaling factors stored at log time.
   let factors = e.breakdown;
@@ -7286,6 +7287,9 @@ async function openReviewDetail(id) {
   const factorRows = factors.filter(f => f && f.val > 0).sort((a, b) => b.val - a.val)
     .map(f => `<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border)"><span style="color:var(--text2);font-size:12px">${f.label}</span><span style="color:var(--red2);font-family:var(--font-mono);font-size:12px;font-weight:700">+${f.val}</span></div>`).join('');
   const aceNote = factors.find(f => f && f.isAceNote);
+  const breakdownContent = factorRows
+    ? factorRows + (aceNote ? `<div style="margin-top:8px;font-size:11px;color:var(--text3);font-family:var(--font-mono)">${aceNote.label}</div>` : '')
+    : '<span style="color:var(--text3);font-size:12px;font-family:var(--font-mono)">Recomputing factors…</span>';
 
   el.innerHTML = `
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);overflow:hidden">
@@ -7305,14 +7309,14 @@ async function openReviewDetail(id) {
       </div>
       <div style="padding:16px 18px;border-bottom:1px solid var(--border)">
         <div style="font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);font-family:var(--font-mono);margin-bottom:10px">Scaling factors that contributed</div>
-        ${factorRows || '<span style="color:var(--text3);font-size:12px;font-family:var(--font-mono)">No factor breakdown stored for this game (older entry).</span>'}
-        ${aceNote ? `<div style="margin-top:8px;font-size:11px;color:var(--text3);font-family:var(--font-mono)">${aceNote.label}</div>` : ''}
+        <div id="reviewBreakdown-${gamePk}">${breakdownContent}</div>
       </div>
       <div id="reviewVerdictBlock" style="padding:16px 18px"></div>
     </div>`;
 
   renderReviewVerdictBlock(id);
   loadReviewBoxScore(gamePk, e);
+  if (!factorRows && isValidGamePk) recomputeReviewBreakdown(id, e, gamePk);
 }
 
 function closeReviewDetail() {
@@ -7344,29 +7348,102 @@ function renderReviewVerdictBlock(id) {
     <textarea oninput="saveVerdictReason('${sid}', this.value)" placeholder="Why is / isn't this a punt? (recorded as tuning feedback)" style="width:100%;min-height:70px;resize:vertical;background:var(--bg);border:1px solid var(--border);border-radius:var(--r-md);padding:10px 12px;color:var(--text);font-family:var(--font-body);font-size:13px;line-height:1.5;box-sizing:border-box">${reason}</textarea>`;
 }
 
+// Lazily-fetched season-long normal lineups, shared by the box-score detail
+// and the season rebuilder so we don't re-fetch on every panel open.
+let _normalLineupsCache = null;
+async function getCachedNormalLineups() {
+  if (_normalLineupsCache) return _normalLineupsCache;
+  await fetchStandings().catch(() => {});
+  const year = new Date().getFullYear();
+  const teamsData = await apiFetch(`${BASE}/teams?sportId=1&season=${year}`);
+  const allTeams = (teamsData?.teams || []).filter(t => t && t.id);
+  const fakeGames = allTeams.map(t => ({ teams: { home: { team: { id: t.id, name: t.name } }, away: { team: { id: t.id, name: t.name } } } }));
+  _normalLineupsCache = await fetchNormalLineups(allTeams.map(t => t.id), fakeGames);
+  return _normalLineupsCache;
+}
+
+// Re-score a single game on the fly and populate the breakdown panel.
+// Called when a log entry has no stored breakdown (pre-dates the feature).
+async function recomputeReviewBreakdown(id, e, gamePk) {
+  const breakdownEl = document.getElementById('reviewBreakdown-' + gamePk);
+  if (!breakdownEl) return;
+  try {
+    const normalLineups = await getCachedNormalLineups();
+    const sched = await apiFetch(`${BASE}/schedule?sportId=1&date=${e.date}&hydrate=probablePitcher,team,game(doubleHeader,gameNumber,dayNight)&gameType=R`);
+    const games = sched?.dates?.[0]?.games || [];
+    const targetGame = games.find(g => String(g.gamePk) === String(gamePk));
+    if (!targetGame) {
+      if (document.getElementById('reviewBreakdown-' + gamePk) === breakdownEl)
+        breakdownEl.innerHTML = '<span style="color:var(--text3);font-size:12px;font-family:var(--font-mono)">Could not locate game on MLB schedule.</span>';
+      return;
+    }
+    const analyzed = await analyzeGame(targetGame, normalLineups);
+    const newBreakdown = (typeof buildScoreBreakdown === 'function' ? buildScoreBreakdown(analyzed) : []) || [];
+    // Save back so it won't need recomputing next time this entry is opened.
+    const logEntry = state.gameLog.find(x => x.id === id);
+    if (logEntry) { logEntry.breakdown = newBreakdown; saveGameLogEntry(id).catch(() => {}); }
+    if (document.getElementById('reviewBreakdown-' + gamePk) !== breakdownEl) return;
+    const rows = newBreakdown.filter(f => f && f.val > 0).sort((a, b) => b.val - a.val)
+      .map(f => `<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border)"><span style="color:var(--text2);font-size:12px">${f.label}</span><span style="color:var(--red2);font-family:var(--font-mono);font-size:12px;font-weight:700">+${f.val}</span></div>`).join('');
+    const aceNote = newBreakdown.find(f => f && f.isAceNote);
+    breakdownEl.innerHTML = rows
+      ? rows + (aceNote ? `<div style="margin-top:8px;font-size:11px;color:var(--text3);font-family:var(--font-mono)">${aceNote.label}</div>` : '')
+      : '<span style="color:var(--text3);font-size:12px;font-family:var(--font-mono)">No scoring factors found (game scored below threshold).</span>';
+  } catch (err) {
+    console.error('[breakdown recompute]', err);
+    const el2 = document.getElementById('reviewBreakdown-' + gamePk);
+    if (el2) el2.innerHTML = '<span style="color:var(--text3);font-size:12px;font-family:var(--font-mono)">Could not recompute factors — see console.</span>';
+  }
+}
+
 async function loadReviewBoxScore(gamePk, e) {
   const box = document.getElementById('reviewBox-' + gamePk);
   if (!box) return;
+
+  // A Math.random() fingerprint in the id means the gamePk was never stored;
+  // the MLB API will always 404. Show a clear message rather than "rate-limiting."
+  if (!/^\d+$/.test(String(gamePk))) {
+    box.innerHTML = '<span style="color:var(--text3);font-size:12px;font-family:var(--font-mono)">Game ID not stored (entry pre-dates fix). Re-run the season scorer to repair.</span>';
+    return;
+  }
+
+  const fetchLinescore = () => apiFetch(`${BASE}/game/${gamePk}/linescore`, 6);
+
+  let ls;
   try {
-    const ls = await apiFetch(`${BASE}/game/${gamePk}/linescore`);
-    if (!ls || !ls.innings || !ls.innings.length) {
-      box.innerHTML = '<span style="color:var(--text3);font-size:12px;font-family:var(--font-mono)">No box score available (game may not have started).</span>';
+    ls = await fetchLinescore();
+  } catch (err1) {
+    // Auto-retry once after 4 s before giving up.
+    box.innerHTML = '<span style="color:var(--text3);font-size:12px;font-family:var(--font-mono)">Retrying…</span>';
+    await new Promise(r => setTimeout(r, 4000));
+    if (document.getElementById('reviewBox-' + gamePk) !== box) return; // panel closed while waiting
+    try {
+      ls = await fetchLinescore();
+    } catch (err2) {
+      const msg = String(err2?.message || err2);
+      const hint = msg.includes('429') ? 'rate limit — try again in a moment'
+        : msg.includes('404') ? 'game not found on MLB API'
+        : msg.slice(0, 80);
+      box.innerHTML = `<span style="color:var(--text3);font-size:12px;font-family:var(--font-mono)">Could not load box score (${hint}). <a onclick="retryReviewBox()" style="color:var(--red2);cursor:pointer;text-decoration:underline">Retry</a></span>`;
+      console.error('[reviewBox]', err2);
       return;
     }
-    const innings = ls.innings;
-    const cell = v => `<td style="padding:4px 8px;text-align:center;font-family:var(--font-mono);font-size:12px;color:var(--text2)">${v ?? '-'}</td>`;
-    const head = `<th style="padding:4px 8px;text-align:left"></th>` +
-      innings.map(i => `<th style="padding:4px 8px;text-align:center;font-size:10px;color:var(--text3);font-family:var(--font-mono)">${i.num}</th>`).join('') +
-      `<th style="padding:4px 10px;text-align:center;font-size:10px;color:var(--text);font-family:var(--font-mono)">R</th><th style="padding:4px 8px;text-align:center;font-size:10px;color:var(--text3);font-family:var(--font-mono)">H</th><th style="padding:4px 8px;text-align:center;font-size:10px;color:var(--text3);font-family:var(--font-mono)">E</th>`;
-    const row = (side, name) => `<tr><td style="padding:4px 8px;font-family:var(--font-display);font-weight:700;font-size:12px;color:var(--text)">${name}</td>` +
-      innings.map(i => cell(i[side]?.runs)).join('') +
-      `<td style="padding:4px 10px;text-align:center;font-family:var(--font-mono);font-size:13px;font-weight:700;color:var(--text)">${ls.teams?.[side]?.runs ?? '-'}</td>` +
-      cell(ls.teams?.[side]?.hits) + cell(ls.teams?.[side]?.errors) + `</tr>`;
-    box.innerHTML = `<table style="border-collapse:collapse;min-width:100%"><thead><tr>${head}</tr></thead><tbody>${row('away', abbr(e.away))}${row('home', abbr(e.home))}</tbody></table>`;
-  } catch (err) {
-    box.innerHTML = '<span style="color:var(--text3);font-size:12px;font-family:var(--font-mono)">Could not load box score (the MLB API may be rate-limiting). <a onclick="retryReviewBox()" style="color:var(--red2);cursor:pointer;text-decoration:underline">Retry</a></span>';
-    console.error('[reviewBox]', err);
   }
+
+  if (!ls || !ls.innings || !ls.innings.length) {
+    box.innerHTML = '<span style="color:var(--text3);font-size:12px;font-family:var(--font-mono)">No box score available (game may not have started).</span>';
+    return;
+  }
+  const innings = ls.innings;
+  const cell = v => `<td style="padding:4px 8px;text-align:center;font-family:var(--font-mono);font-size:12px;color:var(--text2)">${v ?? '-'}</td>`;
+  const head = `<th style="padding:4px 8px;text-align:left"></th>` +
+    innings.map(i => `<th style="padding:4px 8px;text-align:center;font-size:10px;color:var(--text3);font-family:var(--font-mono)">${i.num}</th>`).join('') +
+    `<th style="padding:4px 10px;text-align:center;font-size:10px;color:var(--text);font-family:var(--font-mono)">R</th><th style="padding:4px 8px;text-align:center;font-size:10px;color:var(--text3);font-family:var(--font-mono)">H</th><th style="padding:4px 8px;text-align:center;font-size:10px;color:var(--text3);font-family:var(--font-mono)">E</th>`;
+  const row = (side, name) => `<tr><td style="padding:4px 8px;font-family:var(--font-display);font-weight:700;font-size:12px;color:var(--text)">${name}</td>` +
+    innings.map(i => cell(i[side]?.runs)).join('') +
+    `<td style="padding:4px 10px;text-align:center;font-family:var(--font-mono);font-size:13px;font-weight:700;color:var(--text)">${ls.teams?.[side]?.runs ?? '-'}</td>` +
+    cell(ls.teams?.[side]?.hits) + cell(ls.teams?.[side]?.errors) + `</tr>`;
+  box.innerHTML = `<table style="border-collapse:collapse;min-width:100%"><thead><tr>${head}</tr></thead><tbody>${row('away', abbr(e.away))}${row('home', abbr(e.home))}</tbody></table>`;
 }
 
 function retryReviewBox() {
