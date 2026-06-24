@@ -7415,7 +7415,12 @@ async function openReviewDetail(id) {
   renderReviewVerdictBlock(id);
   loadReviewBoxScore(gamePk, e);
   if (!factorRows && isValidGamePk) recomputeReviewBreakdown(id, e, gamePk);
-  if (isValidGamePk) loadAndRenderGameflowInline(gamePk, e);
+  if (isValidGamePk) {
+    loadAndRenderGameflowInline(gamePk, e);
+  } else {
+    const gfc = document.getElementById('reviewInlineGameflow-' + gamePk);
+    if (gfc) gfc.innerHTML = `<div style="color:var(--text3);font-size:12px;font-family:var(--font-mono);text-align:center;padding:20px">Gameflow unavailable — game ID not stored. Re-run the season scorer to repair.</div>`;
+  }
 }
 
 async function loadAndRenderGameflowInline(gamePk, logEntry) {
@@ -7423,19 +7428,21 @@ async function loadAndRenderGameflowInline(gamePk, logEntry) {
   if (!container) return;
   const date = logEntry.date;
   try {
-    if (!gameflowGamesCache[date]) {
-      const data = await apiFetch(`${BASE}/schedule?sportId=1&date=${date}&hydrate=probablePitcher,team,game(doubleHeader,gameNumber,dayNight)&gameType=R`);
-      const games = data?.dates?.[0]?.games || [];
-      gameflowGamesCache[date] = games.map(g => ({
-        gamePk: g.gamePk,
-        homeTeam: g.teams.home.team.name,
-        awayTeam: g.teams.away.team.name,
-        status: g.status?.detailedState || '',
-        isLive: g.status?.abstractGameState === 'Live',
-        isFinal: g.status?.abstractGameState === 'Final',
-        label: `${abbr(g.teams.away.team.name)} @ ${abbr(g.teams.home.team.name)}`,
-        rawGame: g,
-      }));
+    // Seed the cache from the log entry so we skip the expensive schedule
+    // fetch. We already know teams and gamePk — only the linescore API call
+    // (inside renderGameflowChart) is actually needed for the chart.
+    if (!gameflowGamesCache[date]) gameflowGamesCache[date] = [];
+    if (!gameflowGamesCache[date].find(g => String(g.gamePk) === String(gamePk))) {
+      gameflowGamesCache[date].push({
+        gamePk: parseInt(gamePk, 10),
+        homeTeam: logEntry.home,
+        awayTeam: logEntry.away,
+        status: 'Final',
+        isLive: false,
+        isFinal: true,
+        label: `${abbr(logEntry.away || '')} @ ${abbr(logEntry.home || '')}`,
+        rawGame: null,
+      });
     }
     await renderGameflowChart(false, { gamePk, date, container });
   } catch(err) {
