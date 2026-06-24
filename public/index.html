@@ -7428,7 +7428,9 @@ async function openReviewDetail(id) {
       </div>
       <div style="padding:16px 18px;border-bottom:1px solid var(--border)">
         <div style="font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);font-family:var(--font-mono);margin-bottom:10px">Scaling factors that contributed</div>
+        ${factorRows ? `<div style="font-size:9px;text-transform:uppercase;letter-spacing:1.2px;color:var(--text3);font-family:var(--font-mono);margin-bottom:6px">Pre-Game</div>` : ''}
         <div id="reviewBreakdown-${gamePk}">${breakdownContent}</div>
+        <div id="reviewInGame-${gamePk}" style="margin-top:${factorRows ? 12 : 0}px"></div>
       </div>
       <div id="reviewVerdictBlock" style="padding:16px 18px"></div>
     </div>`;
@@ -7436,6 +7438,7 @@ async function openReviewDetail(id) {
   renderReviewVerdictBlock(id);
   loadReviewBoxScore(gamePk, e);
   if (!factorRows && isValidGamePk) recomputeReviewBreakdown(id, e, gamePk);
+  if (isValidGamePk) loadReviewInGameSignals(gamePk, e);
   if (isValidGamePk) {
     loadAndRenderGameflowInline(gamePk, e);
   } else {
@@ -7532,21 +7535,50 @@ async function recomputeReviewBreakdown(id, e, gamePk) {
     }
     const analyzed = await analyzeGame(targetGame, normalLineups);
     const newBreakdown = (typeof buildScoreBreakdown === 'function' ? buildScoreBreakdown(analyzed) : []) || [];
-    // Save back so it won't need recomputing next time this entry is opened.
+
+    // Save pre-game breakdown back so it won't need recomputing next time.
     const logEntry = state.gameLog.find(x => x.id === id);
     if (logEntry) { logEntry.breakdown = newBreakdown; saveGameLogEntry(id).catch(() => {}); }
     if (document.getElementById('reviewBreakdown-' + gamePk) !== breakdownEl) return;
-    const rows = newBreakdown.filter(f => f && f.val > 0).sort((a, b) => b.val - a.val)
+
+    const preGameRows = newBreakdown.filter(f => f && f.val > 0).sort((a, b) => b.val - a.val)
       .map(f => `<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border)"><span style="color:var(--text2);font-size:12px">${f.label}</span><span style="color:var(--red2);font-family:var(--font-mono);font-size:12px;font-weight:700">+${f.val}</span></div>`).join('');
     const aceNote = newBreakdown.find(f => f && f.isAceNote);
-    breakdownEl.innerHTML = rows
-      ? rows + (aceNote ? `<div style="margin-top:8px;font-size:11px;color:var(--text3);font-family:var(--font-mono)">${aceNote.label}</div>` : '')
-      : '<span style="color:var(--text3);font-size:12px;font-family:var(--font-mono)">No scoring factors found (game scored below threshold).</span>';
+
+    // Pre-game section label is injected by the HTML template only when
+    // factorRows was populated at render time. For recomputed entries, inject it here.
+    const preGameLabel = `<div style="font-size:9px;text-transform:uppercase;letter-spacing:1.2px;color:var(--text3);font-family:var(--font-mono);margin-bottom:6px">Pre-Game</div>`;
+    breakdownEl.innerHTML = preGameRows
+      ? preGameLabel + preGameRows + (aceNote ? `<div style="margin-top:6px;font-size:11px;color:var(--text3);font-family:var(--font-mono)">${aceNote.label}</div>` : '')
+      : '<span style="color:var(--text3);font-size:12px;font-family:var(--font-mono)">Score driven by schedule context (series position, schedule fatigue).</span>';
+
+    // Update in-game section margin now that pre-game content is known.
+    const ig = document.getElementById('reviewInGame-' + gamePk);
+    if (ig && preGameRows) ig.style.marginTop = '12px';
   } catch (err) {
     console.error('[breakdown recompute]', err);
     const el2 = document.getElementById('reviewBreakdown-' + gamePk);
     if (el2) el2.innerHTML = '<span style="color:var(--text3);font-size:12px;font-family:var(--font-mono)">Could not recompute factors — see console.</span>';
   }
+}
+
+// Fetches final in-game signals (blowout, position player pitching, etc.) and
+// renders them in the "In-Game" subsection of Scaling Factors.
+async function loadReviewInGameSignals(gamePk, e) {
+  const el = document.getElementById('reviewInGame-' + gamePk);
+  if (!el) return;
+  try {
+    const puntSide = e.puntSide || 'home';
+    const result = await fetchInGamePuntSignals(gamePk, puntSide, 'Final');
+    const signals = (result?.signals || []).filter(s => s && s.weight > 0)
+      .sort((a, b) => (a.inning || 0) - (b.inning || 0));
+    if (!document.getElementById('reviewInGame-' + gamePk)) return;
+    if (!signals.length) { el.innerHTML = ''; return; }
+    const rows = signals.map(s =>
+      `<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border)"><span style="color:var(--text2);font-size:12px">${s.label}</span><span style="color:var(--gold);font-family:var(--font-mono);font-size:12px;font-weight:700">+${s.weight}</span></div>`
+    ).join('');
+    el.innerHTML = `<div style="font-size:9px;text-transform:uppercase;letter-spacing:1.2px;color:var(--text3);font-family:var(--font-mono);margin-bottom:6px">In-Game</div>${rows}`;
+  } catch { /* silently skip — box score is the fallback */ }
 }
 
 async function loadReviewBoxScore(gamePk, e) {
