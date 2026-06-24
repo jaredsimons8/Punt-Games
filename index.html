@@ -7295,10 +7295,7 @@ async function openReviewDetail(id) {
           <div style="font-family:var(--font-display);font-size:18px;font-weight:800;color:var(--text)">${abbr(e.away)} @ ${abbr(e.home)}</div>
           <div style="font-family:var(--font-mono);font-size:11px;color:var(--text3);margin-top:2px">${e.date} · leaning ${abbr(e.puntTeam)} · algorithm score ${e.score}/80</div>
         </div>
-        <div style="display:flex;gap:8px">
-          <button onclick="openGameflowForLog('${gamePk}','${e.date}')" style="background:var(--red2);border:none;color:#fff;border-radius:var(--r-md);padding:6px 12px;cursor:pointer;font-family:var(--font-mono);font-size:11px;font-weight:700">📈 Gameflow →</button>
-          <button onclick="closeReviewDetail()" style="background:transparent;border:1px solid var(--border2);color:var(--text2);border-radius:var(--r-md);padding:6px 12px;cursor:pointer;font-family:var(--font-mono);font-size:11px">✕ Close</button>
-        </div>
+        <button onclick="closeReviewDetail()" style="background:transparent;border:1px solid var(--border2);color:var(--text2);border-radius:var(--r-md);padding:6px 12px;cursor:pointer;font-family:var(--font-mono);font-size:11px">✕ Close</button>
       </div>
       <div style="padding:16px 18px;border-bottom:1px solid var(--border)">
         <div style="font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);font-family:var(--font-mono);margin-bottom:10px">Box Score</div>
@@ -7308,12 +7305,46 @@ async function openReviewDetail(id) {
         <div style="font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);font-family:var(--font-mono);margin-bottom:10px">Scaling factors that contributed</div>
         <div id="reviewBreakdown-${gamePk}">${breakdownContent}</div>
       </div>
+      <div style="padding:16px 18px;border-bottom:1px solid var(--border)">
+        <div style="font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);font-family:var(--font-mono);margin-bottom:12px">Inning-by-Inning Gameflow</div>
+        <div id="reviewInlineGameflow-${gamePk}" style="background:var(--bg);border:1px solid var(--border);border-radius:var(--r-md);padding:20px;min-height:180px;display:flex;align-items:center;justify-content:center;gap:8px">
+          <div class="spinner"></div>
+          <span style="color:var(--text3);font-size:12px;font-family:var(--font-mono)">Loading gameflow…</span>
+        </div>
+      </div>
       <div id="reviewVerdictBlock" style="padding:16px 18px"></div>
     </div>`;
 
   renderReviewVerdictBlock(id);
   loadReviewBoxScore(gamePk, e);
   if (!factorRows && isValidGamePk) recomputeReviewBreakdown(id, e, gamePk);
+  if (isValidGamePk) loadAndRenderGameflowInline(gamePk, e);
+}
+
+async function loadAndRenderGameflowInline(gamePk, logEntry) {
+  const container = document.getElementById('reviewInlineGameflow-' + gamePk);
+  if (!container) return;
+  const date = logEntry.date;
+  try {
+    if (!gameflowGamesCache[date]) {
+      const data = await apiFetch(`${BASE}/schedule?sportId=1&date=${date}&hydrate=probablePitcher,team,game(doubleHeader,gameNumber,dayNight)&gameType=R`);
+      const games = data?.dates?.[0]?.games || [];
+      gameflowGamesCache[date] = games.map(g => ({
+        gamePk: g.gamePk,
+        homeTeam: g.teams.home.team.name,
+        awayTeam: g.teams.away.team.name,
+        status: g.status?.detailedState || '',
+        isLive: g.status?.abstractGameState === 'Live',
+        isFinal: g.status?.abstractGameState === 'Final',
+        label: `${abbr(g.teams.away.team.name)} @ ${abbr(g.teams.home.team.name)}`,
+        rawGame: g,
+      }));
+    }
+    await renderGameflowChart(false, { gamePk, date, container });
+  } catch(err) {
+    if (container) container.innerHTML = `<div style="color:var(--text3);font-size:12px;font-family:var(--font-mono);text-align:center;padding:20px">Could not load gameflow chart.</div>`;
+    console.warn('loadAndRenderGameflowInline error:', err);
+  }
 }
 
 function closeReviewDetail() {
@@ -8248,15 +8279,17 @@ async function loadGameflowGames() {
   }
 }
 
-async function renderGameflowChart(silent = false) {
+async function renderGameflowChart(silent = false, inlineOpts = null) {
   const sel = document.getElementById('gameflowGameSelect');
-  const gamePk = sel?.value;
+  const gamePk = inlineOpts?.gamePk ?? sel?.value;
   const dp = document.getElementById('gameflowDatePicker');
-  const date = dp?.value;
-  const container = document.getElementById('gameflowContainer');
-  const meta = document.getElementById('gameflowMeta');
+  const date = inlineOpts?.date ?? dp?.value;
+  const container = inlineOpts?.container ?? document.getElementById('gameflowContainer');
+  const meta = inlineOpts ? null : document.getElementById('gameflowMeta');
+  const canvasId = inlineOpts ? `gameflowCanvas-${gamePk}` : 'gameflowCanvas';
+  const sigLogId = inlineOpts ? `gameflowSignalLog-${gamePk}` : 'gameflowSignalLog';
   if (!gamePk || !container) return;
-  if (!silent) { const _vp = document.getElementById('gameflowVerdict'); if (_vp) _vp.innerHTML = ''; }
+  if (!silent && !inlineOpts) { const _vp = document.getElementById('gameflowVerdict'); if (_vp) _vp.innerHTML = ''; }
 
   const games = gameflowGamesCache[date] || [];
   const gameInfo = games.find(g => String(g.gamePk) === String(gamePk));
@@ -8469,12 +8502,12 @@ async function renderGameflowChart(silent = false) {
             <span style="font-size:11px;color:var(--text3);font-family:var(--font-mono)">PUNT threshold (${PUNT_THRESH})</span>
           </div>
         </div>
-        <canvas id="gameflowCanvas" style="width:100%;display:block"></canvas>
-        <div id="gameflowSignalLog" style="margin-top:16px"></div>
+        <canvas id="${canvasId}" style="width:100%;display:block"></canvas>
+        <div id="${sigLogId}" style="margin-top:16px"></div>
       </div>`;
 
     await new Promise(r => setTimeout(r, 10));
-    const canvas = document.getElementById('gameflowCanvas');
+    const canvas = document.getElementById(canvasId);
     if (!canvas) return;
 
     const dpr = window.devicePixelRatio || 1;
@@ -8663,7 +8696,7 @@ async function renderGameflowChart(silent = false) {
     ctx.fillText('INNING', PAD.left + cW / 2, H - 6);
 
     // ── Signal log below chart ──
-    const sigLog = document.getElementById('gameflowSignalLog');
+    const sigLog = document.getElementById(sigLogId);
     if (sigLog) {
       const allSigs = points.flatMap(p =>
         (p.signals || []).map(s => ({ ...s, inning: p.inning, ptsLabel: `+${s.weight}` }))
@@ -8690,16 +8723,16 @@ async function renderGameflowChart(silent = false) {
         </div>` : `<div style="font-size:12px;color:var(--text3);padding:12px 0">No in-game signals detected — score driven by pre-game analysis only.</div>`;
     }
 
-    // ── Polling ──
-    if (gameInfo?.isLive && String(gamePk) !== String(gameflowActivePk)) {
-      startGameflowPolling(gamePk);
-    } else if (gameInfo?.isFinal) {
-      stopGameflowPolling();
-      gameflowActivePk = null;
+    // ── Polling + verdict panel (gameflow tab only, not inline in review detail) ──
+    if (!inlineOpts) {
+      if (gameInfo?.isLive && String(gamePk) !== String(gameflowActivePk)) {
+        startGameflowPolling(gamePk);
+      } else if (gameInfo?.isFinal) {
+        stopGameflowPolling();
+        gameflowActivePk = null;
+      }
+      if (!silent) renderVerdictPanel(logEntry);
     }
-
-    // ── Analyst verdict panel (skip on silent live-polls so a reason being typed isn't wiped) ──
-    if (!silent) renderVerdictPanel(logEntry);
 
   } catch(e) {
     if (!silent) container.innerHTML = '<div style="text-align:center;color:var(--text3);font-size:13px;padding:48px">⚠️ Could not load game data.</div>';
