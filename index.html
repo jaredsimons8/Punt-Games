@@ -2441,9 +2441,10 @@
       <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
         <div>
           <div style="font-family:var(--font-display);font-weight:700;font-size:14px;color:var(--text)">Score entire season</div>
-          <div style="font-size:11px;color:var(--text3);font-family:var(--font-mono);margin-top:2px">Walks every date from Opening Day to today, scores every MLB game, and logs it — so the review queue covers the whole season. Takes several minutes; your punt / not-punt decisions are kept. Safe to re-run.</div>
+          <div style="font-size:11px;color:var(--text3);font-family:var(--font-mono);margin-top:2px">Walks every date from Opening Day to today, scores every MLB game, and logs it — so the review queue covers the whole season. Takes several minutes; your punt / not-punt decisions are kept. Progress is saved after each day — if it stops (rate limit, closed tab), click Resume to pick up where it left off.</div>
         </div>
         <button id="rebuildBtn" onclick="rebuildSeasonLog()" style="background:var(--red2);border:none;color:#fff;border-radius:var(--r-md);padding:9px 16px;cursor:pointer;font-family:var(--font-mono);font-size:12px;font-weight:700;white-space:nowrap">↻ Score entire season</button>
+        <button id="rebuildClearBtn" onclick="clearRebuildCheckpoint();updateRebuildBtn()" style="display:none;background:transparent;border:1px solid var(--border);color:var(--text2);border-radius:var(--r-md);padding:9px 16px;cursor:pointer;font-family:var(--font-mono);font-size:12px;font-weight:700;white-space:nowrap;margin-left:6px">Start over</button>
       </div>
       <div id="rebuildProgress" style="margin-top:10px;font-size:12px;color:var(--text2);font-family:var(--font-mono);display:none"></div>
     </div>
@@ -3448,23 +3449,60 @@ function eachSeasonDate(start, end) {
 }
 
 let rebuildInProgress = false;
+
+const REBUILD_CKPT_KEY = () => `rebuildCheckpoint_${new Date().getFullYear()}`;
+function getRebuildCheckpoint() {
+  try { return JSON.parse(localStorage.getItem(REBUILD_CKPT_KEY()) || 'null'); } catch { return null; }
+}
+function setRebuildCheckpoint(cp) {
+  try { localStorage.setItem(REBUILD_CKPT_KEY(), JSON.stringify(cp)); } catch {}
+}
+function clearRebuildCheckpoint() {
+  try { localStorage.removeItem(REBUILD_CKPT_KEY()); } catch {}
+}
+function updateRebuildBtn() {
+  const btn = document.getElementById('rebuildBtn');
+  const clr = document.getElementById('rebuildClearBtn');
+  if (!btn) return;
+  const cp = getRebuildCheckpoint();
+  if (cp?.lastCompletedDate) {
+    btn.textContent = `↻ Resume from ${cp.lastCompletedDate}`;
+    if (clr) clr.style.display = 'inline';
+  } else {
+    btn.textContent = '↻ Score entire season';
+    if (clr) clr.style.display = 'none';
+  }
+}
+
 async function rebuildSeasonLog() {
   if (!isAdmin()) return;
   if (rebuildInProgress) return;
   if (!currentUser) { showToast('Sign in first', true); return; }
 
-  // FULL SEASON: every date from opening day to today — not just dates already
-  // in the log. New games are added and scored; existing ones are re-scored.
   const dates = eachSeasonDate(seasonStartDate(), localTodayStr());
   if (!dates.length) { showToast('No dates to process', true); return; }
+
+  // Resume from checkpoint if one exists from a previous interrupted run.
+  const cp = getRebuildCheckpoint();
+  const resumeFrom = cp?.lastCompletedDate || null;
+  const datesToProcess = resumeFrom ? dates.filter(d => d > resumeFrom) : [...dates];
+  const skippedDates = dates.length - datesToProcess.length;
 
   rebuildInProgress = true;
   const btn = document.getElementById('rebuildBtn');
   const prog = document.getElementById('rebuildProgress');
+  const clr = document.getElementById('rebuildClearBtn');
   if (btn) { btn.disabled = true; btn.style.opacity = '0.6'; btn.textContent = 'Scoring season…'; }
-  if (prog) { prog.style.display = 'block'; prog.textContent = `Loading current standings & lineups… (this scores all ${dates.length} days of the season and can take several minutes — keep this tab open)`; }
+  if (clr) clr.style.display = 'none';
+  if (prog) {
+    prog.style.display = 'block';
+    prog.textContent = resumeFrom
+      ? `Resuming from ${resumeFrom} — skipping ${skippedDates} already-scored days… (loading lineups)`
+      : `Loading current standings & lineups… (this scores all ${dates.length} days of the season and can take several minutes — keep this tab open)`;
+  }
 
-  let added = 0, rescored = 0, datesDone = 0, datesWithGames = 0, datesFailed = 0;
+  let added = 0, rescored = 0, datesDone = skippedDates, datesWithGames = 0, datesFailed = 0;
+  let completedNormally = false;
 
   try {
     // Fetch standings once, and normal (season-long) lineups once for ALL teams —
@@ -3476,7 +3514,7 @@ async function rebuildSeasonLog() {
     const fakeGames = allTeams.map(t => ({ teams: { home: { team: { id: t.id, name: t.name } }, away: { team: { id: t.id, name: t.name } } } }));
     const normalLineups = await fetchNormalLineups(allTeams.map(t => t.id), fakeGames);
 
-    for (const date of dates) {
+    for (const date of datesToProcess) {
       datesDone++;
       if (prog) prog.textContent = `Scoring ${date} … (day ${datesDone}/${dates.length} · ${added} added · ${rescored} updated)`;
 
@@ -3486,6 +3524,9 @@ async function rebuildSeasonLog() {
       } catch (e) {
         datesFailed++;
         console.error('[rebuild] date failed', date, e);
+        const msg = String(e?.message || e);
+        // Pause longer after a rate-limit hit before the next date.
+        await new Promise(r => setTimeout(r, msg.includes('429') || msg.includes('rate') ? 3000 : 600));
         continue;
       }
       if (analyzed.length) datesWithGames++;
@@ -3516,33 +3557,49 @@ async function rebuildSeasonLog() {
         if (changed) { rescored++; saveIds.push(id); }
       }
 
-      // Persist this day's changes before moving on, so progress is durable
-      // even if a later day fails or rate-limits.
+      // Persist this day's changes before moving on.
       for (const id of saveIds) {
         try { await saveGameLogEntry(id); } catch (e) { console.error('[rebuild] save failed', id, e); }
       }
 
-      // Gentle pacing between days to stay under MLB API rate limits.
-      await new Promise(r => setTimeout(r, 400));
+      // Save checkpoint so the next run can skip this date.
+      setRebuildCheckpoint({ lastCompletedDate: date });
+
+      // 600ms between days — gentler than the previous 400ms.
+      await new Promise(r => setTimeout(r, 600));
     }
+    completedNormally = true;
   } catch (e) {
     console.error('[rebuild] fatal', e);
-    showToast('Scoring hit an error — see console. Progress so far was saved; you can run it again to finish.', true);
+    showToast('Scoring hit an error — see console. Progress was saved; click Resume to continue.', true);
   }
+
+  // Clear checkpoint only on a clean run (no fatal error, no per-date failures).
+  if (completedNormally && datesFailed === 0) clearRebuildCheckpoint();
 
   rebuildInProgress = false;
   state.gameLog.sort((a, b) => a.date.localeCompare(b.date) || b.score - a.score);
   rebuildTeamData();
   renderReviewQueue();
   updateReviewBadge();
-  if (btn) { btn.disabled = false; btn.style.opacity = '1'; btn.textContent = '↻ Score entire season'; }
+  if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
+  updateRebuildBtn();
 
   const reviewNow = state.gameLog.filter(e => e.flag === 'review' && state.logOverrides[e.id] === undefined).length;
   const puntNow = state.gameLog.filter(e => effectiveFlag(e) === 'punt').length;
-  if (prog) prog.textContent = `Done — ${datesWithGames} game days processed · ${added} games added · ${rescored} re-scored`
-    + `${datesFailed ? ` · ${datesFailed} days failed (run again to finish them)` : ''}. `
-    + `Log now holds ${state.gameLog.length} games · ${reviewNow} awaiting your review · ${puntNow} punts.`;
-  showToast(`Season scored — ${reviewNow} games in the review queue`);
+  if (prog) {
+    if (completedNormally && datesFailed === 0) {
+      prog.textContent = `Done — ${datesWithGames} game days processed · ${added} games added · ${rescored} re-scored. `
+        + `Log now holds ${state.gameLog.length} games · ${reviewNow} awaiting your review · ${puntNow} punts.`;
+    } else {
+      prog.textContent = `Paused at day ${datesDone}/${dates.length} · ${added} added · ${rescored} updated`
+        + `${datesFailed ? ` · ${datesFailed} days failed` : ''}. `
+        + `Click "Resume" to continue from where it stopped.`;
+    }
+  }
+  showToast(completedNormally && datesFailed === 0
+    ? `Season scored — ${reviewNow} games in the review queue`
+    : `Scoring paused — ${added} added, ${rescored} updated. Click Resume to finish.`);
 }
 // In-memory cache of historical lineups loaded from Supabase.
 // Structure: { teamName: [ { date, lineup: [], sp, spFip, spEra, opp } ] }
@@ -7931,7 +7988,7 @@ function showPage(page) {
     renderReviewQueue();
     updateReviewBadge();
     const rd = document.getElementById('reviewDetail'); if (rd) rd.innerHTML = '';
-    const rb = document.getElementById('rebuildBar'); if (rb) rb.style.display = isAdmin() ? 'block' : 'none';
+    const rb = document.getElementById('rebuildBar'); if (rb) rb.style.display = isAdmin() ? 'block' : 'none'; if (isAdmin()) updateRebuildBtn();
   }
 }
 
