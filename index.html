@@ -1784,7 +1784,7 @@
         </div>
         <div style="background:var(--surface);padding:24px 26px">
           <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:var(--text3);font-family:var(--font-mono);margin-bottom:10px">The Score</div>
-          <p style="font-size:13px;color:var(--text2);line-height:1.75">Every game is scored on a <strong style="color:var(--text)">0–80 scale</strong> across two independent tracks. The <strong style="color:var(--text)">pre-game score</strong> evaluates lineup and pitching decisions before first pitch / if it reaches 52, the game is a confirmed punt and that verdict is locked. The <strong style="color:var(--text)">in-game score</strong> evaluates behavioral signals during play and can independently confirm a punt even if pre-game looked clean. <strong style="color:var(--red2)">≥ 52 = Punt · ≥ 36 = Review · Under 36 = Clean.</strong></p>
+          <p style="font-size:13px;color:var(--text2);line-height:1.75">Every game is scored on a <strong style="color:var(--text)">0–80 scale</strong> across two independent tracks. The <strong style="color:var(--text)">pre-game score</strong> evaluates lineup and pitching decisions before first pitch / if it reaches 46, the game is a confirmed punt and that verdict is locked. The <strong style="color:var(--text)">in-game score</strong> evaluates behavioral signals during play and can independently confirm a punt even if pre-game looked clean. <strong style="color:var(--red2)">≥ 46 = Punt · ≥ 28 = Review · Under 28 = Clean.</strong></p>
         </div>
         <div style="background:var(--surface);padding:24px 26px">
           <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:var(--text3);font-family:var(--font-mono);margin-bottom:10px">Why It Matters</div>
@@ -2004,7 +2004,7 @@
     <div style="margin-top:16px;background:rgba(212,43,43,0.06);border:1px solid rgba(212,43,43,0.2);border-radius:10px;padding:14px 18px;font-size:12px;color:var(--text2);line-height:1.8">
       <strong style="color:var(--red2)">🔒 Pre-Game Lock + Independent In-Game Track</strong><br>
       Pre-game and in-game are scored on separate 0–80 scales and evaluated independently.<br><br>
-      <strong style="color:var(--text)">Pre-game punt (≥ 52):</strong> Locked. A game confirmed before first pitch stays a punt regardless of in-game outcome. In-game signals add a small bonus but cannot reduce the classification.<br><br>
+      <strong style="color:var(--text)">Pre-game punt (≥ 46):</strong> Locked. A game confirmed before first pitch stays a punt regardless of in-game outcome. In-game signals add a small bonus but cannot reduce the classification.<br><br>
       <strong style="color:var(--text)">In-game punt:</strong> A clean or review pre-game can still become a punt from in-game behavior alone. The badge reads <span style="color:#f59e0b;font-family:var(--font-mono)">PUNT · IN-GAME</span> to distinguish it.<br><br>
       <strong style="color:var(--text)">Blended (neither confirmed):</strong> Pre-game dominates early, shifting toward in-game as innings accumulate. Final games weight in-game at 35%.
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px;font-size:11px">
@@ -2060,13 +2060,13 @@
 
     <div style="margin-top:16px;display:flex;gap:12px;flex-wrap:wrap">
       <div style="background:rgba(212,43,43,0.15);border:1px solid rgba(212,43,43,0.3);border-radius:8px;padding:10px 18px;font-size:12px">
-        <span style="color:var(--red2);font-weight:600">🚩 PUNT GAME</span> &nbsp;Score ≥ 52 <span style="color:var(--text3);font-size:10px">(of 80)</span>
+        <span style="color:var(--red2);font-weight:600">🚩 PUNT GAME</span> &nbsp;Score ≥ 46 <span style="color:var(--text3);font-size:10px">(of 80)</span>
       </div>
       <div style="background:rgba(230,126,34,0.12);border:1px solid rgba(230,126,34,0.3);border-radius:8px;padding:10px 18px;font-size:12px">
-        <span style="color:var(--orange);font-weight:600">🔍 MANUAL REVIEW</span> &nbsp;Score 36–51
+        <span style="color:var(--orange);font-weight:600">🔍 MANUAL REVIEW</span> &nbsp;Score 28–45
       </div>
       <div style="background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:8px;padding:10px 18px;font-size:12px;color:var(--text2)">
-        ✓ CLEAN &nbsp;Score &lt; 36
+        ✓ CLEAN &nbsp;Score &lt; 28
       </div>
     </div>
   </div>
@@ -2559,7 +2559,7 @@ const state = {
   logOverrides: {},
   logResults: {},
   teamData: {},
-  aceFipTracker: {},
+  aceEraTracker: {},
   retrograded: new Set(), // teams whose calibration games have been retroactively scored
 };
 const standingsCache = { lastFetch: null, data: {} };
@@ -4309,7 +4309,7 @@ async function analyzeGame(game, normalLineups) {
   // less than 16hrs between games / stronger rest signal than generic B2B.
   // Detect by checking if today's game time is before 4pm local.
   const gameTime = game.gameDate ? new Date(game.gameDate) : null;
-  const isDayGame = gameTime ? gameTime.getUTCHours() < 20 : false; // before ~4pm ET = day game
+  const isDayGame = gameTime ? gameTime.getUTCHours() < 22 : false; // before ~6pm ET / catches West Coast 1pm starts
   const homeDayAfterNight = isDayGame && homePlayedYesterday;
   const awayDayAfterNight = isDayGame && awayPlayedYesterday;
 
@@ -4707,6 +4707,17 @@ function getLiveTeamQuality(teamName) {
     tier = 'rebuilding'; // keep tier for context labels
   }
 
+  // Wild card race: a team currently holding a playoff spot has less incentive
+  // to punt — every game genuinely matters when you're fighting to stay in.
+  // Only applies when the team isn't already clinched or eliminated.
+  // Caps motivation at 0.72 to prevent a .500 WC team from registering the
+  // same punt pressure as a division-leading contender.
+  if (live.wildCardEligible === true &&
+      live.clinched !== true && live.divisionChamp !== true &&
+      live.eliminationNumber !== 'E') {
+    puntMotivation = Math.min(puntMotivation, 0.72);
+  }
+
   return { ...base, tier, puntMotivation };
 }
 
@@ -4903,7 +4914,7 @@ function buildPlayerRecencyWeights(teamName) {
 }
 
 // ── PUNT SCORE / TEAM-QUALITY-AWARE ──────────────────────
-// Scale: 0–80. PUNT ≥ 52, REVIEW ≥ 36, CLEAN < 36.
+// Scale: 0–80. PUNT ≥ 46, REVIEW ≥ 28, CLEAN < 28.
 //
 // Fix #1: Ace disqualifier relative margin only applies after 3+ starts
 // Fix #2: FIP pitching signal weighted down when < 4 starts (noisy sample)
@@ -4913,7 +4924,7 @@ function buildPlayerRecencyWeights(teamName) {
 // Fix #6: Back-to-back game adds moderate fatigue bonus (motivation-scaled)
 // Fix #7: West→East same-day travel adds structural fatigue bonus
 // Fix #8: clinched vs eliminated tracked separately (label fix in breakdown)
-function computePuntScore({ effectiveBenched, fipDelta, eraDelta, isLastGame, isFirstGame,
+function computePuntScore({ effectiveBenched, eraDelta, isLastGame, isFirstGame,
   isDHNightcap, clinched, eliminated, gameDate, teamName,
   spFip, spEra, spStarts, seriesLength, isBackToBack, hasTravelFatigue,
   isDayAfterNight, consecutiveStreak }) {
@@ -6656,8 +6667,6 @@ async function fetchInGamePuntSignals(gid, puntSide, gameStatus) {
     const oppRuns  = puntSide === 'home' ? awayRuns : homeRuns;
     const runDiff  = puntRuns - oppRuns;
 
-    // Decisions (winning/losing pitcher) from boxscore
-    const decisions = boxscore?.info?.find ? null : null;
     const wp = boxscore?.decisions?.winner;
     const lp = boxscore?.decisions?.loser;
     const sv = boxscore?.decisions?.save;
@@ -7851,7 +7860,7 @@ function renderWatchList(games) {
         team, score, eb, reasons,
         logoUrl: getTeamLogo(team.name),
         opp: side === 'home' ? g.away : g.home,
-        risk: score >= 52 ? 'high' : 'med',
+        risk: score >= PUNT_THRESH ? 'high' : 'med',
       });
     });
   });
@@ -7978,7 +7987,7 @@ function buildSparkline(history, width = 120, height = 28) {
     const y = height - 4 - ((s / max) * (height - 8));
     return `${x},${y}`;
   }).join(' ');
-  const color = scores[scores.length - 1] >= 52 ? 'var(--red2)' : scores[scores.length - 1] >= 36 ? 'var(--gold)' : 'var(--text3)';
+  const color = scores[scores.length - 1] >= PUNT_THRESH ? 'var(--red2)' : scores[scores.length - 1] >= REVIEW_THRESH ? 'var(--gold)' : 'var(--text3)';
   return `<svg viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
     <polyline points="${pts}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.8"/>
     <circle cx="${pts.split(' ').pop().split(',')[0]}" cy="${pts.split(' ').pop().split(',')[1]}" r="2.5" fill="${color}"/>
