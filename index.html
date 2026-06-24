@@ -7288,12 +7288,29 @@ async function openReviewDetail(id) {
     ? factorRows + (aceNote ? `<div style="margin-top:8px;font-size:11px;color:var(--text3);font-family:var(--font-mono)">${aceNote.label}</div>` : '')
     : '<span style="color:var(--text3);font-size:12px;font-family:var(--font-mono)">Recomputing factors…</span>';
 
+  const rdBadgeClass  = e.flag === 'punt' ? 'flag' : e.flag === 'review' ? 'review' : 'clean';
+  const rdBadgeText   = e.flag === 'punt' ? 'Punt' : e.flag === 'review' ? 'Review' : 'Clean';
+  const rdScoreColor  = e.flag === 'punt' ? 'var(--red2)' : e.flag === 'review' ? 'var(--gold)' : 'var(--text2)';
+  const rdBorderColor = e.flag === 'punt' ? 'rgba(224,92,42,0.45)' : e.flag === 'review' ? 'rgba(232,184,75,0.35)' : 'var(--border)';
+  const rdBg = e.flag === 'punt'
+    ? 'linear-gradient(160deg, rgba(224,92,42,0.07) 0%, var(--surface) 40%)'
+    : e.flag === 'review'
+    ? 'linear-gradient(160deg, rgba(232,184,75,0.07) 0%, var(--surface) 40%)'
+    : 'var(--surface)';
+
   el.innerHTML = `
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);overflow:hidden">
+    <div style="background:${rdBg};border:1px solid ${rdBorderColor};border-radius:var(--r-lg);overflow:hidden">
       <div style="padding:16px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
-        <div>
-          <div style="font-family:var(--font-display);font-size:18px;font-weight:800;color:var(--text)">${abbr(e.away)} @ ${abbr(e.home)}</div>
-          <div style="font-family:var(--font-mono);font-size:11px;color:var(--text3);margin-top:2px">${e.date} · leaning ${abbr(e.puntTeam)} · algorithm score ${e.score}/80</div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+            <div style="font-family:var(--font-display);font-size:18px;font-weight:800;color:var(--text)">${abbr(e.away)} @ ${abbr(e.home)}</div>
+            <span class="punt-badge ${rdBadgeClass}">${rdBadgeText}</span>
+          </div>
+          <div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap">
+            <span style="font-family:var(--font-display);font-size:28px;font-weight:800;color:${rdScoreColor};letter-spacing:-1px;line-height:1">${e.score}</span>
+            <span style="font-family:var(--font-mono);font-size:13px;color:var(--text3)">/80</span>
+            <span style="font-family:var(--font-mono);font-size:11px;color:var(--text3)">${e.date} · ${abbr(e.puntTeam)} leaning punt</span>
+          </div>
         </div>
         <button onclick="closeReviewDetail()" style="background:transparent;border:1px solid var(--border2);color:var(--text2);border-radius:var(--r-md);padding:6px 12px;cursor:pointer;font-family:var(--font-mono);font-size:11px">✕ Close</button>
       </div>
