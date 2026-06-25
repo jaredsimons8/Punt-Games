@@ -2485,17 +2485,7 @@
       <div class="pill gold">Games needing a decision</div>
       <div class="divider"></div>
     </div>
-    <div id="rebuildBar" style="display:none;margin-bottom:16px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:14px 16px">
-      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
-        <div>
-          <div style="font-family:var(--font-display);font-weight:700;font-size:14px;color:var(--text)">Score entire season</div>
-          <div style="font-size:11px;color:var(--text3);font-family:var(--font-mono);margin-top:2px">Walks every date from Opening Day to today, scores every MLB game, and logs it — so the review queue covers the whole season. Takes several minutes; your punt / not-punt decisions are kept. Progress is saved after each day — if it stops (rate limit, closed tab), click Resume to pick up where it left off.</div>
-        </div>
-        <button id="rebuildBtn" onclick="rebuildSeasonLog()" style="background:var(--red2);border:none;color:#fff;border-radius:var(--r-md);padding:9px 16px;cursor:pointer;font-family:var(--font-mono);font-size:12px;font-weight:700;white-space:nowrap">↻ Score entire season</button>
-        <button id="rebuildClearBtn" onclick="clearRebuildCheckpoint();updateRebuildBtn()" style="display:none;background:transparent;border:1px solid var(--border);color:var(--text2);border-radius:var(--r-md);padding:9px 16px;cursor:pointer;font-family:var(--font-mono);font-size:12px;font-weight:700;white-space:nowrap;margin-left:6px">Start over</button>
-      </div>
-      <div id="rebuildProgress" style="margin-top:10px;font-size:12px;color:var(--text2);font-family:var(--font-mono);display:none"></div>
-    </div>
+    <div id="rebuildProgress" style="display:none;margin-bottom:10px;font-size:11px;color:var(--text3);font-family:var(--font-mono);padding:4px 2px"></div>
     <div id="reviewQueue"></div>
     <div id="reviewDetail" style="margin-top:20px"></div>
   </div><!-- /page-reviews -->
@@ -3514,19 +3504,7 @@ function setRebuildCheckpoint(cp) {
 function clearRebuildCheckpoint() {
   try { localStorage.removeItem(REBUILD_CKPT_KEY()); } catch {}
 }
-function updateRebuildBtn() {
-  const btn = document.getElementById('rebuildBtn');
-  const clr = document.getElementById('rebuildClearBtn');
-  if (!btn) return;
-  const cp = getRebuildCheckpoint();
-  if (cp?.lastCompletedDate) {
-    btn.textContent = `↻ Resume from ${cp.lastCompletedDate}`;
-    if (clr) clr.style.display = 'inline';
-  } else {
-    btn.textContent = '↻ Score entire season';
-    if (clr) clr.style.display = 'none';
-  }
-}
+function updateRebuildBtn() { /* button removed — scoring is fully automatic */ }
 
 // Silently scores any season dates not yet in game_log.
 // Runs automatically after login; uses the same checkpoint as the manual
@@ -3655,16 +3633,12 @@ async function rebuildSeasonLog() {
   const skippedDates = dates.length - datesToProcess.length;
 
   rebuildInProgress = true;
-  const btn = document.getElementById('rebuildBtn');
   const prog = document.getElementById('rebuildProgress');
-  const clr = document.getElementById('rebuildClearBtn');
-  if (btn) { btn.disabled = true; btn.style.opacity = '0.6'; btn.textContent = 'Scoring season…'; }
-  if (clr) clr.style.display = 'none';
   if (prog) {
     prog.style.display = 'block';
     prog.textContent = resumeFrom
       ? `Resuming from ${resumeFrom} — skipping ${skippedDates} already-scored days… (loading lineups)`
-      : `Loading current standings & lineups… (this scores all ${dates.length} days of the season and can take several minutes — keep this tab open)`;
+      : `Loading current standings & lineups…`;
   }
 
   let added = 0, rescored = 0, datesDone = skippedDates, datesWithGames = 0, datesFailed = 0;
@@ -3753,8 +3727,6 @@ async function rebuildSeasonLog() {
   rebuildTeamData();
   renderReviewQueue();
   updateReviewBadge();
-  if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
-  updateRebuildBtn();
 
   const reviewNow = state.gameLog.filter(e => e.flag === 'review' && state.logOverrides[e.id] === undefined).length;
   const puntNow = state.gameLog.filter(e => effectiveFlag(e) === 'punt').length;
@@ -8658,7 +8630,6 @@ function showPage(page) {
     renderReviewQueue();
     updateReviewBadge();
     const rd = document.getElementById('reviewDetail'); if (rd) rd.innerHTML = '';
-    const rb = document.getElementById('rebuildBar'); if (rb) rb.style.display = isAdmin() ? 'block' : 'none'; if (isAdmin()) updateRebuildBtn();
   }
 }
 
