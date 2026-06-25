@@ -7428,7 +7428,10 @@ async function openReviewDetail(id) {
         </div>
       </div>
       <div style="padding:16px 18px;border-bottom:1px solid var(--border)">
-        <div style="font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);font-family:var(--font-mono);margin-bottom:10px">Scaling factors that contributed</div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+          <div style="font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);font-family:var(--font-mono)">Scaling factors that contributed</div>
+          <div style="font-family:var(--font-mono);font-size:11px;font-weight:700;color:${rdScoreColor};background:${rdScoreColor}1a;border:1px solid ${rdScoreColor}40;border-radius:4px;padding:2px 7px;letter-spacing:0.5px">${abbr(e.puntTeam)} punting</div>
+        </div>
         ${factorRows ? `<div style="font-size:9px;text-transform:uppercase;letter-spacing:1.2px;color:var(--text3);font-family:var(--font-mono);margin-bottom:6px">Pre-Game</div>` : ''}
         <div id="reviewBreakdown-${gamePk}">${breakdownContent}</div>
         <div id="reviewInGame-${gamePk}" style="margin-top:${factorRows ? 12 : 0}px"></div>
