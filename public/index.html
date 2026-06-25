@@ -8519,7 +8519,15 @@ async function renderGameflowChart(silent = false, inlineOpts = null) {
     }
 
     // ── Step 3: determine which side is the punt candidate ──
-    const puntSide = logEntry?.puntSide || 'home';
+    // Prefer stored puntSide; fall back to puntTeam comparison for old entries
+    // that didn't store punt_side — wrong puntSide makes drift calculation backwards.
+    let puntSide = logEntry?.puntSide || null;
+    if (!puntSide && logEntry?.puntTeam) {
+      const eHome = typeof logEntry.home === 'string' ? logEntry.home : (logEntry.home?.name || '');
+      puntSide = (logEntry.puntTeam === eHome || abbr(logEntry.puntTeam) === abbr(eHome)) ? 'home' : 'away';
+    }
+    puntSide = puntSide || 'home';
+
     // Old Supabase entries lack preGameScore; fall back to score (the final score,
     // which equals preGameScore when there are no in-game signals).
     const preGameScore = logEntry?.preGameScore ?? logEntry?.score ?? 0;
@@ -8571,15 +8579,16 @@ async function renderGameflowChart(silent = false, inlineOpts = null) {
       const fired = signalsByInning[inningNum] || [];
 
       // Permanent punt evidence accrues (signals are real actions — they don't un-happen).
+      // Use stored signals when available; fall back to run-differential heuristic so
+      // Supabase-loaded entries (which lack stored inGameSignals) still show movement.
       let inningBonus = 0;
-      if (!logEntry) {
-        if (inningNum >= 6 && deficit <= -5) {
-          inningBonus = Math.min(50, Math.round((Math.abs(deficit) - 4) * (inningNum >= 8 ? 9 : inningNum >= 7 ? 7 : 5)));
-        } else if (inningNum >= 4 && inningNum < 6 && deficit <= -5) {
-          inningBonus = 14;
-        }
-      } else {
+      const hasFired = fired.length > 0;
+      if (hasFired) {
         inningBonus = fired.reduce((sum, s) => sum + (s.weight || 0), 0);
+      } else if (inningNum >= 6 && deficit <= -5) {
+        inningBonus = Math.min(50, Math.round((Math.abs(deficit) - 4) * (inningNum >= 8 ? 9 : inningNum >= 7 ? 7 : 5)));
+      } else if (inningNum >= 4 && inningNum < 6 && deficit <= -5) {
+        inningBonus = 14;
       }
       runningPermanent = Math.min(80, runningPermanent + inningBonus);
 
@@ -8655,7 +8664,7 @@ async function renderGameflowChart(silent = false, inlineOpts = null) {
       <div style="width:100%">
         <div style="display:flex;align-items:center;gap:16px;margin-bottom:16px;flex-wrap:wrap">
           <div style="display:flex;align-items:center;gap:6px">
-            <div style="width:12px;height:3px;background:var(--red2);border-radius:2px"></div>
+            <div style="width:12px;height:3px;background:rgba(255,255,255,0.85);border-radius:2px"></div>
             <span style="font-size:11px;color:var(--text3);font-family:var(--font-mono)">Punt Score (0–80)</span>
           </div>
           <div style="display:flex;align-items:center;gap:6px">
@@ -8758,16 +8767,28 @@ async function renderGameflowChart(silent = false, inlineOpts = null) {
     ctx.lineTo(toX(n - 1), PAD.top + cH);
     ctx.lineTo(toX(0), PAD.top + cH);
     ctx.closePath();
-    ctx.fillStyle = 'rgba(224,92,42,0.10)';
+    ctx.fillStyle = 'rgba(255,255,255,0.05)';
     ctx.fill();
 
-    // ── Score line ──
+    // ── Score line — bright white so it's always distinct from orange/gold thresholds ──
     ctx.beginPath();
     points.forEach((p, i) => { i === 0 ? ctx.moveTo(toX(i), toY(p.score)) : ctx.lineTo(toX(i), toY(p.score)); });
-    ctx.strokeStyle = 'rgba(224,92,42,0.85)';
+    ctx.strokeStyle = 'rgba(255,255,255,0.90)';
     ctx.lineWidth = 2.5;
     ctx.lineJoin = 'round';
     ctx.stroke();
+
+    // Score label at end of line
+    if (points.length > 0) {
+      const last = points[points.length - 1];
+      const lx = toX(points.length - 1);
+      const ly = toY(last.score);
+      const scoreLabel = String(Math.round(last.score));
+      ctx.font = 'bold 9px JetBrains Mono,monospace';
+      ctx.textAlign = 'left';
+      ctx.fillStyle = 'rgba(255,255,255,0.80)';
+      ctx.fillText(scoreLabel, lx + 4, ly + 3);
+    }
 
     // ── Lock marker — where the game crossed the punt line and locked ──
     if (lockInning != null && lockInning >= 1 && lockInning < n) {
