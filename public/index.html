@@ -3041,7 +3041,7 @@ async function onUserLoggedIn(user) {
 
 function onUserLoggedOut() {
   currentUser = null;
-  state.gameLog = []; state.logComments = {}; state.logOverrides = {}; state.logResults = {};
+  state.gameLog = []; state.logComments = {}; state.logOverrides = {}; state.logResults = {}; state.teamFeedbackBias = {};
   starredTeams = new Set();
   document.getElementById('authOverlay').style.display = 'none';
   showSignInPrompt();
@@ -3150,6 +3150,7 @@ async function loadUserData() {
       });
       // Rebuild derived teamData so leaders/watchlist/team cards show real data
       rebuildTeamData();
+      buildTeamFeedbackBias();
       console.log(`[gameLog] loaded ${state.gameLog.length} games · ${state.gameLog.filter(e => e.flag === 'review').length} review-band · ${state.gameLog.filter(e => e.flag === 'punt').length} punts · ${Object.keys(state.logOverrides).length} manual overrides · admin=${isAdmin()}`);
       renderTeamBreakdown();
       renderLeaders();
@@ -4956,6 +4957,32 @@ function buildPlayerRecencyWeights(teamName) {
 // Fix #2: FIP pitching signal weighted down when < 4 starts (noisy sample)
 // Fix #3: puntMotivation live-adjusted via getLiveTeamQuality (standings)
 // Fix #4: 2-game series gets no last-game bonus / every game matters
+// Reads all completed review overrides that have comments and builds a
+// per-team score bias (±5 pts). Called after game log loads and after
+// each verdict/comment save. Result stored in state.teamFeedbackBias.
+function buildTeamFeedbackBias() {
+  const PUNT_KW = /\b(rest(?:ed|ing)?|regulars?|starters?|benched?|sat out|lineup|concede|obvious|clear(?:ly)?|definitely|tanking|giving up|waving)\b/i;
+  const CLEAN_KW = /\b(compet(?:itive|ing)|trying|fought back|legitimate|not a punt|close game|injur(?:y|ied)|still in it|came back)\b/i;
+
+  const teamTotals = {};
+  for (const entry of state.gameLog) {
+    const override = state.logOverrides[entry.id];
+    const comment  = (state.logComments[entry.id] || '').trim();
+    if (override === undefined || !comment) continue;
+    const team = entry.puntTeam;
+    if (!team || team === '—') continue;
+    if (!teamTotals[team]) teamTotals[team] = 0;
+    if (override === true)  teamTotals[team] += PUNT_KW.test(comment)  ? 3 : 1;
+    if (override === false) teamTotals[team] -= CLEAN_KW.test(comment) ? 3 : 1;
+  }
+
+  const bias = {};
+  for (const [team, total] of Object.entries(teamTotals)) {
+    if (total !== 0) bias[team] = Math.max(-5, Math.min(5, total));
+  }
+  state.teamFeedbackBias = bias;
+}
+
 // Fix #5: G1 suppression stays at ×0.65 (correct / monitoring)
 // Fix #6: Back-to-back game adds moderate fatigue bonus (motivation-scaled)
 // Fix #7: West→East same-day travel adds structural fatigue bonus
@@ -5097,7 +5124,13 @@ function computePuntScore({ effectiveBenched, eraDelta, isLastGame, isFirstGame,
   const timingMult = seasonTimingMultiplier(gameDate, teamName);
   score = score * timingMult * aceScale;
 
-  return Math.min(Math.round(score), 80);
+  // ── USER FEEDBACK BIAS ────────────────────────────────────
+  // Small additive from override+comment history. Applied after timing/ace
+  // so early-season games still benefit from review learnings.
+  const feedbackBias = (state.teamFeedbackBias || {})[teamName] || 0;
+  if (feedbackBias !== 0) score += feedbackBias;
+
+  return Math.min(Math.max(Math.round(score), 0), 80);
 }
 
 
@@ -6752,6 +6785,38 @@ async function fetchInGamePuntSignals(gid, puntSide, gameStatus) {
       signals.push({ type: 'early_star_removal', label: `${earlyOffSubs} offensive subs before 7th inning`, weight: pts, inning: 6 });
     }
 
+    // Boxscore-based starter removal: count regulars with few PAs while losing.
+    // Catches cases missed by play-by-play event types (defensive replacements,
+    // DH subs, etc.) and serves as confirmation when the team is down big.
+    // Only fires when punting team is losing by 4+ and no early_star_removal
+    // signal already fired (avoids double-counting the same event).
+    try {
+      const alreadySignaled = signals.some(s => s.type === 'early_star_removal');
+      if (!alreadySignaled && runDiff <= -4 && boxscore) {
+        const puntData = boxscore.teams?.[puntSide];
+        if (puntData) {
+          const pitcherSet = new Set(puntData.pitchers || []);
+          const totalInnings = linescore?.innings?.length || inning;
+          // In a 9-inning game a starter gets 3-4 PAs; ≤2 = pulled before 6th
+          const earlyThreshold = totalInnings >= 9 ? 2 : 1;
+          const earlyPulled = Object.values(puntData.players || {})
+            .filter(p => {
+              const bo = parseInt(p.battingOrder);
+              return bo && bo % 100 === 0 && !pitcherSet.has(p.person?.id);
+            })
+            .filter(p => {
+              const pas = p.stats?.batting?.plateAppearances ?? -1;
+              return pas >= 0 && pas <= earlyThreshold;
+            }).length;
+          if (earlyPulled >= 2) {
+            const pts = Math.min(14, earlyPulled * 5);
+            inGameScore += pts;
+            signals.push({ type: 'early_star_removal', label: `${earlyPulled} regulars pulled early (down ${Math.abs(runDiff)})`, weight: pts, inning });
+          }
+        }
+      }
+    } catch { /* best-effort */ }
+
     // Blowout early / down 5+ by inning 4 is an unusually strong signal
     // even before the "late game" deficit threshold applies
     if (inning >= 4 && inning < 6 && runDiff <= -5) {
@@ -7210,12 +7275,12 @@ function toggleOverride(id) {
   else if (cur === true)  state.logOverrides[id] = false;
   else                    delete state.logOverrides[id];
   renderCalibratedLineup();
-  debounceSave("override_"+id, () => saveGameLogEntry(id));
+  debounceSave("override_"+id, () => { saveGameLogEntry(id); buildTeamFeedbackBias(); });
 }
 
 function saveComment(id, val) {
   state.logComments[id] = val;
-  debounceSave("comment_"+id, () => saveGameLogEntry(id));
+  debounceSave("comment_"+id, () => { saveGameLogEntry(id); buildTeamFeedbackBias(); });
 }
 
 // ── Analyst manual verdict (gameflow page) ──────────────────
@@ -7230,6 +7295,7 @@ function setManualVerdict(id, verdict) {
     else                          delete state.logOverrides[id];
 
     rebuildTeamData();
+    buildTeamFeedbackBias();
     state.seasonPunts = state.gameLog.filter(e => effectiveFlag(e) === 'punt').length;
     const ss = document.getElementById('statSeason'); if (ss) ss.textContent = state.seasonPunts;
     if (typeof renderTeamBreakdown === 'function') renderTeamBreakdown();
@@ -7916,6 +7982,7 @@ function clearLog() {
   state.gameLog = [];
   state.logComments = {};
   state.logOverrides = {};
+  state.teamFeedbackBias = {};
   rebuildTeamData();
   renderTeamBreakdown();
   renderLeaders();
@@ -8309,6 +8376,13 @@ function buildScoreBreakdown(g) {
   if (isFat)  push('West→East travel', 5 * effMot, 5);
 
   if (aceNote) factors.push({ label: aceNote, val: 0, max: 0, isAceNote: true });
+
+  const feedbackBias = Math.round((state.teamFeedbackBias || {})[teamName] || 0);
+  if (feedbackBias > 0) {
+    factors.push({ label: `Review feedback — punt pattern recognized for ${teamName}`, val: feedbackBias, max: 5 });
+  } else if (feedbackBias < 0) {
+    factors.push({ label: `Review feedback — competitive pattern noted for ${teamName} (${feedbackBias} pts)`, val: 0, max: 0, isAceNote: true });
+  }
 
   return factors;
 }
