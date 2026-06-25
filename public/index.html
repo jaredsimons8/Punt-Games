@@ -9207,7 +9207,7 @@ function stopAutoRefresh() {
 
 document.addEventListener('keydown', e => {
   // R = refresh
-  if (e.key === 'r' && !e.metaKey && !e.ctrlKey && document.activeElement.tagName !== 'INPUT') {
+  if (e.key === 'r' && !e.metaKey && !e.ctrlKey && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA') {
     e.preventDefault(); fetchGames();
   }
   // Escape = close any open breakdown panels
