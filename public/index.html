@@ -7574,7 +7574,20 @@ async function recomputeReviewBreakdown(id, e, gamePk) {
   } catch (err) {
     console.error('[breakdown recompute]', err);
     const el2 = document.getElementById('reviewBreakdown-' + gamePk);
-    if (el2) el2.innerHTML = '<span style="color:var(--text3);font-size:12px;font-family:var(--font-mono)">Could not recompute factors — see console.</span>';
+    if (!el2) return;
+    // Even on error, show the inferred pre-game contribution so the score adds up.
+    const logEntry2 = state.gameLog.find(x => x.id === id);
+    const igEl = document.getElementById('reviewInGame-' + gamePk);
+    const inGameTotal = igEl
+      ? [...igEl.querySelectorAll('span[style*="font-mono"]')]
+          .reduce((s, el) => s + (parseInt(el.textContent) || 0), 0)
+      : 0;
+    const preGameContrib = Math.max(0, (logEntry2?.score || 0) - inGameTotal);
+    const preGameLabel = `<div style="font-size:9px;text-transform:uppercase;letter-spacing:1.2px;color:var(--text3);font-family:var(--font-mono);margin-bottom:6px">Pre-Game</div>`;
+    el2.innerHTML = preGameLabel + (preGameContrib > 0
+      ? `<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border)"><span style="color:var(--text2);font-size:12px">Pre-game factors (lineup, pitching, schedule)</span><span style="color:var(--red2);font-family:var(--font-mono);font-size:12px;font-weight:700">+${preGameContrib}</span></div><div style="margin-top:6px;font-size:11px;color:var(--text3);font-family:var(--font-mono)">Detail unavailable — re-open after a moment to retry</div>`
+      : `<span style="color:var(--text3);font-size:12px;font-family:var(--font-mono)">No pre-game factors found</span>`);
+    if (igEl) igEl.style.marginTop = '12px';
   }
 }
 
