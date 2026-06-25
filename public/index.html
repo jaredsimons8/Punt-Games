@@ -5650,6 +5650,7 @@ function rebuildTeamData() {
       puntW,
       puntL,
       history: punts.map(e => ({
+        id:    e.id,
         date:  e.date,
         opp:   e.away === t.name ? abbr(e.home) : abbr(e.away),
         score: e.score || 0,
@@ -8038,6 +8039,22 @@ function renderCalProgress() {
   });
 }
 
+// Navigate from Team Punts → Reviews tab → open review detail for a specific game.
+function openGameFromTeams(id) {
+  if (!id) return;
+  showPage('reviews');
+  // showPage clears reviewDetail; defer so the queue renders first.
+  setTimeout(() => openReviewDetail(id), 50);
+}
+
+// Clicking a chart bar opens the most recent punt game for that team.
+function openMostRecentPuntForTeam(teamName) {
+  const td = state.teamData[teamName];
+  if (!td || !td.history.length) return;
+  const latest = td.history[td.history.length - 1];
+  if (latest?.id) openGameFromTeams(latest.id);
+}
+
 function renderTeamBreakdown() {
   const query = (document.getElementById('teamSearch')?.value || '').toLowerCase();
   const grid = document.getElementById('teamsGrid');
@@ -8077,8 +8094,9 @@ function renderTeamBreakdown() {
     const gamesHTML = hasPunts
       ? [...td.history].reverse().map(h => {
           const sev = h.score >= 58 ? 'sev-hi' : h.score >= 50 ? 'sev-mid' : '';
+          const idJs = (h.id || '').replace(/'/g, "\\'");
           return `
-            <div class="tp-game ${sev}" title="${h.date} vs ${h.opp} — punt score ${h.score}">
+            <div class="tp-game ${sev}" title="${h.date} vs ${h.opp} — punt score ${h.score} · click to view" style="cursor:pointer" onclick="openGameFromTeams('${idJs}')">
               <span class="tpg-score">${h.score}</span>
               <span class="tpg-when">${fmtWhen(h.date)}</span>
               <span class="tpg-opp">${h.opp}</span>
@@ -8151,11 +8169,14 @@ function renderPuntChart() {
       const x = mL + u * slotW + (slotW - barW) / 2;
       const h = (t.punts / niceMax) * plotH;
       const y = baseY - h;
+      const nameJs = t.name.replace(/'/g, "\\'");
+      const clickable = t.punts > 0;
+      const clickAttr = clickable ? ` style="cursor:pointer" onclick="openMostRecentPuntForTeam('${nameJs}')"` : '';
       if (t.punts > 0) {
-        svg += `<rect class="pc-bar" x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${barW.toFixed(1)}" height="${h.toFixed(1)}" rx="1.5" fill="var(--red)"><title>${t.name}: ${t.punts} punt${t.punts===1?'':'s'}</title></rect>`;
-        svg += `<text class="pc-val-label" x="${(x+barW/2).toFixed(1)}" y="${(y-3).toFixed(1)}" text-anchor="middle">${t.punts}</text>`;
+        svg += `<rect class="pc-bar"${clickAttr} x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${barW.toFixed(1)}" height="${h.toFixed(1)}" rx="1.5" fill="var(--red)"><title>${t.name}: ${t.punts} punt${t.punts===1?'':'s'} · click to view latest</title></rect>`;
+        svg += `<text class="pc-val-label"${clickAttr} x="${(x+barW/2).toFixed(1)}" y="${(y-3).toFixed(1)}" text-anchor="middle">${t.punts}</text>`;
       }
-      svg += `<text class="pc-team-label" x="${(x+barW/2).toFixed(1)}" y="${(baseY+11).toFixed(1)}" text-anchor="middle">${t.abbr}</text>`;
+      svg += `<text class="pc-team-label"${clickAttr} x="${(x+barW/2).toFixed(1)}" y="${(baseY+11).toFixed(1)}" text-anchor="middle">${t.abbr}</text>`;
       u += 1;
     });
     const firstX = groupX0 + (slotW - barW) / 2;
