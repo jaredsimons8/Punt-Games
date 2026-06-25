@@ -3032,6 +3032,8 @@ async function onUserLoggedIn(user) {
     await loadLineupBaselines();
     renderTeamBreakdown(); renderCalProgress();
     updateStarredPanel();
+    // Auto-score any dates not yet in the game log (runs in background).
+    autoFillMissingGames().catch(e => console.error('[autoFill]', e));
   } catch(e) {
     console.error('Error loading user data:', e);
     setSyncDot('error');
@@ -3523,6 +3525,118 @@ function updateRebuildBtn() {
   } else {
     btn.textContent = '↻ Score entire season';
     if (clr) clr.style.display = 'none';
+  }
+}
+
+// Silently scores any season dates not yet in game_log.
+// Runs automatically after login; uses the same checkpoint as the manual
+// rebuild so the two don't conflict and resume each other's partial work.
+async function autoFillMissingGames() {
+  if (!currentUser || rebuildInProgress) return;
+
+  // Determine start: checkpoint wins; otherwise use the most recent date
+  // that's already in the game log so we don't re-score everything.
+  const cp = getRebuildCheckpoint();
+  let startFrom = cp?.lastCompletedDate || null;
+  if (!startFrom && state.gameLog.length) {
+    const sorted = state.gameLog.map(e => e.date).sort();
+    startFrom = sorted[sorted.length - 1];
+  }
+
+  // Score through yesterday — today's games may still be live.
+  const todayStr = localTodayStr();
+  const yesterday = (() => {
+    const d = new Date(todayStr + 'T00:00:00Z');
+    d.setUTCDate(d.getUTCDate() - 1);
+    return d.toISOString().slice(0, 10);
+  })();
+
+  const allDates = eachSeasonDate(seasonStartDate(), yesterday);
+  const datesToProcess = startFrom ? allDates.filter(d => d > startFrom) : allDates;
+  if (!datesToProcess.length) return;
+
+  console.log(`[autoFill] ${datesToProcess.length} day(s) to score (${datesToProcess[0]} → ${datesToProcess[datesToProcess.length - 1]})`);
+
+  rebuildInProgress = true;
+  setSyncDot('syncing');
+  const prog = document.getElementById('rebuildProgress');
+  if (prog) prog.style.display = 'block';
+
+  let added = 0, failed = 0;
+
+  try {
+    await fetchStandings();
+    const year = new Date().getFullYear();
+    const teamsData = await apiFetch(`${BASE}/teams?sportId=1&season=${year}`);
+    const allTeams = (teamsData?.teams || []).filter(t => t && t.id);
+    const fakeGames = allTeams.map(t => ({
+      teams: { home: { team: { id: t.id, name: t.name } }, away: { team: { id: t.id, name: t.name } } }
+    }));
+    const normalLineups = await fetchNormalLineups(allTeams.map(t => t.id), fakeGames);
+
+    for (let i = 0; i < datesToProcess.length; i++) {
+      const date = datesToProcess[i];
+      if (prog) prog.textContent = `Auto-scoring ${date} … (${i + 1}/${datesToProcess.length} days · ${added} games added)`;
+
+      try {
+        const analyzed = await analyzeDateSilent(date, normalLineups);
+        const saveIds = [];
+        for (const g of analyzed) {
+          if (g.flag === 'postponed') continue;
+          const id = gameLogId(g, date);
+          if (!state.gameLog.find(x => x.id === id)) {
+            state.gameLog.push(buildLogEntry(g, date));
+            saveIds.push(id);
+            added++;
+          }
+        }
+        for (const id of saveIds) {
+          try { await saveGameLogEntry(id); } catch { /* best effort */ }
+        }
+        setRebuildCheckpoint({ lastCompletedDate: date });
+
+        // Refresh UI whenever games are added, or every 5 dates at minimum
+        if (saveIds.length || i % 5 === 4 || i === datesToProcess.length - 1) {
+          state.gameLog.sort((a, b) => a.date.localeCompare(b.date) || b.score - a.score);
+          rebuildTeamData();
+          buildTeamFeedbackBias();
+          renderReviewQueue();
+          updateReviewBadge();
+          if (typeof renderTeamBreakdown === 'function') renderTeamBreakdown();
+          if (typeof renderLeaders === 'function') renderLeaders();
+        }
+      } catch (e) {
+        failed++;
+        console.warn('[autoFill] date failed', date, e?.message || e);
+        const isRateLimit = String(e?.message || e).includes('429') || String(e?.message || e).includes('rate');
+        await new Promise(r => setTimeout(r, isRateLimit ? 3000 : 1000));
+      }
+      await new Promise(r => setTimeout(r, 600));
+    }
+
+    if (failed === 0) clearRebuildCheckpoint();
+  } catch (e) {
+    console.error('[autoFill] fatal', e);
+  } finally {
+    rebuildInProgress = false;
+    state.gameLog.sort((a, b) => a.date.localeCompare(b.date) || b.score - a.score);
+    rebuildTeamData();
+    buildTeamFeedbackBias();
+    renderReviewQueue();
+    updateReviewBadge();
+    if (typeof renderTeamBreakdown === 'function') renderTeamBreakdown();
+    if (typeof renderLeaders === 'function') renderLeaders();
+    updateRebuildBtn();
+    setSyncDot('synced');
+    if (prog) {
+      if (added > 0) {
+        prog.textContent = `Auto-fill complete — ${added} game${added === 1 ? '' : 's'} scored`;
+        setTimeout(() => { if (prog) prog.style.display = 'none'; }, 6000);
+      } else {
+        prog.style.display = 'none';
+      }
+    }
+    if (added > 0) showToast(`Scored ${added} game${added === 1 ? '' : 's'} automatically`);
   }
 }
 
