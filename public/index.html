@@ -7731,6 +7731,51 @@ async function loadReviewBoxScore(gamePk, e) {
 
   const awayIsPunt = e.puntSide === 'away';
   const homeIsPunt = e.puntSide === 'home';
+
+  // ── Starting lineups ────────────────────────────────────────
+  const buildLineup = (side) => {
+    const team = bs.teams?.[side];
+    if (!team) return [];
+    const players = team.players || {};
+    return Object.values(players)
+      .filter(p => p.battingOrder && parseInt(p.battingOrder) % 100 === 0)
+      .sort((a, b) => parseInt(a.battingOrder) - parseInt(b.battingOrder))
+      .map(p => ({ order: parseInt(p.battingOrder) / 100, name: p.person?.fullName || '—', pos: p.position?.abbreviation || '—' }));
+  };
+
+  const awayLineup = buildLineup('away');
+  const homeLineup = buildLineup('home');
+
+  if (awayLineup.length || homeLineup.length) {
+    const maxRows = Math.max(awayLineup.length, homeLineup.length);
+    const mono = 'font-family:var(--font-mono);font-size:11px';
+    const colHdr = (teamAbbr, isPunt) =>
+      `<th style="padding:3px 8px;text-align:left;font-size:10px;font-family:var(--font-display);font-weight:700;color:${isPunt ? 'var(--gold)' : 'var(--text3)'}">
+        ${teamAbbr}${isPunt ? ' <span style="font-size:9px;font-family:var(--font-mono);font-weight:400;color:var(--text3)">punting</span>' : ''}
+      </th>`;
+    const lineupRows = Array.from({ length: maxRows }, (_, i) => {
+      const a = awayLineup[i];
+      const h = homeLineup[i];
+      const cell = (p, isPunt) => p
+        ? `<td style="padding:2px 8px;${mono};color:${isPunt ? 'var(--text)' : 'var(--text2)'};white-space:nowrap">
+            <span style="color:var(--text3);margin-right:5px">${p.order}.</span>${p.name}
+            <span style="color:var(--text3);margin-left:5px">${p.pos}</span>
+          </td>`
+        : '<td></td>';
+      return `<tr style="border-top:1px solid var(--border)">${cell(a, awayIsPunt)}${cell(h, homeIsPunt)}</tr>`;
+    }).join('');
+
+    box.insertAdjacentHTML('beforeend', `
+      <div style="margin-top:14px">
+        <div style="font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);font-family:var(--font-mono);margin-bottom:6px">Starting Lineups</div>
+        <table style="border-collapse:collapse;width:100%">
+          <thead><tr>${colHdr(abbr(e.away), awayIsPunt)}${colHdr(abbr(e.home), homeIsPunt)}</tr></thead>
+          <tbody>${lineupRows}</tbody>
+        </table>
+      </div>`);
+  }
+
+  // ── Pitching ─────────────────────────────────────────────────
   const awayRows = buildPitchingRows('away');
   const homeRows = buildPitchingRows('home');
 
