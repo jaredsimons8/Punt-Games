@@ -7419,6 +7419,21 @@ async function openReviewDetail(id) {
       <div style="padding:16px 18px;border-bottom:1px solid var(--border)">
         <div style="font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);font-family:var(--font-mono);margin-bottom:10px">Box Score</div>
         <div id="reviewBox-${gamePk}" style="overflow-x:auto"><span style="color:var(--text3);font-size:12px;font-family:var(--font-mono)">Loading box score…</span></div>
+        <div style="margin-top:12px;display:flex;flex-direction:column;gap:4px">${
+          [
+            { team: abbr(e.away), sp: e.awaySP, era: e.awaySPEra, isPunt: e.puntSide === 'away' },
+            { team: abbr(e.home), sp: e.homeSP, era: e.homeSPEra, isPunt: e.puntSide === 'home' }
+          ].map(({ team, sp, era, isPunt }) => {
+            const eraStr = (!era || era >= 99) ? '—' : parseFloat(era).toFixed(2);
+            const col = isPunt ? rdScoreColor : 'var(--text2)';
+            return `<div style="display:flex;align-items:baseline;gap:8px">
+              <span style="font-family:var(--font-mono);font-size:11px;font-weight:700;color:${col};min-width:32px">${team}</span>
+              <span style="font-family:var(--font-mono);font-size:12px;color:${isPunt ? 'var(--text)' : 'var(--text2)'};font-weight:${isPunt ? '600' : '400'}">${sp || 'TBD'}</span>
+              <span style="font-family:var(--font-mono);font-size:11px;color:var(--text3)">${eraStr} ERA</span>
+              ${isPunt ? `<span style="font-family:var(--font-mono);font-size:9px;color:${rdScoreColor};text-transform:uppercase;letter-spacing:1px">punting SP</span>` : ''}
+            </div>`;
+          }).join('')
+        }</div>
       </div>
       <div style="padding:16px 18px;border-bottom:1px solid var(--border)">
         <div style="font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);font-family:var(--font-mono);margin-bottom:12px">Inning-by-Inning Gameflow</div>
