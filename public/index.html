@@ -6824,19 +6824,19 @@ async function fetchInGamePuntSignals(gid, puntSide, gameStatus) {
       signals.push({ type: 'early_blowout', label: `Down ${Math.abs(runDiff)} through ${inning} innings`, weight: 14, inning });
     }
 
-    // ── LOW-LEVERAGE ARMS IN A CLOSE GAME ────────────────────
-    // Using mop-up / garbage-time relievers while the game is still competitive
-    // is one of the clearest mid-game concession signals.
-    // A manager who brings in a 7.00+ ERA arm when down by 2 in the 6th
-    // has quietly decided the game is over before the scoreboard agrees.
+    // ── LOW-LEVERAGE ARMS WHILE LOSING ───────────────────────
+    // Using mop-up / garbage-time relievers while losing (or in a close game)
+    // is a strong concession signal. A manager who brings in a 7.00+ ERA arm
+    // when down by 2 in the 6th has quietly decided the game is over before
+    // the scoreboard agrees. Down 8 in the 7th with the same arm is even clearer.
     //
-    // Detection: pull the punting team's pitchers from boxscore,
-    // check their season ERA, and flag if a high-ERA arm appeared
-    // while the run differential was within 3 (competitive game).
+    // Detection: pull the punting team's pitchers from boxscore, check their
+    // season ERA, flag if a high-ERA arm appeared while the team was not
+    // comfortably ahead (runDiff <= 3). Fires from inning 4 when deficit
+    // is 5+, inning 5 otherwise. Does NOT fire when team is winning by 4+.
     //
-    // We use ERA > 6.50 as the threshold / this captures genuine mop-up
-    // arms without penalising unlucky outings from legitimate relievers.
-    // Scaled by how many such arms appeared and how close the game was.
+    // ERA > 6.50 threshold captures genuine mop-up arms without penalising
+    // unlucky outings from legitimate relievers.
     try {
       const puntTeamSide = puntSide; // 'home' or 'away'
       const puntPitcherIds = boxscore?.teams?.[puntTeamSide]?.pitchers || [];
@@ -6844,9 +6844,13 @@ async function fetchInGamePuntSignals(gid, puntSide, gameStatus) {
       const relieversUsed = puntPitcherIds.slice(1);
 
       if (relieversUsed.length > 0) {
-        // Fetch ERA for each reliever in parallel
+        // Use seasonStats.pitching.era from boxscore when available (avoids
+        // extra API calls). Fall back to a live stats fetch only if missing.
+        const puntPlayers = boxscore?.teams?.[puntTeamSide]?.players || {};
         const relieverStats = await Promise.all(
           relieversUsed.slice(0, 6).map(async pid => {
+            const bsEra = parseFloat(puntPlayers['ID' + pid]?.seasonStats?.pitching?.era);
+            if (bsEra && bsEra < 99) return { pid, era: bsEra };
             try {
               const yr = new Date().getFullYear();
               const data = await apiFetch(`${BASE}/people/${pid}/stats?stats=season&group=pitching&season=${yr}`);
@@ -6866,21 +6870,24 @@ async function fetchInGamePuntSignals(gid, puntSide, gameStatus) {
           const appearance = allPlays.find(p => p?.matchup?.pitcher?.id === rel.pid);
           if (!appearance) continue;
           const appearedInning = appearance?.about?.inning || 99;
-          // Calculate run diff at that point / use overall runDiff as proxy
-          // (we don't have inning-by-inning scores, so use game-level diff directionally)
-          // Only flag if game appeared competitive (within 3) at some point this inning
-          if (Math.abs(runDiff) <= 3 && appearedInning >= 5) {
+          // Fire when punt team is not comfortably winning (runDiff <= 3).
+          // Lower inning gate to 4 when already losing big (runDiff <= -5).
+          const inningGate = runDiff <= -5 ? 4 : 5;
+          if (runDiff <= 3 && appearedInning >= inningGate) {
             lowLevCount++;
           }
         }
 
         if (lowLevCount >= 1) {
-          // Scale: 1 low-lev arm in close game = +12, 2+ = +20
+          // Scale: 1 arm = +12, 2+ = +20; label reflects whether losing or close
           const pts = lowLevCount >= 2 ? 20 : 12;
+          const lbl = runDiff <= -4
+            ? `${lowLevCount} mop-up arm${lowLevCount > 1 ? 's' : ''} used while losing by ${Math.abs(runDiff)}`
+            : `${lowLevCount} mop-up arm${lowLevCount > 1 ? 's' : ''} used in competitive game`;
           inGameScore += pts;
           signals.push({
             type: 'low_leverage_close_game',
-            label: `${lowLevCount} mop-up arm${lowLevCount > 1 ? 's' : ''} used in competitive game`,
+            label: lbl,
             weight: pts,
             inning,
           });
