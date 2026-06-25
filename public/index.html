@@ -7410,7 +7410,8 @@ async function openReviewDetail(id) {
           <div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap">
             <span style="font-family:var(--font-display);font-size:28px;font-weight:800;color:${rdScoreColor};letter-spacing:-1px;line-height:1">${e.score}</span>
             <span style="font-family:var(--font-mono);font-size:13px;color:var(--text3)">/80</span>
-            <span style="font-family:var(--font-mono);font-size:11px;color:var(--text3)">${e.date} · ${abbr(e.puntTeam)} leaning punt</span>
+            <span style="font-family:var(--font-mono);font-size:13px;font-weight:700;color:${rdScoreColor}">${abbr(e.puntTeam)}</span>
+            <span style="font-family:var(--font-mono);font-size:11px;color:var(--text3)">punting · ${e.date}</span>
           </div>
         </div>
         <button onclick="closeReviewDetail()" style="background:transparent;border:1px solid var(--border2);color:var(--text2);border-radius:var(--r-md);padding:6px 12px;cursor:pointer;font-family:var(--font-mono);font-size:11px">✕ Close</button>
@@ -7552,13 +7553,24 @@ async function recomputeReviewBreakdown(id, e, gamePk) {
     // Pre-game section label is injected by the HTML template only when
     // factorRows was populated at render time. For recomputed entries, inject it here.
     const preGameLabel = `<div style="font-size:9px;text-transform:uppercase;letter-spacing:1.2px;color:var(--text3);font-family:var(--font-mono);margin-bottom:6px">Pre-Game</div>`;
-    breakdownEl.innerHTML = preGameRows
-      ? preGameLabel + preGameRows + (aceNote ? `<div style="margin-top:6px;font-size:11px;color:var(--text3);font-family:var(--font-mono)">${aceNote.label}</div>` : '')
-      : '<span style="color:var(--text3);font-size:12px;font-family:var(--font-mono)">Score driven by schedule context (series position, schedule fatigue).</span>';
+
+    if (preGameRows) {
+      breakdownEl.innerHTML = preGameLabel + preGameRows + (aceNote ? `<div style="margin-top:6px;font-size:11px;color:var(--text3);font-family:var(--font-mono)">${aceNote.label}</div>` : '');
+    } else {
+      // Can't recover individual factors for historical games with changed context.
+      // Derive the pre-game contribution as totalScore − sum(in-game signals).
+      const inGameTotal = (analyzed.inGameSignals || []).reduce((s, sg) => s + (sg?.weight || 0), 0);
+      const preGameContrib = Math.max(0, (logEntry?.score || 0) - inGameTotal);
+      breakdownEl.innerHTML = preGameLabel + (
+        preGameContrib > 0
+          ? `<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border)"><span style="color:var(--text2);font-size:12px">Pre-game factors (lineup, pitching, schedule)</span><span style="color:var(--red2);font-family:var(--font-mono);font-size:12px;font-weight:700">+${preGameContrib}</span></div><div style="margin-top:6px;font-size:11px;color:var(--text3);font-family:var(--font-mono)">Individual breakdown unavailable — re-run season scorer to restore detail</div>`
+          : `<span style="color:var(--text3);font-size:12px;font-family:var(--font-mono)">No pre-game factors — score entirely from in-game signals</span>`
+      );
+    }
 
     // Update in-game section margin now that pre-game content is known.
     const ig = document.getElementById('reviewInGame-' + gamePk);
-    if (ig && preGameRows) ig.style.marginTop = '12px';
+    if (ig) ig.style.marginTop = '12px';
   } catch (err) {
     console.error('[breakdown recompute]', err);
     const el2 = document.getElementById('reviewBreakdown-' + gamePk);
