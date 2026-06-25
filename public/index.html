@@ -3022,7 +3022,8 @@ async function onUserLoggedIn(user) {
     await loadLineupBaselines();
     renderTeamBreakdown(); renderCalProgress();
     updateStarredPanel();
-    // Auto-score any dates not yet in the game log (runs in background).
+    // Score today immediately, then fill any historical gaps in the background.
+    scoreTodayBackground().catch(() => {});
     autoFillMissingGames().catch(e => console.error('[autoFill]', e));
   } catch(e) {
     console.error('Error loading user data:', e);
@@ -5671,30 +5672,46 @@ function buildLogEntry(g, dateVal) {
 }
 
 function addGamesToLog(games, dateVal) {
+  const isToday = dateVal === localTodayStr();
   const newIds = [];
+  const updatedIds = [];
+
   games.forEach(g => {
-    // Don't log postponed or suspended games / no lineup data to store
     if (g.flag === 'postponed') return;
-
     const id = gameLogId(g, dateVal);
-    if (state.gameLog.find(e => e.id === id)) return;
+    const existing = state.gameLog.find(e => e.id === id);
 
-    state.gameLog.push(buildLogEntry(g, dateVal));
-    newIds.push(id);
+    if (!existing) {
+      state.gameLog.push(buildLogEntry(g, dateVal));
+      newIds.push(id);
+      return;
+    }
+
+    // For today's games, update score/flag/breakdown as the game progresses.
+    // Manual overrides and notes live in separate maps and are preserved by
+    // saveGameLogEntry, so updating the scored fields here is safe.
+    if (isToday) {
+      const newFlag = existing.flag === 'review' ? 'review' : g.flag;
+      if (existing.score !== g.topScore || existing.flag !== newFlag || existing.puntSide !== g.puntSide) {
+        existing.score      = g.topScore;
+        existing.flag       = newFlag;
+        existing.puntSide   = g.puntSide;
+        existing.puntTeam   = (newFlag === 'punt' || newFlag === 'review')
+          ? (g.puntSide === 'home' ? g.home.name : g.away.name) : '—';
+        existing.breakdown  = (typeof buildScoreBreakdown === 'function' ? buildScoreBreakdown(g) : []) || [];
+        updatedIds.push(id);
+      }
+    }
   });
 
   state.gameLog.sort((a, b) => a.date.localeCompare(b.date) || b.score - a.score);
   populateCalTeamDropdown();
   rebuildTeamData();
-
   renderCalibratedLineup();
   if (typeof renderReviewQueue === 'function') renderReviewQueue();
   if (typeof updateReviewBadge === 'function') updateReviewBadge();
-  // Persist ONLY newly-added entries. Re-saving an existing entry here would
-  // overwrite a manual override/notes with the algorithmic values (the
-  // override/notes live only in logOverrides/logComments, which may not be
-  // populated yet on a fresh load) — so existing rows are left untouched.
   newIds.forEach(id => debounceSave("log_" + id, () => saveGameLogEntry(id), 300));
+  updatedIds.forEach(id => debounceSave("log_upd_" + id, () => saveGameLogEntry(id), 1000));
 }
 
 // ── REBUILD teamData from full gameLog ──────────────────────
@@ -9365,15 +9382,32 @@ function showSkeletonCards(count = 6) {
 
 let autoRefreshInterval = null;
 
+// Score today's games in the background and update game_log.
+// If the user is viewing today on the Today tab, also re-renders the cards.
+let _scoreTodayLock = false;
+async function scoreTodayBackground() {
+  if (_scoreTodayLock || !currentUser) return;
+  _scoreTodayLock = true;
+  try {
+    const today = localTodayStr();
+    const normalLineups = await getCachedNormalLineups();
+    const analyzed = await analyzeDateSilent(today, normalLineups);
+    if (analyzed.length) addGamesToLog(analyzed, today);
+
+    // If the Today tab is open and showing today, refresh the rendered cards too.
+    const dp = document.getElementById('datePicker');
+    if (dp?.value === today && currentPage === 'today') fetchGames();
+  } catch(e) {
+    console.warn('[scoreTodayBackground]', e?.message || e);
+  } finally {
+    _scoreTodayLock = false;
+  }
+}
+
 function startAutoRefresh() {
   stopAutoRefresh();
-  autoRefreshInterval = setInterval(() => {
-    const dp = document.getElementById('datePicker');
-    if (!dp) return;
-    const today = localTodayStr();
-    // Only auto-refresh if viewing today's games
-    if (dp.value === today) fetchGames();
-  }, 90000); // 90 seconds
+  // Score today every 90 seconds regardless of which tab is active.
+  autoRefreshInterval = setInterval(scoreTodayBackground, 90000);
 }
 
 function stopAutoRefresh() {
