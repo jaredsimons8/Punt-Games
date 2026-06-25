@@ -7419,21 +7419,6 @@ async function openReviewDetail(id) {
       <div style="padding:16px 18px;border-bottom:1px solid var(--border)">
         <div style="font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);font-family:var(--font-mono);margin-bottom:10px">Box Score</div>
         <div id="reviewBox-${gamePk}" style="overflow-x:auto"><span style="color:var(--text3);font-size:12px;font-family:var(--font-mono)">Loading box score…</span></div>
-        <div style="margin-top:12px;display:flex;flex-direction:column;gap:4px">${
-          [
-            { team: abbr(e.away), sp: e.awaySP, era: e.awaySPEra, isPunt: e.puntSide === 'away' },
-            { team: abbr(e.home), sp: e.homeSP, era: e.homeSPEra, isPunt: e.puntSide === 'home' }
-          ].map(({ team, sp, era, isPunt }) => {
-            const eraStr = (!era || era >= 99) ? '—' : parseFloat(era).toFixed(2);
-            const col = isPunt ? rdScoreColor : 'var(--text2)';
-            return `<div style="display:flex;align-items:baseline;gap:8px">
-              <span style="font-family:var(--font-mono);font-size:11px;font-weight:700;color:${col};min-width:32px">${team}</span>
-              <span style="font-family:var(--font-mono);font-size:12px;color:${isPunt ? 'var(--text)' : 'var(--text2)'};font-weight:${isPunt ? '600' : '400'}">${sp || 'TBD'}</span>
-              <span style="font-family:var(--font-mono);font-size:11px;color:var(--text3)">${eraStr} ERA</span>
-              ${isPunt ? `<span style="font-family:var(--font-mono);font-size:9px;color:${rdScoreColor};text-transform:uppercase;letter-spacing:1px">punting SP</span>` : ''}
-            </div>`;
-          }).join('')
-        }</div>
       </div>
       <div style="padding:16px 18px;border-bottom:1px solid var(--border)">
         <div style="font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);font-family:var(--font-mono);margin-bottom:12px">Inning-by-Inning Gameflow</div>
@@ -7661,6 +7646,10 @@ async function loadReviewBoxScore(gamePk, e) {
     box.innerHTML = '<span style="color:var(--text3);font-size:12px;font-family:var(--font-mono)">No box score available (game may not have started).</span>';
     return;
   }
+
+  // Fetch boxscore in parallel for pitching lines (non-blocking — show linescore first)
+  const bsPromise = apiFetch(`${BASE}/game/${gamePk}/boxscore`).catch(() => null);
+
   const innings = ls.innings;
   const cell = v => `<td style="padding:4px 8px;text-align:center;font-family:var(--font-mono);font-size:12px;color:var(--text2)">${v ?? '-'}</td>`;
   const head = `<th style="padding:4px 8px;text-align:left"></th>` +
@@ -7671,6 +7660,75 @@ async function loadReviewBoxScore(gamePk, e) {
     `<td style="padding:4px 10px;text-align:center;font-family:var(--font-mono);font-size:13px;font-weight:700;color:var(--text)">${ls.teams?.[side]?.runs ?? '-'}</td>` +
     cell(ls.teams?.[side]?.hits) + cell(ls.teams?.[side]?.errors) + `</tr>`;
   box.innerHTML = `<table style="border-collapse:collapse;min-width:100%"><thead><tr>${head}</tr></thead><tbody>${row('away', abbr(e.away))}${row('home', abbr(e.home))}</tbody></table>`;
+
+  // Append pitching lines once boxscore resolves
+  const bs = await bsPromise;
+  if (!bs || document.getElementById('reviewBox-' + gamePk) !== box) return;
+
+  const decisions = bs.decisions || {};
+  const winId  = decisions.winner?.id;
+  const lossId = decisions.loser?.id;
+  const saveId = decisions.save?.id;
+
+  const buildPitchingRows = (side) => {
+    const team = bs.teams?.[side];
+    if (!team) return '';
+    const pitcherIds = team.pitchers || [];
+    const players = team.players || {};
+    return pitcherIds.map(pid => {
+      const p = players['ID' + pid];
+      if (!p) return '';
+      const name = p.person?.fullName || '—';
+      const st = p.stats?.pitching || {};
+      const ip   = st.inningsPitched ?? '—';
+      const h    = st.hits           ?? '—';
+      const r    = st.runs           ?? '—';
+      const er   = st.earnedRuns     ?? '—';
+      const bb   = st.baseOnBalls    ?? '—';
+      const k    = st.strikeOuts     ?? '—';
+      const dec  = pid === winId ? ' W' : pid === lossId ? ' L' : pid === saveId ? ' SV' : '';
+      const decCol = pid === winId ? 'var(--green)' : pid === lossId ? 'var(--red2)' : 'var(--gold)';
+      const mono = 'font-family:var(--font-mono);font-size:11px';
+      return `<tr style="border-top:1px solid var(--border)">
+        <td style="padding:3px 8px;${mono};color:var(--text2);white-space:nowrap">${name}${dec ? `<span style="color:${decCol};font-weight:700;margin-left:5px">${dec}</span>` : ''}</td>
+        <td style="padding:3px 6px;text-align:center;${mono};color:var(--text3)">${ip}</td>
+        <td style="padding:3px 6px;text-align:center;${mono};color:var(--text3)">${h}</td>
+        <td style="padding:3px 6px;text-align:center;${mono};color:var(--text3)">${r}</td>
+        <td style="padding:3px 6px;text-align:center;${mono};color:var(--text3)">${er}</td>
+        <td style="padding:3px 6px;text-align:center;${mono};color:var(--text3)">${bb}</td>
+        <td style="padding:3px 6px;text-align:center;${mono};color:var(--text3)">${k}</td>
+      </tr>`;
+    }).join('');
+  };
+
+  const thStyle = 'padding:3px 6px;text-align:center;font-size:9px;color:var(--text3);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:1px';
+  const teamHdr = (teamAbbr, isPunt) =>
+    `<tr><td colspan="7" style="padding:6px 8px 2px;font-family:var(--font-display);font-size:11px;font-weight:700;color:${isPunt ? 'var(--gold)' : 'var(--text3)'}">${teamAbbr}${isPunt ? ' <span style="font-size:9px;font-family:var(--font-mono);font-weight:400;color:var(--text3)">punting</span>' : ''}</td></tr>`;
+
+  const awayIsPunt = e.puntSide === 'away';
+  const homeIsPunt = e.puntSide === 'home';
+  const awayRows = buildPitchingRows('away');
+  const homeRows = buildPitchingRows('home');
+
+  if (!awayRows && !homeRows) return;
+
+  const pitchTable = `
+    <div style="margin-top:14px">
+      <div style="font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);font-family:var(--font-mono);margin-bottom:6px">Pitching</div>
+      <table style="border-collapse:collapse;width:100%">
+        <thead><tr>
+          <th style="padding:3px 8px;text-align:left;${thStyle.replace('text-align:center;','')}">Pitcher</th>
+          <th style="${thStyle}">IP</th><th style="${thStyle}">H</th><th style="${thStyle}">R</th>
+          <th style="${thStyle}">ER</th><th style="${thStyle}">BB</th><th style="${thStyle}">K</th>
+        </tr></thead>
+        <tbody>
+          ${teamHdr(abbr(e.away), awayIsPunt)}${awayRows}
+          ${teamHdr(abbr(e.home), homeIsPunt)}${homeRows}
+        </tbody>
+      </table>
+    </div>`;
+
+  box.insertAdjacentHTML('beforeend', pitchTable);
 }
 
 function retryReviewBox() {
