@@ -7710,9 +7710,11 @@ async function loadReviewBoxScore(gamePk, e) {
       const k    = st.strikeOuts     ?? '—';
       const dec  = pid === winId ? ' W' : pid === lossId ? ' L' : pid === saveId ? ' SV' : '';
       const decCol = pid === winId ? 'var(--green)' : pid === lossId ? 'var(--red2)' : 'var(--gold)';
+      const eraRaw = p.seasonStats?.pitching?.era;
+      const era = (eraRaw && eraRaw !== '-.--' && eraRaw !== 'Infinity') ? eraRaw : null;
       const mono = 'font-family:var(--font-mono);font-size:11px';
       return `<tr style="border-top:1px solid var(--border)">
-        <td style="padding:3px 8px;${mono};color:var(--text2);white-space:nowrap">${name}${dec ? `<span style="color:${decCol};font-weight:700;margin-left:5px">${dec}</span>` : ''}</td>
+        <td style="padding:3px 8px;${mono};color:var(--text2);white-space:nowrap">${name}${dec ? `<span style="color:${decCol};font-weight:700;margin-left:5px">${dec}</span>` : ''}${era ? `<span style="color:var(--text3);font-size:10px;margin-left:7px">${era} ERA</span>` : ''}</td>
         <td style="padding:3px 6px;text-align:center;${mono};color:var(--text3)">${ip}</td>
         <td style="padding:3px 6px;text-align:center;${mono};color:var(--text3)">${h}</td>
         <td style="padding:3px 6px;text-align:center;${mono};color:var(--text3)">${r}</td>
