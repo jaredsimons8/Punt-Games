@@ -7534,8 +7534,17 @@ async function recomputeReviewBreakdown(id, e, gamePk) {
         breakdownEl.innerHTML = '<span style="color:var(--text3);font-size:12px;font-family:var(--font-mono)">Could not locate game on MLB schedule.</span>';
       return;
     }
-    const analyzed = await analyzeGame(targetGame, normalLineups);
-    const freshBreakdown = (typeof buildScoreBreakdown === 'function' ? buildScoreBreakdown(analyzed) : []) || [];
+    // Bypass the calibration gate so pre-June games can be retrograde-scored
+    // for review display (calibration only guards live detection, not review).
+    const prevCalib = state.previewIgnoreCalibration;
+    state.previewIgnoreCalibration = true;
+    let analyzed, freshBreakdown;
+    try {
+      analyzed = await analyzeGame(targetGame, normalLineups);
+      freshBreakdown = (typeof buildScoreBreakdown === 'function' ? buildScoreBreakdown(analyzed) : []) || [];
+    } finally {
+      state.previewIgnoreCalibration = prevCalib;
+    }
 
     // Save back if fresh recompute has content; otherwise keep what was stored.
     const logEntry = state.gameLog.find(x => x.id === id);
