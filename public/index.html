@@ -3105,6 +3105,7 @@ async function handleSignout() {
 
 function setAuthError(msg) {
   const el = document.getElementById('authError');
+  if (!el) return;
   el.style.color = msg.includes('Check') ? 'var(--green)' : 'var(--red2)';
   el.textContent = msg;
 }
@@ -3112,6 +3113,7 @@ function setAuthLoading(on) { document.querySelectorAll('.auth-submit').forEach(
 
 function setSyncDot(status) {
   const dot = document.getElementById('syncDot');
+  if (!dot) return;
   dot.className = 'sync-dot' + (status === 'syncing' ? ' syncing' : status === 'error' ? ' error' : '');
   dot.title = { syncing:'Saving...', error:'Sync error', synced:'All changes saved' }[status] || '';
 }
@@ -3253,6 +3255,7 @@ async function apiFetch(url, _retries = 3) {
 // ── TOAST ──────────────────────────────────────────────────
 function showToast(msg, isError = false) {
   const t = document.getElementById('toast');
+  if (!t) return;
   t.textContent = msg;
   t.className = 'toast show' + (isError ? ' error' : '');
   setTimeout(() => t.className = 'toast', 3500);
@@ -3699,8 +3702,9 @@ async function loadLineupBaselines() {
   if (loadLineupBaselines._loading) return;
   loadLineupBaselines._loading = true;
 
-  // Clear in-memory cache before loading fresh
+  // Clear in-memory caches before loading fresh
   Object.keys(lineupHistory).forEach(k => delete lineupHistory[k]);
+  _normalLineupsCache = null; _normalLineupsCachePromise = null;
 
   try {
     // shared_lineup_baselines / no auth required, visible to all users.
@@ -6945,7 +6949,7 @@ const calResultCache = {}; // cache stores {html, won} so color can be reapplied
 
 function renderCalendar() {
   const teamFilter = document.getElementById('calTeam')?.value || '';
-  const month = parseInt(document.getElementById('calMonth')?.value || new Date().getMonth() + 1);
+  const month = parseInt(document.getElementById('calMonth')?.value) || new Date().getMonth() + 1;
   const year = new Date().getFullYear();
   const grid = document.getElementById('calGrid');
   if (!grid) return;
@@ -7430,9 +7434,9 @@ async function openReviewDetail(id) {
       <div style="padding:16px 18px;border-bottom:1px solid var(--border)">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
           <div style="font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);font-family:var(--font-mono)">Scaling factors that contributed</div>
-          <div style="font-family:var(--font-mono);font-size:11px;font-weight:700;color:${rdScoreColor};background:${rdScoreColor}1a;border:1px solid ${rdScoreColor}40;border-radius:4px;padding:2px 7px;letter-spacing:0.5px">${abbr(e.puntTeam)} punting</div>
+          ${e.puntTeam && e.puntTeam !== '—' ? `<div style="font-family:var(--font-mono);font-size:11px;font-weight:700;color:${rdScoreColor};background:${rdScoreColor}1a;border:1px solid ${rdScoreColor}40;border-radius:4px;padding:2px 7px;letter-spacing:0.5px">${abbr(e.puntTeam)} punting</div>` : ''}
         </div>
-        ${factorRows ? `<div style="font-size:9px;text-transform:uppercase;letter-spacing:1.2px;color:var(--text3);font-family:var(--font-mono);margin-bottom:6px">Pre-Game</div>` : ''}
+        <div style="font-size:9px;text-transform:uppercase;letter-spacing:1.2px;color:var(--text3);font-family:var(--font-mono);margin-bottom:6px">Pre-Game</div>
         <div id="reviewBreakdown-${gamePk}">${breakdownContent}</div>
         <div id="reviewInGame-${gamePk}" style="margin-top:${factorRows ? 12 : 0}px"></div>
       </div>
@@ -7511,15 +7515,21 @@ function renderReviewVerdictBlock(id) {
 // Lazily-fetched season-long normal lineups, shared by the box-score detail
 // and the season rebuilder so we don't re-fetch on every panel open.
 let _normalLineupsCache = null;
+let _normalLineupsCachePromise = null;
 async function getCachedNormalLineups() {
   if (_normalLineupsCache) return _normalLineupsCache;
-  await fetchStandings().catch(() => {});
-  const year = new Date().getFullYear();
-  const teamsData = await apiFetch(`${BASE}/teams?sportId=1&season=${year}`);
-  const allTeams = (teamsData?.teams || []).filter(t => t && t.id);
-  const fakeGames = allTeams.map(t => ({ teams: { home: { team: { id: t.id, name: t.name } }, away: { team: { id: t.id, name: t.name } } } }));
-  _normalLineupsCache = await fetchNormalLineups(allTeams.map(t => t.id), fakeGames);
-  return _normalLineupsCache;
+  if (_normalLineupsCachePromise) return _normalLineupsCachePromise;
+  _normalLineupsCachePromise = (async () => {
+    await fetchStandings().catch(() => {});
+    const year = new Date().getFullYear();
+    const teamsData = await apiFetch(`${BASE}/teams?sportId=1&season=${year}`);
+    const allTeams = (teamsData?.teams || []).filter(t => t && t.id);
+    const fakeGames = allTeams.map(t => ({ teams: { home: { team: { id: t.id, name: t.name } }, away: { team: { id: t.id, name: t.name } } } }));
+    _normalLineupsCache = await fetchNormalLineups(allTeams.map(t => t.id), fakeGames);
+    _normalLineupsCachePromise = null;
+    return _normalLineupsCache;
+  })();
+  return _normalLineupsCachePromise;
 }
 
 // Re-score a single game on the fly and populate the breakdown panel.
