@@ -3017,8 +3017,9 @@ async function onUserLoggedIn(user) {
   document.getElementById('signoutBtn').textContent = 'Sign Out';
   document.getElementById('syncDot').style.display = '';
   setSyncDot('synced');
+  restoreGameLogCache(); // instant render from localStorage while Supabase loads
   try {
-    await loadUserData();
+    await loadUserData(); // authoritative Supabase refresh, saves updated cache
     await loadLineupBaselines();
     renderTeamBreakdown(); renderCalProgress();
     updateStarredPanel();
@@ -3116,6 +3117,45 @@ function debounceSave(key, fn, delay = 800) {
   saveQueue.set(key, setTimeout(fn, delay));
 }
 
+// ── LOCAL CACHE ───────────────────────────────────────────────────────────
+// Avoids cold-start Supabase round-trips on every page refresh.
+// Game log: restored synchronously before Supabase loads (instant render).
+// Baselines: restored synchronously; Supabase refreshes in background.
+function saveGameLogCache() {
+  if (!currentUser) return;
+  try {
+    localStorage.setItem(`glc_${currentUser.id}`, JSON.stringify({
+      ts: Date.now(),
+      log: state.gameLog,
+      ovr: state.logOverrides,
+      res: state.logResults,
+      cmt: state.logComments,
+    }));
+  } catch {}
+}
+
+function restoreGameLogCache() {
+  if (!currentUser) return false;
+  try {
+    const raw = localStorage.getItem(`glc_${currentUser.id}`);
+    if (!raw) return false;
+    const { log, ovr, res, cmt } = JSON.parse(raw);
+    if (!log || !log.length) return false;
+    state.gameLog = log;
+    state.logOverrides = ovr || {};
+    state.logResults = res || {};
+    state.logComments = cmt || {};
+    rebuildTeamData();
+    buildTeamFeedbackBias();
+    renderTeamBreakdown();
+    renderLeaders();
+    renderReviewQueue();
+    updateReviewBadge();
+    console.log(`[gameLog] ${log.length} games from local cache`);
+    return true;
+  } catch { return false; }
+}
+
 async function loadUserData() {
   if (!currentUser) return;
   setSyncDot('syncing');
@@ -3155,7 +3195,8 @@ async function loadUserData() {
     }
     setSyncDot('synced');
     renderCalibratedLineup();
-  
+    saveGameLogCache();
+
   } catch(e) { setSyncDot('error'); console.error(e); }
 }
 
@@ -3805,6 +3846,32 @@ async function loadLineupBaselines() {
   Object.keys(lineupHistory).forEach(k => delete lineupHistory[k]);
   _normalLineupsCache = null; _normalLineupsCachePromise = null;
 
+  // Restore from localStorage cache for instant render, then refresh from
+  // Supabase in the background if the cache is older than 60 minutes.
+  const BLC_KEY = `blc_${_yr}`;
+  try {
+    const raw = localStorage.getItem(BLC_KEY);
+    if (raw) {
+      const { ts, data } = JSON.parse(raw);
+      if (data && Object.keys(data).length) {
+        Object.assign(lineupHistory, data);
+        lineupBaselinesLoaded = true;
+        const ageMins = Math.round((Date.now() - (ts || 0)) / 60000);
+        console.log(`[baselines] ${Object.values(data).reduce((s,a)=>s+a.length,0)} rows from local cache (${ageMins}m old)`);
+        renderCalProgress();
+        renderTeamBreakdown();
+        if (state.lastAnalyzed) renderGames(state.lastAnalyzed);
+        checkAndRetrograde().catch(() => {});
+        loadLineupBaselines._loading = false;
+        // Background refresh if cache is stale (> 60 min)
+        if (!ts || Date.now() - ts > 60 * 60 * 1000) {
+          setTimeout(() => _refreshBaselinesFromSupabase(BLC_KEY), 1000);
+        }
+        return;
+      }
+    }
+  } catch {}
+
   try {
     // shared_lineup_baselines / no auth required, visible to all users.
     // PostgREST caps a single response at 1000 rows. With ~30 teams * ~60
@@ -3867,6 +3934,8 @@ async function loadLineupBaselines() {
       if (Object.keys(unmatched).length) {
         console.warn('[baselines] team_name values that did NOT map to a known team:', unmatched);
       }
+      // Persist to localStorage so next load is instant
+      try { localStorage.setItem(BLC_KEY, JSON.stringify({ ts: Date.now(), data: lineupHistory })); } catch {}
     } else {
       // Empty result — Supabase returned OK but no rows.
       // Do NOT set lineupBaselinesLoaded so we retry on next call.
@@ -3882,6 +3951,49 @@ async function loadLineupBaselines() {
     console.warn('Could not load shared lineup baselines:', e.message);
   } finally {
     loadLineupBaselines._loading = false;
+  }
+}
+
+// Background re-fetch from Supabase after a cache hit.
+// Updates lineupHistory in-place and saves fresh cache; does not touch flags.
+async function _refreshBaselinesFromSupabase(cacheKey) {
+  try {
+    const seasonStart = `${_yr}-01-01`;
+    const PAGE = 1000;
+    let sharedData = [];
+    let offset = 0;
+    while (true) {
+      const { data: page, error } = await db
+        .from('shared_lineup_baselines')
+        .select('*')
+        .gte('game_date', seasonStart)
+        .order('game_date', { ascending: false })
+        .range(offset, offset + PAGE - 1);
+      if (error) throw new Error(error.message);
+      if (!page || page.length === 0) break;
+      sharedData = sharedData.concat(page);
+      if (page.length < PAGE) break;
+      offset += PAGE;
+    }
+    if (!sharedData.length) return;
+    // Rebuild lineupHistory from fresh data
+    Object.keys(lineupHistory).forEach(k => delete lineupHistory[k]);
+    _normalLineupsCache = null; _normalLineupsCachePromise = null;
+    sharedData.forEach(row => {
+      const team = resolveTeamName(row.team_name);
+      if (!lineupHistory[team]) lineupHistory[team] = [];
+      const key = `${row.game_date}|${(row.sp_name || '').toLowerCase()}`;
+      if (!lineupHistory[team].some(e => `${e.date}|${(e.sp || '').toLowerCase()}` === key)) {
+        lineupHistory[team].push({ date: row.game_date, lineup: row.lineup || [], sp: row.sp_name, spFip: row.sp_fip, spEra: row.sp_era, opp: row.opp_team });
+      }
+    });
+    try { localStorage.setItem(cacheKey, JSON.stringify({ ts: Date.now(), data: lineupHistory })); } catch {}
+    console.log(`[baselines] background refresh: ${sharedData.length} rows -> ${Object.keys(lineupHistory).length} teams`);
+    renderCalProgress();
+    renderTeamBreakdown();
+    if (state.lastAnalyzed) renderGames(state.lastAnalyzed);
+  } catch(e) {
+    console.warn('[baselines] background refresh failed:', e.message);
   }
 }
 
@@ -7480,6 +7592,7 @@ function setManualVerdict(id, verdict) {
     if (typeof renderLeaders === 'function') renderLeaders();
 
     saveGameLogEntry(id);
+    saveGameLogCache();
     renderVerdictPanel(state.gameLog.find(e => e.id === id) || { id });
     if (typeof renderReviewQueue === 'function') renderReviewQueue();
     if (typeof updateReviewBadge === 'function') updateReviewBadge();
