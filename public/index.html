@@ -5869,8 +5869,25 @@ function renderCard(g, idx) {
     ? ''
     : `<div class="pc2-score"><span class="pc2-score-num">${g.topScore}</span><span class="pc2-score-den">/80</span></div>`;
 
+  // Series score context: show who's leading when in a 3+ game series past G1
+  const awaySeries = g.awaySeries != null ? g.awaySeries : null;
+  const homeSeries = g.homeSeries != null ? g.homeSeries : null;
+  let seriesBadgeText = `G${g.seriesGame}/${g.seriesLength}`;
+  let seriesBadgeStyle = '';
+  if (g.seriesLength >= 3 && g.seriesGame > 1 && awaySeries != null && homeSeries != null) {
+    const awayLeads = awaySeries > homeSeries;
+    const homeLeads = homeSeries > awaySeries;
+    const isTied    = awaySeries === homeSeries;
+    if (!isTied) {
+      seriesBadgeText = `G${g.seriesGame}/${g.seriesLength} · ${awayLeads ? abbr(g.away.name) : abbr(g.home.name)} leads ${Math.max(awaySeries, homeSeries)}–${Math.min(awaySeries, homeSeries)}`;
+    } else if (g.seriesGame >= 3) {
+      seriesBadgeText = `G${g.seriesGame}/${g.seriesLength} · rubber`;
+      seriesBadgeStyle = 'color:var(--gold);border-color:rgba(232,184,75,0.3);background:rgba(232,184,75,0.07)';
+    }
+  }
+
   const tags = [
-    `<span class="series-badge">G${g.seriesGame}/${g.seriesLength}</span>`,
+    `<span class="series-badge" style="${seriesBadgeStyle}">${seriesBadgeText}</span>`,
     isDH ? `<span class="series-badge" style="color:#a78bfa;border-color:rgba(167,139,250,0.3);background:rgba(167,139,250,0.08)">DH·2</span>` : '',
     (g.puntSide === 'home' ? g.homeIsBackToBack : g.awayIsBackToBack) ? `<span class="series-badge" style="color:var(--gold);border-color:rgba(232,184,75,0.3);background:rgba(232,184,75,0.07)" title="Back-to-back">B2B</span>` : '',
   ].filter(Boolean).join('');
@@ -7906,10 +7923,12 @@ function renderReviewQueue() {
     const ov = state.logOverrides[g.id];
     const vLabel = ov === true ? 'Punt' : 'Not a Punt';
     const vColor = ov === true ? 'var(--red2)' : 'var(--green)';
+    const topFactor = (g.breakdown || []).filter(f => f.val > 0).sort((a,b) => b.val - a.val)[0];
+    const factorHint = topFactor ? ` <span style="color:var(--text3);font-weight:400">· ${topFactor.label}</span>` : '';
     return `<div class="rq-row" style="opacity:0.72">
       <div class="rq-game" style="cursor:pointer" onclick="openReviewDetail('${idJs}')" title="Open box score & factors">
         <div class="rq-matchup">${abbr(g.away)} @ ${abbr(g.home)} <span style="font-size:11px;color:var(--text3);font-weight:400">›</span></div>
-        <div class="rq-meta">${g.date} · leaning ${abbr(g.puntTeam)} · ${g.score}/80</div>
+        <div class="rq-meta">${g.date} · <span style="color:var(--gold)">${g.score}/80</span> · ${abbr(g.puntTeam)}${factorHint}</div>
       </div>
       <div style="font-family:var(--font-mono);font-size:11px;color:${vColor};font-weight:700;padding:0 8px;white-space:nowrap">${vLabel} ✓</div>
       <div class="rq-actions">
@@ -7983,8 +8002,21 @@ async function openReviewDetail(id) {
   let factors = e.breakdown;
   if (typeof factors === 'string') { try { factors = JSON.parse(factors); } catch { factors = []; } }
   if (!Array.isArray(factors)) factors = [];
-  const factorRows = factors.filter(f => f && f.val > 0).sort((a, b) => b.val - a.val)
-    .map(f => `<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border)"><span style="color:var(--text2);font-size:12px">${f.label}</span><span style="color:var(--red2);font-family:var(--font-mono);font-size:12px;font-weight:700">+${f.val}</span></div>`).join('');
+  const posFactors = factors.filter(f => f && f.val > 0).sort((a, b) => b.val - a.val);
+  const factorRows = posFactors.map(f => {
+    const maxForFactor = f.max || f.val || 1;
+    const pct = Math.min(100, (f.val / maxForFactor) * 100).toFixed(1);
+    const barColor = f.val >= 15 ? 'var(--red2)' : f.val >= 8 ? 'var(--gold)' : 'rgba(255,255,255,0.35)';
+    return `<div style="padding:7px 0;border-bottom:1px solid var(--border)">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px">
+        <span style="color:var(--text2);font-size:12px">${f.label}</span>
+        <span style="color:${barColor};font-family:var(--font-mono);font-size:12px;font-weight:700;margin-left:12px;white-space:nowrap">+${f.val}</span>
+      </div>
+      <div style="height:3px;background:var(--border2);border-radius:2px;overflow:hidden">
+        <div style="height:100%;width:${pct}%;background:${barColor};border-radius:2px;transition:width 0.4s ease"></div>
+      </div>
+    </div>`;
+  }).join('');
   const isAceLabel = l => /ace on the mound|top starter|rotation anchor/i.test(l || '');
   const aceNote = factors.find(f => f && f.isAceNote && !isAceLabel(f.label));
   const breakdownContent = factorRows
