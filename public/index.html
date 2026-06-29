@@ -3149,8 +3149,9 @@ async function loadUserData() {
       renderLeaders();
       renderReviewQueue();
       updateReviewBadge();
-      // Check retrograde for any teams that graduated since last session
-      checkAndRetrograde().catch(() => {});
+      // Retrograde must complete before autoFillMissingGames starts so
+      // both don't race to modify the same state.gameLog entries.
+      await checkAndRetrograde().catch(() => {});
     }
     setSyncDot('synced');
     renderCalibratedLineup();
@@ -3569,10 +3570,18 @@ async function autoFillMissingGames() {
             added++;
           }
         }
+        let dateSaveFailed = false;
         for (const id of saveIds) {
-          try { await saveGameLogEntry(id); } catch { /* best effort */ }
+          try { await saveGameLogEntry(id); }
+          catch (saveErr) {
+            dateSaveFailed = true;
+            console.warn('[autoFill] save failed for', id, saveErr?.message || saveErr);
+          }
         }
-        setRebuildCheckpoint({ lastCompletedDate: date });
+        // Only advance checkpoint when all saves for this date succeeded.
+        // If any save failed, leave the checkpoint at the previous date so
+        // the next refresh re-attempts those games instead of skipping forever.
+        if (!dateSaveFailed) setRebuildCheckpoint({ lastCompletedDate: date });
 
         // Refresh UI whenever games are added, or every 5 dates at minimum
         if (saveIds.length || i % 5 === 4 || i === datesToProcess.length - 1) {
@@ -5890,8 +5899,16 @@ async function retrogradeCalibrationGames(teamName) {
       : retroScore >= REVIEW_THRESH ? 'review'
       : 'clean';
 
+    // Use the existing entry's ID when retrograding — changing it would
+    // orphan any override stored in state.logOverrides and create a
+    // duplicate Supabase row. For brand-new entries, prefer sched.id
+    // (which has the gamePk) for consistency with regular game log IDs.
+    const retroId = existingIdx >= 0
+      ? state.gameLog[existingIdx].id
+      : (sched.id || `${sched.date}_${abbr(sched.away)}_${abbr(sched.home)}_retro`);
+
     const entry = {
-      id: `retro_${sched.date}_${abbr(sched.away)}_${abbr(sched.home)}`,
+      id: retroId,
       date: sched.date,
       away: sched.away,
       home: sched.home,
@@ -5905,17 +5922,20 @@ async function retrogradeCalibrationGames(teamName) {
       benched: effectiveBenched,
       score: retroScore,
       flag: retroFlag,
-      isRetrograde: true, // mark so UI can distinguish
+      isRetrograde: true,
     };
 
     if (existingIdx >= 0) {
       // Only upgrade if retrograde is more informative (was calibration, now scored)
       if (state.gameLog[existingIdx].flag === 'calibration') {
-        state.gameLog[existingIdx] = { ...state.gameLog[existingIdx], ...entry };
+        // Preserve the existing ID — do NOT let entry.id overwrite it
+        state.gameLog[existingIdx] = { ...state.gameLog[existingIdx], ...entry, id: state.gameLog[existingIdx].id };
+        saveGameLogEntry(state.gameLog[existingIdx].id).catch(() => {});
         retroCount++;
       }
     } else {
       state.gameLog.push(entry);
+      saveGameLogEntry(entry.id).catch(() => {});
       retroCount++;
     }
   }
