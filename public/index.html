@@ -4531,35 +4531,30 @@ async function analyzeGame(game, normalLineups) {
   let finalScore, puntSource;
 
   if (isPreGamePunt) {
-    // Case A: locked pre-game punt. In-game signals shown as bonus context,
-    // but cannot reduce score below the pre-game reading.
-    const inGameBonus = Math.round(inGameData.score * 0.20); // small additive bonus only
+    // Case A: locked pre-game punt. In-game signals add on top — never reduce.
+    const inGameBonus = Math.round(inGameData.score * 0.30);
     finalScore = Math.min(80, topPreGame + inGameBonus);
     puntSource = 'pregame';
   } else if (status === 'Live' || status === 'Final') {
-    // Case B/C: pre-game did not confirm / check if in-game independently confirms
+    // In-game signals are ADDITIVE on top of the pre-game score.
+    // The old blend (preGame×0.65 + inGame×0.35) was wrong: it dragged
+    // pre-game review scores DOWN when in-game signals were weak.
+    // Now: pre-game score is the floor; in-game evidence only raises it.
+    const inning = inGameData.inning || (status === 'Final' ? 9 : 1);
     const inGamePunt = inGameData.score >= PUNT_THRESH;
 
+    let inGameWeight;
     if (inGamePunt) {
-      // In-game signals alone are strong enough / in-game punt
-      // Weight shifts fully toward in-game evidence
-      const inning = inGameData.inning || 9;
-      const inGameWeight = status === 'Final' ? 0.80 : (inning >= 7 ? 0.70 : inning >= 4 ? 0.55 : 0.35);
-      const preWeight = 1.0 - inGameWeight;
-      finalScore = Math.min(80, Math.round((topPreGame * preWeight) + (inGameData.score * inGameWeight)));
+      // Strong in-game evidence — weight it heavily
+      inGameWeight = status === 'Final' ? 0.75 : (inning >= 7 ? 0.65 : inning >= 4 ? 0.45 : 0.25);
       puntSource = 'ingame';
     } else {
-      // Case C: neither confirmed / blend, pre-game dominant
-      let inGameWeight;
-      if (status === 'Final') {
-        inGameWeight = 0.35;
-      } else {
-        const inning = inGameData.inning || 1;
-        inGameWeight = inning >= 7 ? 0.30 : inning >= 4 ? 0.18 : 0.08;
-      }
-      finalScore = Math.min(80, Math.round((topPreGame * (1 - inGameWeight)) + (inGameData.score * inGameWeight)));
+      // Moderate in-game evidence — additive contribution
+      inGameWeight = status === 'Final' ? 0.40 : (inning >= 7 ? 0.30 : inning >= 4 ? 0.18 : 0.06);
       puntSource = 'clean';
     }
+
+    finalScore = Math.min(80, topPreGame + Math.round(inGameData.score * inGameWeight));
   } else {
     // Pre-game only / no live/final data yet
     finalScore = topPreGame;
