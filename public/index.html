@@ -1776,6 +1776,29 @@
   .punt-watch-panel { border-radius: 12px !important; }
   .rq-panel { border-radius: 14px !important; }
 
+  /* ── WIN-LOSS RECORD IN CARD HEADER ── */
+  .pc2-record {
+    font-family: var(--font-mono) !important;
+    font-size: 9px !important;
+    color: var(--text3) !important;
+    font-weight: 400 !important;
+    margin-left: 4px !important;
+    letter-spacing: 0 !important;
+    opacity: 0.8 !important;
+  }
+
+  /* ── SCORE BAR THRESHOLD MARKERS ── */
+  .pc2-scorebar-mark {
+    position: absolute !important;
+    top: 0 !important; bottom: 0 !important;
+    width: 1px !important;
+    background: rgba(232,184,75,0.4) !important; /* review threshold */
+    pointer-events: none !important;
+  }
+  .pc2-scorebar-mark.punt {
+    background: rgba(224,92,42,0.4) !important; /* punt threshold */
+  }
+
 </style>
 </head>
 <body>
@@ -4733,6 +4756,7 @@ async function analyzeGame(game, normalLineups) {
   // ── TRAVEL FATIGUE DETECTION ─────────────────────────────
   const homeTZ = TEAM_TIMEZONE[homeTeam.name] || 'E';
   const awayTZ = TEAM_TIMEZONE[awayTeam.name] || 'E';
+  // West→East: hardest travel — body clock runs 3h behind, first overnight recovery
   const awayWestToEast = awayPlayedYesterday && awayTZ === 'W' && homeTZ === 'E';
   const homeWestToEast = homePlayedYesterday && homeTZ === 'E' &&
     (state.scheduleLog || []).some(e =>
@@ -4740,11 +4764,22 @@ async function analyzeGame(game, normalLineups) {
       (e.home === homeTeam.name || e.away === homeTeam.name) &&
       TEAM_TIMEZONE[e.home] === 'W'
     );
+  // East→West: meaningful but slightly easier than the reverse
+  const awayEastToWest = awayPlayedYesterday && awayTZ === 'E' && homeTZ === 'W';
+  const homeEastToWest = homePlayedYesterday && homeTZ === 'W' &&
+    (state.scheduleLog || []).some(e =>
+      e.date === yesterday &&
+      (e.home === homeTeam.name || e.away === homeTeam.name) &&
+      TEAM_TIMEZONE[e.home] === 'E'
+    );
 
   const homeIsBackToBack    = homePlayedYesterday;
   const awayIsBackToBack    = awayPlayedYesterday;
-  const homeHasTravelFatigue = homeWestToEast;
-  const awayHasTravelFatigue = awayWestToEast;
+  // hasTravelFatigue covers both directions; East→West is softer (handled in computePuntScore)
+  const homeHasTravelFatigue = homeWestToEast || homeEastToWest;
+  const awayHasTravelFatigue = awayWestToEast || awayEastToWest;
+  const homeIsWestToEast = homeWestToEast;
+  const awayIsWestToEast = awayWestToEast;
 
   const homeScore = computePuntScore({
     effectiveBenched: homeEB.effectiveBenched,
@@ -4754,7 +4789,7 @@ async function analyzeGame(game, normalLineups) {
     clinched: homeClinched, eliminated: homeEliminated,
     gameDate, teamName: homeTeam.name,
     spFip: homeStats.fip, spEra: homeStats.era, spStarts: homeStats.starts || 0, spIp: homeStats.ip || 0, seriesLength,
-    isBackToBack: homeIsBackToBack, hasTravelFatigue: homeHasTravelFatigue,
+    isBackToBack: homeIsBackToBack, hasTravelFatigue: homeHasTravelFatigue, isWestToEast: homeIsWestToEast,
     isDayAfterNight: homeDayAfterNight, consecutiveStreak: homeConsecutiveStreak,
     puntSeriesWins: homeSeries, oppSeriesWins: awaySeries,
   });
@@ -4766,7 +4801,7 @@ async function analyzeGame(game, normalLineups) {
     clinched: awayClinched, eliminated: awayEliminated,
     gameDate, teamName: awayTeam.name,
     spFip: awayStats.fip, spEra: awayStats.era, spStarts: awayStats.starts || 0, spIp: awayStats.ip || 0, seriesLength,
-    isBackToBack: awayIsBackToBack, hasTravelFatigue: awayHasTravelFatigue,
+    isBackToBack: awayIsBackToBack, hasTravelFatigue: awayHasTravelFatigue, isWestToEast: awayIsWestToEast,
     isDayAfterNight: awayDayAfterNight, consecutiveStreak: awayConsecutiveStreak,
     puntSeriesWins: awaySeries, oppSeriesWins: homeSeries,
   });
@@ -4872,7 +4907,7 @@ async function analyzeGame(game, normalLineups) {
     puntSide,
     isPreGamePunt,
     puntSource,
-    seriesGame, seriesLength, isLastGame,
+    seriesGame, seriesLength, isLastGame, isFirstGame,
     homeSeries, awaySeries,
     isDHNightcap,
     inCalibration, flag,
@@ -4884,6 +4919,7 @@ async function analyzeGame(game, normalLineups) {
     // Fatigue/rest context
     homeIsBackToBack, awayIsBackToBack,
     homeHasTravelFatigue, awayHasTravelFatigue,
+    homeIsWestToEast, awayIsWestToEast,
     homeDayAfterNight, awayDayAfterNight,
     homeConsecutiveStreak, awayConsecutiveStreak,
   };
@@ -5110,6 +5146,20 @@ function getLiveTeamQuality(teamName) {
       live.clinched !== true && live.divisionChamp !== true &&
       live.eliminationNumber !== 'E') {
     puntMotivation = Math.min(puntMotivation, 0.72);
+  }
+
+  // Out-of-contention boost: teams far off the pace (>10 GB, not wild-card
+  // eligible) from July onward have structurally lower stakes and rest
+  // regulars more freely. Boost captures this reality — these aren't
+  // rebuilders, they're just out of the race this year.
+  if (live.wildCardEligible === false &&
+      live.clinched !== true && live.eliminationNumber !== 'E' &&
+      live.gb > 10) {
+    const month = new Date().getMonth() + 1; // 1–12
+    if (month >= 7) {
+      const gbBoost = Math.min(0.18, (live.gb - 10) * 0.025);
+      puntMotivation = Math.min(0.78, puntMotivation + gbBoost);
+    }
   }
 
   return { ...base, tier, puntMotivation };
@@ -5346,7 +5396,7 @@ function buildTeamFeedbackBias() {
 // Fix #8: clinched vs eliminated tracked separately (label fix in breakdown)
 function computePuntScore({ effectiveBenched, eraDelta, isLastGame, isFirstGame,
   isDHNightcap, clinched, eliminated, gameDate, teamName,
-  spFip, spEra, spStarts, spIp, seriesLength, isBackToBack, hasTravelFatigue,
+  spFip, spEra, spStarts, spIp, seriesLength, isBackToBack, hasTravelFatigue, isWestToEast = true,
   isDayAfterNight, consecutiveStreak, puntSeriesWins = null, oppSeriesWins = null }) {
 
   const tq = getLiveTeamQuality(teamName);
@@ -5451,16 +5501,31 @@ function computePuntScore({ effectiveBenched, eraDelta, isLastGame, isFirstGame,
     score += streakBonus;
   }
 
-  // ── WEST→EAST TRAVEL FATIGUE ─────────────────────────────
-  // Flying cross-country overnight to open a series is a known
-  // rest trigger — especially for the first game of that series.
-  if (hasTravelFatigue) score += 5 * effMot;
+  // ── CROSS-COUNTRY TRAVEL FATIGUE ─────────────────────────
+  // Flying cross-country overnight is a known rest trigger.
+  // West→East (body clock 3h behind): +5 pts — physiologically harder.
+  // East→West (body clock 3h ahead): +3 pts — still meaningful but softer.
+  if (hasTravelFatigue) score += (isWestToEast ? 5 : 3) * effMot;
 
-  // ── TOP-STARTER REDUCTION (replaces the old ace disqualifier) ──────
-  // Starting the team's best arm makes a punt less likely — a manager rarely
-  // Ace/top-starter reduction removed — pending a reliable depth-chart
-  // definition. ERA and IP alone both produce false positives.
-  const aceScale = 1.0;
+  // ── SPOT STARTER SIGNAL ─────────────────────────────────────────────
+  // A spot / emergency starter (≤2 GS this season, high ERA or unknown) is
+  // itself a punt signal — teams don't burn rotation depth on games they
+  // don't prioritize. The ERA gate (> 5.00) avoids penalizing legitimate
+  // rookie callups who are simply unproven.
+  if (spStarts <= 2 && (spEra == null || spEra > 5.00)) {
+    score += 7 * effMot;
+  }
+
+  // ── ACE STARTER REDUCTION ───────────────────────────────────────────
+  // Deploying a true ace (ERA ≤ 3.00, ≥ 6 starts) signals the team is trying
+  // to win. Managers don't waste elite starts on concession days.
+  //   ×0.75 standard (25% reduction) — non-clinched contenders
+  //   ×0.88 clinched (12% reduction) — clinched teams can rest regulars even
+  //          with their ace, but are less likely to run a full punt
+  let aceScale = 1.0;
+  if (spEra != null && spEra <= 3.00 && spStarts >= 6) {
+    aceScale = clinched ? 0.88 : 0.75;
+  }
 
   // ── SEASON TIMING ─────────────────────────────────────────
   const timingMult = seasonTimingMultiplier(gameDate, teamName);
@@ -5794,14 +5859,20 @@ function renderCard(g, idx) {
     (g.puntSide === 'home' ? g.homeIsBackToBack : g.awayIsBackToBack) ? `<span class="series-badge" style="color:var(--gold);border-color:rgba(232,184,75,0.3);background:rgba(232,184,75,0.07)" title="Back-to-back">B2B</span>` : '',
   ].filter(Boolean).join('');
 
+  // Win-loss records from live standings
+  const _awayStd = standingsCache.data[g.away.name];
+  const _homeStd = standingsCache.data[g.home.name];
+  const awayWL = _awayStd ? `<span class="pc2-record">${_awayStd.wins}–${_awayStd.losses}</span>` : '';
+  const homeWL = _homeStd ? `<span class="pc2-record">${_homeStd.wins}–${_homeStd.losses}</span>` : '';
+
   return `
     <div class="game-card pc2 ${cardClass}" style="animation-delay:${delay}ms" onclick="openGameflowFromCard('${g.gid || idx}')" title="View inning-by-inning Gameflow">
 
       <div class="pc2-head">
         <div class="pc2-matchup">
-          ${teamLogoHTML(g.away.name, abbr(g.away.name))}<span class="pc2-abbr">${abbr(g.away.name)}</span>
+          ${teamLogoHTML(g.away.name, abbr(g.away.name))}<span class="pc2-abbr">${abbr(g.away.name)}</span>${awayWL}
           <span class="pc2-at">@</span>
-          ${teamLogoHTML(g.home.name, abbr(g.home.name))}<span class="pc2-abbr">${abbr(g.home.name)}</span>
+          ${teamLogoHTML(g.home.name, abbr(g.home.name))}<span class="pc2-abbr">${abbr(g.home.name)}</span>${homeWL}
         </div>
         <div class="pc2-tags">${tags}</div>
       </div>
@@ -5828,7 +5899,7 @@ function renderCard(g, idx) {
 
       ${(isPunt || isReview) ? `<div class="pc2-foot"><button class="share-btn" onclick="event.stopPropagation();shareGame('${g.gid || idx}')">↗ Share</button></div>` : ''}
 
-      ${isPostponedF ? '' : `<div class="pc2-scorebar"><div class="pc2-scorebar-fill" style="width:${Math.min(100,(g.topScore/80*100)).toFixed(1)}%"></div></div>`}
+      ${isPostponedF ? '' : `<div class="pc2-scorebar"><div class="pc2-scorebar-fill" style="width:${Math.min(100,(g.topScore/80*100)).toFixed(1)}%"></div><div class="pc2-scorebar-mark" style="left:35%"></div><div class="pc2-scorebar-mark punt" style="left:57.5%"></div></div>`}
     </div>
   `;
 }
@@ -7799,10 +7870,12 @@ function renderReviewQueue() {
   const pendingRows = pending.map(g => {
     const idAttr = String(g.id).replace(/"/g, '&quot;');
     const idJs = String(g.id).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+    const topFactor = (g.breakdown || []).filter(f => f.val > 0).sort((a,b) => b.val - a.val)[0];
+    const factorHint = topFactor ? ` <span style="color:var(--text3);font-weight:400">· ${topFactor.label}</span>` : '';
     return `<div class="rq-row">
       <div class="rq-game" style="cursor:pointer" onclick="openReviewDetail('${idJs}')" title="Open box score & factors">
         <div class="rq-matchup">${abbr(g.away)} @ ${abbr(g.home)} <span style="font-size:11px;color:var(--text3);font-weight:400">›</span></div>
-        <div class="rq-meta">${g.date} · leaning ${abbr(g.puntTeam)} · ${g.score}/80</div>
+        <div class="rq-meta">${g.date} · <span style="color:var(--gold)">${g.score}/80</span> · ${abbr(g.puntTeam)}${factorHint}</div>
       </div>
       <input class="rq-reason" id="rq-reason-${idAttr}" placeholder="reason (optional)…">
       <div class="rq-actions">
@@ -8824,9 +8897,6 @@ function buildScoreBreakdown(g) {
   const spIp     = (g.puntSide === 'home' ? g.homeSP?.ip     : g.awaySP?.ip)     || 0;
   const spName   = g.puntSide === 'home' ? g.homeSP?.name   : g.awaySP?.name;
 
-  // Ace reduction removed — pending a reliable depth-chart definition.
-  const aceScale = 1.0, aceNote = null;
-
   // ── EFFECTIVE MOTIVATION (mirror engine) ──
   const clinched   = g.puntSide === 'home' ? g.homeClinched   : g.awayClinched;
   const eliminated = g.puntSide === 'home' ? g.homeEliminated : g.awayEliminated;
@@ -8834,6 +8904,12 @@ function buildScoreBreakdown(g) {
   let effMot = mot;
   if (clinched) effMot = Math.max(mot, 0.85);
   else if (eliminated) effMot = Math.max(mot, 0.45);
+
+  // ── ACE SCALE (mirrors computePuntScore) ─────────────────────────────
+  const aceScale = (spEra != null && spEra <= 3.00 && spStarts >= 6) ? (clinched ? 0.88 : 0.75) : 1.0;
+  const aceNote  = aceScale < 1.0
+    ? `Ace on mound (${spName || 'SP'}, ${typeof spEra === 'number' ? spEra.toFixed(2) : spEra} ERA) — score reduced by ${Math.round((1 - aceScale) * 100)}%`
+    : null;
 
   const SL = g.seriesLength || 0;
   const puntSeriesWins = g.puntSide === 'home' ? g.homeSeries : g.awaySeries;
@@ -8849,6 +8925,7 @@ function buildScoreBreakdown(g) {
 
   const isB2B   = g.puntSide === 'home' ? g.homeIsBackToBack      : g.awayIsBackToBack;
   const isFat   = g.puntSide === 'home' ? g.homeHasTravelFatigue  : g.awayHasTravelFatigue;
+  const isW2E   = g.puntSide === 'home' ? g.homeIsWestToEast      : g.awayIsWestToEast;
   const isDAN   = g.puntSide === 'home' ? g.homeDayAfterNight     : g.awayDayAfterNight;
   const streak  = g.puntSide === 'home' ? g.homeConsecutiveStreak : g.awayConsecutiveStreak;
 
@@ -8869,6 +8946,10 @@ function buildScoreBreakdown(g) {
       push(`ERA gap (${delta.toFixed(2)})`, 14 * Math.pow(Math.min(delta, 3.0) / 3.0, 0.65) * effMot * w * g1Suppress, 14);
     }
   }
+  // Spot starter — emergency arm with ≤2 GS is itself a punt signal.
+  if (spStarts <= 2 && (spEra == null || spEra > 5.00)) {
+    push(`Spot starter (${spName || 'SP'}, ${spStarts} GS this season)`, 7 * effMot, 7);
+  }
   // Structural bonuses — NOT G1-suppressed; only the season-timing multiplier.
   if (g.isLastGame && SL >= 3 && !isRubberGame && !trailingSeries) {
     const lbl = hasSeriesData
@@ -8883,7 +8964,7 @@ function buildScoreBreakdown(g) {
   if (isB2B)  push('Back-to-back game', 6 * effMot, 6);
   if (isDAN)  push('Day game after night', 5 * effMot, 5);
   if (streak >= 7) push(`${streak}-game no-rest stretch`, Math.min(9, (streak - 6) * 1.2) * effMot, 9);
-  if (isFat)  push('West→East travel', 5 * effMot, 5);
+  if (isFat)  push(isW2E ? 'West→East travel' : 'East→West travel', (isW2E ? 5 : 3) * effMot, 5);
 
   if (aceNote) factors.push({ label: aceNote, val: 0, max: 0, isAceNote: true });
 
