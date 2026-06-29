@@ -3123,7 +3123,7 @@ async function loadUserData() {
     const { data: prefs } = await db.from('user_preferences').select('*').eq('user_id', currentUser.id).single();
     if (prefs?.starred_teams) starredTeams = new Set(prefs.starred_teams);
 
-    const { data: logs } = await db.from('game_log').select('*').eq('user_id', currentUser.id).order('game_date', { ascending: true });
+    const { data: logs } = await db.from('game_log').select('*').eq('user_id', currentUser.id).order('game_date', { ascending: true }).limit(5000);
     if (logs) {
       state.gameLog = logs.map(row => ({
         id: row.game_id, _dbId: row.id,
