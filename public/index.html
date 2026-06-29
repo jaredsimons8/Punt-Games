@@ -3291,6 +3291,13 @@ function saveGameLogCache() {
   } catch {}
 }
 
+// Ensure breakdown is always a JS array regardless of how it was cached.
+function normalizeBreakdown(b) {
+  if (Array.isArray(b)) return b;
+  if (typeof b === 'string' && b) { try { const p = JSON.parse(b); return Array.isArray(p) ? p : []; } catch { return []; } }
+  return [];
+}
+
 function restoreGameLogCache() {
   if (!currentUser) return false;
   try {
@@ -3298,7 +3305,8 @@ function restoreGameLogCache() {
     if (!raw) return false;
     const { log, ovr, res, cmt } = JSON.parse(raw);
     if (!log || !log.length) return false;
-    state.gameLog = log;
+    // Normalize breakdown — old cache entries may have stored it as a JSON string
+    state.gameLog = log.map(e => ({ ...e, breakdown: normalizeBreakdown(e.breakdown) }));
     state.logOverrides = ovr || {};
     state.logResults = res || {};
     state.logComments = cmt || {};
@@ -7912,7 +7920,7 @@ function renderReviewQueue() {
   const pendingRows = pending.map(g => {
     const idAttr = String(g.id).replace(/"/g, '&quot;');
     const idJs = String(g.id).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
-    const topFactor = (g.breakdown || []).filter(f => f.val > 0).sort((a,b) => b.val - a.val)[0];
+    const topFactor = normalizeBreakdown(g.breakdown).filter(f => f.val > 0).sort((a,b) => b.val - a.val)[0];
     const factorHint = topFactor ? ` <span style="color:var(--text3);font-weight:400">· ${topFactor.label}</span>` : '';
     return `<div class="rq-row">
       <div class="rq-game" style="cursor:pointer" onclick="openReviewDetail('${idJs}')" title="Open box score & factors">
@@ -7932,7 +7940,7 @@ function renderReviewQueue() {
     const ov = state.logOverrides[g.id];
     const vLabel = ov === true ? 'Punt' : 'Not a Punt';
     const vColor = ov === true ? 'var(--red2)' : 'var(--green)';
-    const topFactor = (g.breakdown || []).filter(f => f.val > 0).sort((a,b) => b.val - a.val)[0];
+    const topFactor = normalizeBreakdown(g.breakdown).filter(f => f.val > 0).sort((a,b) => b.val - a.val)[0];
     const factorHint = topFactor ? ` <span style="color:var(--text3);font-weight:400">· ${topFactor.label}</span>` : '';
     return `<div class="rq-row" style="opacity:0.72">
       <div class="rq-game" style="cursor:pointer" onclick="openReviewDetail('${idJs}')" title="Open box score & factors">
