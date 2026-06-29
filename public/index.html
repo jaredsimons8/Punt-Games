@@ -3593,7 +3593,9 @@ async function autoFillMissingGames() {
       await new Promise(r => setTimeout(r, 600));
     }
 
-    if (failed === 0) clearRebuildCheckpoint();
+    // Do NOT clear the checkpoint — keep it at the last completed date so
+    // the next refresh skips instantly instead of falling back to the game
+    // log (which may have gaps from silent save failures).
   } catch (e) {
     console.error('[autoFill] fatal', e);
   } finally {
@@ -7550,8 +7552,15 @@ function renderReviewQueue() {
     </div>`;
   }).join('');
 
-  const decidedSep = decided.length
-    ? `<div style="padding:7px 18px;font-family:var(--font-mono);font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1.5px;background:rgba(255,255,255,0.015);border-top:1px solid var(--border)">Decided — ${decided.length} game${decided.length === 1 ? '' : 's'}</div>`
+  const decidedId = 'rq-decided-section';
+  const decidedSection = decided.length
+    ? `<div style="border-top:1px solid var(--border)">
+        <button onclick="const s=document.getElementById('${decidedId}');const open=s.style.display==='none';s.style.display=open?'':'none';this.textContent=open?'▲ Hide ${decided.length} decided':'▼ Show ${decided.length} decided';"
+          style="width:100%;padding:8px 18px;background:none;border:none;cursor:pointer;font-family:var(--font-mono);font-size:10px;color:var(--text3);text-align:left;letter-spacing:0.5px">
+          ▼ Show ${decided.length} decided
+        </button>
+        <div id="${decidedId}" style="display:none">${decidedRows}</div>
+      </div>`
     : '';
 
   const headerTitle = pending.length
@@ -7567,7 +7576,7 @@ function renderReviewQueue() {
       ${headerCount}
     </div>
     ${pendingRows}
-    ${decided.length ? decidedSep + decidedRows : ''}
+    ${decidedSection}
   </div>`;
 }
 
