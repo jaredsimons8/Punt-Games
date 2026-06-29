@@ -6999,6 +6999,62 @@ async function fetchInGamePuntSignals(gid, puntSide, gameStatus) {
       }
     } catch { /* low-leverage detection is best-effort / never crash main scoring */ }
 
+    // ── INFERIOR RELIEVER USED WHEN BETTER ARMS AVAILABLE ────
+    // Detects when a manager skips visibly better bullpen options for an
+    // inferior arm in a close game the team is losing — a quiet concession.
+    // Example: using a 5.00 ERA arm when three 3.x ERA arms sat untouched.
+    // This catches cases the mop-up signal misses (sub-6.50 ERA but still
+    // clearly the worst available option by a significant margin).
+    // Only fires when the team is losing and NOT already in mop-up-arm
+    // territory (to avoid stacking on the same outing).
+    try {
+      const mopupFired = signals.some(s => s.type === 'low_leverage_close_game');
+      if (!mopupFired && runDiff < 0 && runDiff >= -5 && inning >= 4 && boxscore) {
+        const pData  = boxscore.teams?.[puntSide];
+        const pPlayers = boxscore.teams?.[puntSide]?.players || {};
+        if (pData) {
+          const usedRelievers = new Set((pData.pitchers || []).slice(1));
+          const fullBullpen   = pData.bullpen || [];
+
+          const era = pid => {
+            const v = parseFloat(pPlayers['ID' + pid]?.seasonStats?.pitching?.era);
+            return (v && v > 0 && v < 99) ? v : null;
+          };
+
+          // Arms actually used (reliever appearances)
+          const used = [...usedRelievers]
+            .map(pid => ({ pid, era: era(pid) }))
+            .filter(a => a.era !== null);
+
+          // Arms on the roster who didn't throw a pitch — the available pool
+          const available = fullBullpen
+            .filter(pid => !usedRelievers.has(pid))
+            .map(pid => ({ pid, era: era(pid) }))
+            .filter(a => a.era !== null && a.era < 5.0); // only clearly quality arms
+
+          if (used.length >= 1 && available.length >= 2) {
+            const avgAvailEra = available.reduce((s, a) => s + a.era, 0) / available.length;
+
+            // Flag used arms that are significantly worse than the available pool
+            const inferior = used.filter(a => a.era > avgAvailEra + 1.5 && a.era > 4.5);
+
+            if (inferior.length >= 1) {
+              const worstUsed = Math.max(...inferior.map(a => a.era)).toFixed(2);
+              const gap = (worstUsed - avgAvailEra).toFixed(1);
+              const pts = inferior.length >= 2 ? 14 : 10;
+              inGameScore += pts;
+              signals.push({
+                type: 'inferior_reliever_used',
+                label: `${inferior.length > 1 ? `${inferior.length} inferior arms` : 'Inferior arm'} used (${worstUsed} ERA) with ${available.length} better options available (avg ${avgAvailEra.toFixed(2)} ERA, gap +${gap})`,
+                weight: pts,
+                inning,
+              });
+            }
+          }
+        }
+      }
+    } catch { /* best-effort */ }
+
     return {
       score: Math.min(80, Math.round(inGameScore)),
       signals,
