@@ -5467,7 +5467,8 @@ function renderCard(g, idx) {
   const puntTeamName = abbr(puntingTeam.name);
   // Contributing factors for any scored game (calibration/postponed have none).
   const factors = (!isPostponedF && !isCal) ? (buildScoreBreakdown(g) || []) : [];
-  const aceNoteFactor = factors.find(f => f.isAceNote);
+  const isAceFactorLabel = l => /ace on the mound|top starter|rotation anchor/i.test(l || '');
+  const aceNoteFactor = factors.find(f => f.isAceNote && !isAceFactorLabel(f.label));
   const posFactors = factors.filter(f => !f.isMult && !f.isAceNote && f.val > 0).sort((a, b) => b.val - a.val).slice(0, 4);
   let reasonsHTML = '';
   if (posFactors.length) {
@@ -7600,7 +7601,8 @@ async function openReviewDetail(id) {
   if (!Array.isArray(factors)) factors = [];
   const factorRows = factors.filter(f => f && f.val > 0).sort((a, b) => b.val - a.val)
     .map(f => `<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border)"><span style="color:var(--text2);font-size:12px">${f.label}</span><span style="color:var(--red2);font-family:var(--font-mono);font-size:12px;font-weight:700">+${f.val}</span></div>`).join('');
-  const aceNote = factors.find(f => f && f.isAceNote);
+  const isAceLabel = l => /ace on the mound|top starter|rotation anchor/i.test(l || '');
+  const aceNote = factors.find(f => f && f.isAceNote && !isAceLabel(f.label));
   const breakdownContent = factorRows
     ? factorRows + (aceNote ? `<div style="margin-top:8px;font-size:11px;color:var(--text3);font-family:var(--font-mono)">${aceNote.label}</div>` : '')
     : '<span style="color:var(--text3);font-size:12px;font-family:var(--font-mono)">Recomputing factors…</span>';
@@ -7782,7 +7784,8 @@ async function recomputeReviewBreakdown(id, e, gamePk) {
 
     const preGameRows = newBreakdown.filter(f => f && f.val > 0).sort((a, b) => b.val - a.val)
       .map(f => `<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border)"><span style="color:var(--text2);font-size:12px">${f.label}</span><span style="color:var(--red2);font-family:var(--font-mono);font-size:12px;font-weight:700">+${f.val}</span></div>`).join('');
-    const aceNote = newBreakdown.find(f => f && f.isAceNote);
+    const isAceLbl = l => /ace on the mound|top starter|rotation anchor/i.test(l || '');
+    const aceNote = newBreakdown.find(f => f && f.isAceNote && !isAceLbl(f.label));
 
     // Pre-game section label is injected by the HTML template only when
     // factorRows was populated at render time. For recomputed entries, inject it here.
