@@ -4307,6 +4307,9 @@ async function analyzeGame(game, normalLineups) {
   const seriesLength = game.gamesInSeries || 3;
   const isLastGame = seriesGame === seriesLength;
   const isFirstGame = seriesGame === 1;
+  // series wins for each team BEFORE this game is played (MLB API field)
+  const homeSeries = typeof game.teams?.home?.seriesNumber === 'number' ? game.teams.home.seriesNumber : null;
+  const awaySeries = typeof game.teams?.away?.seriesNumber === 'number' ? game.teams.away.seriesNumber : null;
 
   // Doubleheader detection / game 2 of a doubleheader is a strong punt signal
   // The MLB API returns doubleHeader: 'Y'/'N' and gameNumber: 1 or 2
@@ -4486,6 +4489,7 @@ async function analyzeGame(game, normalLineups) {
     spFip: homeStats.fip, spEra: homeStats.era, spStarts: homeStats.starts || 0, spIp: homeStats.ip || 0, seriesLength,
     isBackToBack: homeIsBackToBack, hasTravelFatigue: homeHasTravelFatigue,
     isDayAfterNight: homeDayAfterNight, consecutiveStreak: homeConsecutiveStreak,
+    puntSeriesWins: homeSeries, oppSeriesWins: awaySeries,
   });
   const awayScore = computePuntScore({
     effectiveBenched: awayEB.effectiveBenched,
@@ -4497,6 +4501,7 @@ async function analyzeGame(game, normalLineups) {
     spFip: awayStats.fip, spEra: awayStats.era, spStarts: awayStats.starts || 0, spIp: awayStats.ip || 0, seriesLength,
     isBackToBack: awayIsBackToBack, hasTravelFatigue: awayHasTravelFatigue,
     isDayAfterNight: awayDayAfterNight, consecutiveStreak: awayConsecutiveStreak,
+    puntSeriesWins: awaySeries, oppSeriesWins: homeSeries,
   });
 
   const topPreGame = Math.max(homeScore, awayScore);
@@ -4601,6 +4606,7 @@ async function analyzeGame(game, normalLineups) {
     isPreGamePunt,
     puntSource,
     seriesGame, seriesLength, isLastGame,
+    homeSeries, awaySeries,
     isDHNightcap,
     inCalibration, flag,
     gameStatus: status,
@@ -5074,7 +5080,7 @@ function buildTeamFeedbackBias() {
 function computePuntScore({ effectiveBenched, eraDelta, isLastGame, isFirstGame,
   isDHNightcap, clinched, eliminated, gameDate, teamName,
   spFip, spEra, spStarts, spIp, seriesLength, isBackToBack, hasTravelFatigue,
-  isDayAfterNight, consecutiveStreak }) {
+  isDayAfterNight, consecutiveStreak, puntSeriesWins = null, oppSeriesWins = null }) {
 
   const tq = getLiveTeamQuality(teamName);
 
@@ -5127,13 +5133,21 @@ function computePuntScore({ effectiveBenched, eraDelta, isLastGame, isFirstGame,
   // signals are very strong.
   if (isFirstGame && seriesLength >= 3) score *= 0.65;
 
-  // Series finale: the single most reliable structural punt trigger.
-  // A manager with a day off tomorrow, knowing exactly who he needs
-  // fresh for the next series, has every incentive to rest here.
-  // Bumped from +7 to +9 for 3-game series finale — this is the
-  // clearest non-standings trigger in baseball.
-  if (isLastGame && seriesLength >= 3) score += 9;
-  if (isLastGame && seriesLength >= 4) score += 4; // extra for 4-game series
+  // Series finale: only applies when the punting team has already clinched
+  // the series. A rubber game (tied series) is still competitive — the
+  // manager has every reason to play to win, so the bonus is suppressed.
+  // Trailing teams also get no bonus (series already decided against them).
+  // If series standing is unknown (API returned null), fall back to the
+  // old flat bonus to avoid silently dropping a real signal.
+  if (isLastGame && seriesLength >= 3) {
+    const hasSeriesData = puntSeriesWins != null && oppSeriesWins != null;
+    const isRubberGame = hasSeriesData && puntSeriesWins === oppSeriesWins;
+    const trailingSeries = hasSeriesData && puntSeriesWins < oppSeriesWins;
+    if (!isRubberGame && !trailingSeries) {
+      score += 9;
+      if (seriesLength >= 4) score += 4;
+    }
+  }
 
   // Clinched / eliminated: competitive stakes are gone.
   // These are separate flags with the same structural weight — a team
@@ -8536,6 +8550,11 @@ function buildScoreBreakdown(g) {
   else if (eliminated) effMot = Math.max(mot, 0.45);
 
   const SL = g.seriesLength || 0;
+  const puntSeriesWins = g.puntSide === 'home' ? g.homeSeries : g.awaySeries;
+  const oppSeriesWins  = g.puntSide === 'home' ? g.awaySeries : g.homeSeries;
+  const hasSeriesData  = puntSeriesWins != null && oppSeriesWins != null;
+  const isRubberGame   = hasSeriesData && puntSeriesWins === oppSeriesWins;
+  const trailingSeries = hasSeriesData && puntSeriesWins < oppSeriesWins;
   // Engine applies G1 suppression to lineup+pitching only, and multiplies the whole
   // score by season-timing AND the ace reduction. We distribute all of them
   // per-factor so the displayed values sum to the actual score for every matchup.
@@ -8565,7 +8584,12 @@ function buildScoreBreakdown(g) {
     }
   }
   // Structural bonuses — NOT G1-suppressed; only the season-timing multiplier.
-  if (g.isLastGame && SL >= 3) push('Series finale', 9 + (SL >= 4 ? 4 : 0), 13);
+  if (g.isLastGame && SL >= 3 && !isRubberGame && !trailingSeries) {
+    const lbl = hasSeriesData
+      ? `Series finale (up ${puntSeriesWins}–${oppSeriesWins})`
+      : 'Series finale';
+    push(lbl, 9 + (SL >= 4 ? 4 : 0), 13);
+  }
   if (clinched)   push('Division clinched', 22, 22);
   if (eliminated) push('Mathematically eliminated', 22, 22);
   if ((clinched || eliminated) && g.isLastGame) push('Clinch/elim + finale', 6, 6);
