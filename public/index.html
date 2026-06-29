@@ -5432,15 +5432,24 @@ function computePuntScore({ effectiveBenched, eraDelta, isLastGame, isFirstGame,
   }
 
   // ── PITCHING SIGNAL (0–14 pts after motivation, ERA-based) ─
-  // FIP isn't collected (always null), so the disadvantage signal now uses
-  // ERA delta vs the opponent's starter. ERA is on the same runs/9 scale, so
-  // the curve/ceiling carry over directly. Weighted by start sample (≥4 = full).
+  // Uses ERA delta vs opponent's starter. Weighted by start sample (≥4 = full).
   const eraSampleWeight = Math.min(1.0, (spStarts || 0) / 4);
   const clampedEraDelta = Math.min(Math.max(eraDelta, 0), 4.0);
 
   if (clampedEraDelta > 0 && eraSampleWeight > 0) {
     const pitchingRaw = 14 * Math.pow(Math.min(clampedEraDelta, 3.0) / 3.0, 0.65);
     score += pitchingRaw * effMot * eraSampleWeight;
+  }
+
+  // ── ABSOLUTE ERA THRESHOLD ──────────────────────────────────
+  // Relative signal misses the case where both teams have bad arms. A truly
+  // poor ERA (≥6.00 in a meaningful sample) is itself a punt signal regardless
+  // of the opponent — good teams don't deploy sub-replacement starters on
+  // competitive days. Capped at 6 pts so it doesn't overwhelm; not additive
+  // with the spot-starter signal (spStarts ≤ 2 already triggers that path).
+  if (spEra != null && spEra >= 6.00 && spStarts >= 3 && eraSampleWeight >= 0.5) {
+    const absEraPts = Math.min(6, (spEra - 5.0) * 1.0) * effMot * eraSampleWeight;
+    score += absEraPts;
   }
 
   // ── SERIES / GAME POSITION CONTEXT ────────────────────────
@@ -5623,15 +5632,22 @@ function cardNarrative(g) {
   const eliminated = side === 'home' ? g.homeEliminated : g.awayEliminated;
   const b2b = side === 'home' ? g.homeIsBackToBack : g.awayIsBackToBack;
 
+  const spStarts = (side === 'home' ? g.homeSP?.starts : g.awaySP?.starts) ?? null;
+  const isFat    = side === 'home' ? g.homeHasTravelFatigue : g.awayHasTravelFatigue;
+  const isW2E    = side === 'home' ? g.homeIsWestToEast     : g.awayIsWestToEast;
+  const isSpot   = spStarts !== null && spStarts <= 2 && (spEra == null || spEra > 5.00);
+
   const clauses = [];
   if (eb >= 1) clauses.push(`rested ${eb} regular${eb !== 1 ? 's' : ''}`);
-  if (spEra != null && oppEra != null && spEra < 90 && oppEra < 90 && (spEra - oppEra) >= 0.75) {
+  if (isSpot) clauses.push(`using a spot starter (${spStarts} GS this season)`);
+  else if (spEra != null && oppEra != null && spEra < 90 && oppEra < 90 && (spEra - oppEra) >= 0.75) {
     clauses.push(`behind a weaker arm (${parseFloat(spEra).toFixed(2)} vs ${parseFloat(oppEra).toFixed(2)} ERA)`);
   }
   if (g.isDHNightcap) clauses.push('in a doubleheader nightcap');
   if (g.isLastGame && g.seriesLength >= 3) clauses.push('in the series finale');
   if (clinched) clauses.push('with the division already clinched');
   else if (eliminated) clauses.push('while mathematically eliminated');
+  else if (isFat) clauses.push(isW2E ? 'on a West→East overnight' : 'on an East→West overnight');
   else if (b2b) clauses.push('on no rest (back-to-back)');
 
   if (!clauses.length) return '';
@@ -8949,6 +8965,14 @@ function buildScoreBreakdown(g) {
   // Spot starter — emergency arm with ≤2 GS is itself a punt signal.
   if (spStarts <= 2 && (spEra == null || spEra > 5.00)) {
     push(`Spot starter (${spName || 'SP'}, ${spStarts} GS this season)`, 7 * effMot, 7);
+  }
+  // Absolute ERA threshold — objectively poor arm (6.00+) in meaningful sample.
+  if (spEra != null && spEra >= 6.00 && spStarts >= 3) {
+    const w = Math.min(1, spStarts / 4);
+    if (w >= 0.5) {
+      const absPts = Math.min(6, (spEra - 5.0) * 1.0) * effMot * w;
+      push(`High ERA (${typeof spEra === 'number' ? spEra.toFixed(2) : spEra} — objectively poor arm)`, absPts, 6);
+    }
   }
   // Structural bonuses — NOT G1-suppressed; only the season-timing multiplier.
   if (g.isLastGame && SL >= 3 && !isRubberGame && !trailingSeries) {
