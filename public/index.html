@@ -2576,7 +2576,7 @@ const state = {
   logOverrides: {},
   logResults: {},
   teamData: {},
-  aceEraTracker: {},
+  aceIpTracker: {},
   retrograded: new Set(), // teams whose calibration games have been retroactively scored
 };
 const standingsCache = { lastFetch: null, data: {} };
@@ -4182,6 +4182,7 @@ async function fetchPitcherStats(playerId) {
     const era = parseFloat(s.era);
     const fip = parseFloat(s.fieldingIndependentPitching);
     const starts = parseInt(s.gamesStarted) || 0;
+    const ip     = parseFloat(s.inningsPitched) || 0;
 
     // Return current season if ERA exists / FIP may not yet be available early season
     if (era && era < 90) {
@@ -4189,6 +4190,7 @@ async function fetchPitcherStats(playerId) {
         era: +era.toFixed(2),
         fip: (fip && fip < 90) ? +fip.toFixed(2) : null,
         starts,
+        ip,
         source: 'current'
       };
       pitcherStatsCache[playerId] = result;
@@ -4206,7 +4208,7 @@ async function fetchPitcherStats(playerId) {
       const result = {
         era: +prevEra.toFixed(2),
         fip: (prevFip && prevFip < 90) ? +prevFip.toFixed(2) : null,
-        starts: 0, // prior season / treat as zero current starts
+        starts: 0, ip: 0, // prior season / treat as zero current starts
         source: 'prior'
       };
       pitcherStatsCache[playerId] = result;
@@ -4214,7 +4216,7 @@ async function fetchPitcherStats(playerId) {
       return result;
     }
 
-    const empty = { era: null, fip: null, starts: 0, source: 'none' };
+    const empty = { era: null, fip: null, starts: 0, ip: 0, source: 'none' };
     pitcherStatsCache[playerId] = empty;
     return empty;
 
@@ -4481,7 +4483,7 @@ async function analyzeGame(game, normalLineups) {
     isLastGame, isFirstGame, isDHNightcap,
     clinched: homeClinched, eliminated: homeEliminated,
     gameDate, teamName: homeTeam.name,
-    spFip: homeStats.fip, spEra: homeStats.era, spStarts: homeStats.starts || 0, seriesLength,
+    spFip: homeStats.fip, spEra: homeStats.era, spStarts: homeStats.starts || 0, spIp: homeStats.ip || 0, seriesLength,
     isBackToBack: homeIsBackToBack, hasTravelFatigue: homeHasTravelFatigue,
     isDayAfterNight: homeDayAfterNight, consecutiveStreak: homeConsecutiveStreak,
   });
@@ -4492,7 +4494,7 @@ async function analyzeGame(game, normalLineups) {
     isLastGame, isFirstGame, isDHNightcap,
     clinched: awayClinched, eliminated: awayEliminated,
     gameDate, teamName: awayTeam.name,
-    spFip: awayStats.fip, spEra: awayStats.era, spStarts: awayStats.starts || 0, seriesLength,
+    spFip: awayStats.fip, spEra: awayStats.era, spStarts: awayStats.starts || 0, spIp: awayStats.ip || 0, seriesLength,
     isBackToBack: awayIsBackToBack, hasTravelFatigue: awayHasTravelFatigue,
     isDayAfterNight: awayDayAfterNight, consecutiveStreak: awayConsecutiveStreak,
   });
@@ -5076,7 +5078,7 @@ function buildTeamFeedbackBias() {
 // Fix #8: clinched vs eliminated tracked separately (label fix in breakdown)
 function computePuntScore({ effectiveBenched, eraDelta, isLastGame, isFirstGame,
   isDHNightcap, clinched, eliminated, gameDate, teamName,
-  spFip, spEra, spStarts, seriesLength, isBackToBack, hasTravelFatigue,
+  spFip, spEra, spStarts, spIp, seriesLength, isBackToBack, hasTravelFatigue,
   isDayAfterNight, consecutiveStreak }) {
 
   const tq = getLiveTeamQuality(teamName);
@@ -5182,29 +5184,32 @@ function computePuntScore({ effectiveBenched, eraDelta, isLastGame, isFirstGame,
   // Starting the team's best arm makes a punt less likely — a manager rarely
   // burns their ace in a game they've written off — but it is a REDUCTION, not
   // a disqualification. Resting the lineup behind an ace is still a (smaller)
-  // punt. "#1 starter" is proxied by the team's season-best ERA (the ace is
-  // almost always the #1 depth-chart arm); the absolute floor (≤3.40) always
-  // applies, the relative margins only once the pitcher has ≥3 starts.
-  const ACE_ERA_ABSOLUTE = 3.40;
-  const ACE_RELATIVE_MARGIN = 0.35;
-  const ACE_CLEAR_MARGIN = 0.15;
-  const ACE_MIN_STARTS_FOR_RELATIVE = 3;
+  // Ace detection: depth-chart based, not ERA based.
+  // The team's ace is whoever has the MOST innings pitched this season
+  // (the true #1 rotation arm). ERA-only was wrong — a spot starter with
+  // 2.78 ERA in 8 IP is not an ace; the 150-IP workhorse is.
+  // Requirements to qualify: ≥ 40 IP current season AND ERA < 4.50.
+  // If not in the current season (prior-season fallback, source=prior),
+  // ip is 0 so neither threshold is met and the disqualifier is skipped.
+  const ACE_MIN_IP   = 40;   // minimum innings pitched to be considered a rotation anchor
+  const ACE_ERA_CAP  = 4.50; // IP leader with ERA ≥ 4.50 isn't truly "protecting" vs a punt
+  const ACE_IP_CLEAR = 0.85; // ≥ 85% of the team's IP leader = clear ace tier
+  const ACE_IP_NEAR  = 0.65; // ≥ 65% of team IP leader = near-ace tier
 
-  if (!state.aceEraTracker) state.aceEraTracker = {};
-  if (spEra && spEra < 90) {
-    if (!state.aceEraTracker[teamName] || spEra < state.aceEraTracker[teamName]) {
-      state.aceEraTracker[teamName] = spEra;
+  if (!state.aceIpTracker) state.aceIpTracker = {};
+  if ((spIp || 0) >= ACE_MIN_IP && spEra && spEra < ACE_ERA_CAP) {
+    const cur = state.aceIpTracker[teamName];
+    if (!cur || spIp > cur.ip) {
+      state.aceIpTracker[teamName] = { ip: spIp, era: spEra };
     }
   }
 
   let aceScale = 1.0;
-  if (spEra && spEra < 90) {
-    const teamBestEra = state.aceEraTracker[teamName] || tq.avgRotationFip;
-    const hasEnoughStarts = (spStarts || 0) >= ACE_MIN_STARTS_FOR_RELATIVE;
-    const isClearAce = spEra <= ACE_ERA_ABSOLUTE || (hasEnoughStarts && spEra <= teamBestEra + ACE_CLEAR_MARGIN);
-    const isNearBest = hasEnoughStarts && spEra <= teamBestEra + ACE_RELATIVE_MARGIN;
-    if (isClearAce)      aceScale = 0.50;   // clear #1 / elite arm → halve the punt score
-    else if (isNearBest) aceScale = 0.72;   // near the team's best → modest reduction
+  const teamAce = state.aceIpTracker[teamName];
+  if (teamAce && (spIp || 0) >= ACE_MIN_IP && spEra && spEra < ACE_ERA_CAP) {
+    const ipRatio = spIp / teamAce.ip;
+    if (ipRatio >= ACE_IP_CLEAR)      aceScale = 0.50; // clear rotation anchor → halve score
+    else if (ipRatio >= ACE_IP_NEAR)  aceScale = 0.72; // near-ace tier → modest reduction
   }
 
   // ── SEASON TIMING ─────────────────────────────────────────
@@ -8544,18 +8549,16 @@ function buildScoreBreakdown(g) {
   const spEra    = g.puntSide === 'home' ? g.homeSP?.era    : g.awaySP?.era;
   const oppEra   = g.puntSide === 'home' ? g.awaySP?.era    : g.homeSP?.era;
   const spStarts = (g.puntSide === 'home' ? g.homeSP?.starts : g.awaySP?.starts) || 0;
+  const spIp     = (g.puntSide === 'home' ? g.homeSP?.ip     : g.awaySP?.ip)     || 0;
   const spName   = g.puntSide === 'home' ? g.homeSP?.name   : g.awaySP?.name;
 
-  // ── TOP-STARTER REDUCTION (mirror computePuntScore) — scales the score down,
-  // no longer a disqualifier. Surfaced as a note + applied to every factor.
+  // ── TOP-STARTER REDUCTION (mirror computePuntScore, IP-based) ──
   let aceScale = 1.0, aceNote = null;
-  if (spEra != null && spEra < 90) {
-    const teamBestEra = (state.aceEraTracker && state.aceEraTracker[teamName]) || tq.avgRotationFip;
-    const hasEnough = spStarts >= 3;
-    const isClearAce = spEra <= 3.40 || (hasEnough && spEra <= teamBestEra + 0.15);
-    const isNearBest = hasEnough && spEra <= teamBestEra + 0.35;
-    if (isClearAce)      { aceScale = 0.50; aceNote = `Ace on the mound — ${spName} (${parseFloat(spEra).toFixed(2)} ERA) · score ×0.50`; }
-    else if (isNearBest) { aceScale = 0.72; aceNote = `Top starter — ${spName} (${parseFloat(spEra).toFixed(2)} ERA) · score ×0.72`; }
+  const teamAceBS = state.aceIpTracker && state.aceIpTracker[teamName];
+  if (teamAceBS && spIp >= 40 && spEra != null && spEra < 4.50) {
+    const ipRatio = spIp / teamAceBS.ip;
+    if (ipRatio >= 0.85)      { aceScale = 0.50; aceNote = `Rotation anchor on the mound — ${spName} (${spIp} IP, ${parseFloat(spEra).toFixed(2)} ERA) · score ×0.50`; }
+    else if (ipRatio >= 0.65) { aceScale = 0.72; aceNote = `Top starter on the mound — ${spName} (${spIp} IP, ${parseFloat(spEra).toFixed(2)} ERA) · score ×0.72`; }
   }
 
   // ── EFFECTIVE MOTIVATION (mirror engine) ──
