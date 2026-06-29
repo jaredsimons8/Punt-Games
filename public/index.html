@@ -1642,6 +1642,139 @@
     .app { padding: 0 8px 40px; }
   }
 
+  /* ══════════════════════════════════════════════════════
+     DESIGN POLISH — refined hierarchy, spacing, and weight
+     ══════════════════════════════════════════════════════ */
+
+  /* ── NAV TABS: clean underline, no blue tinge ── */
+  .top-nav { border-bottom-color: rgba(30,45,66,0.9) !important; }
+  .top-nav-tab {
+    padding: 0 16px !important; height: 52px !important;
+    font-size: 13px !important; font-weight: 500 !important;
+    letter-spacing: 0 !important; color: #586878 !important;
+    border-bottom-width: 2px !important;
+    transition: color 0.12s, border-color 0.12s !important;
+  }
+  .top-nav-tab:hover { color: #99A8BC !important; background: transparent !important; }
+  .top-nav-tab.active {
+    color: #E4E8EE !important; border-bottom-color: #E05C2A !important;
+    font-weight: 600 !important; background: transparent !important;
+  }
+  .top-nav-tab .nav-badge { font-size: 8.5px !important; padding: 1px 5px !important; }
+
+  /* ── SECTION HEADERS: less aggressive ── */
+  .section-hdr { margin-bottom: 18px !important; gap: 14px !important; }
+  .section-hdr h2 {
+    font-size: 9.5px !important; letter-spacing: 1.8px !important;
+    font-weight: 600 !important; color: rgba(61,80,106,0.95) !important;
+  }
+  .section-hdr .divider { background: rgba(30,45,66,0.55) !important; }
+
+  /* ── STAT STRIP: refined numbers and backgrounds ── */
+  .stat-strip { gap: 8px !important; margin-bottom: 40px !important; }
+  .stat-card { padding: 18px 22px 16px !important; border-radius: 14px !important; }
+  .stat-card .label { font-size: 8.5px !important; letter-spacing: 1.5px !important; margin-bottom: 8px !important; }
+  .stat-card .value { font-size: 34px !important; letter-spacing: -1.5px !important; }
+  .stat-card .sub { margin-top: 6px !important; font-size: 9.5px !important; }
+  .stat-card.red  { background: linear-gradient(150deg, rgba(224,92,42,0.10) 0%, var(--surface) 60%) !important; }
+  .stat-card.gold { background: linear-gradient(150deg, rgba(232,184,75,0.08) 0%, var(--surface) 60%) !important; }
+  .stat-card.green{ background: linear-gradient(150deg, rgba(52,211,153,0.08) 0%, var(--surface) 60%) !important; }
+  .stat-card.blue { background: linear-gradient(150deg, rgba(91,156,246,0.09) 0%, var(--surface) 60%) !important; }
+
+  /* ── PC2 GAME CARDS: unified header, cleaner flow ── */
+  .game-card { border-radius: 14px !important; }
+  .pc2-head {
+    padding: 12px 16px 10px !important;
+    background: none !important; border-bottom: none !important;
+  }
+  .pc2-matchup .team-logo,
+  .pc2-matchup .team-logo-fallback { width: 28px !important; height: 28px !important; }
+  .pc2-abbr { font-size: 14.5px !important; letter-spacing: -0.2px !important; }
+  .pc2-at { font-size: 10px !important; margin: 0 3px !important; }
+  .pc2-verdict {
+    padding: 0 16px 12px !important;
+    border-bottom: 1px solid rgba(255,255,255,0.045) !important; gap: 8px !important;
+  }
+  .pc2-verdict .punt-badge { font-size: 10px !important; padding: 4px 10px !important; }
+  .pc2-score-num { font-size: 42px !important; letter-spacing: -2.5px !important; }
+  .pc2-score-den { font-size: 12px !important; }
+  .pc2-narrative {
+    padding: 8px 16px 4px !important; font-size: 13px !important;
+    line-height: 1.55 !important; color: var(--text2) !important;
+  }
+  .pc2-narrative.pc2-muted { color: var(--text3) !important; font-size: 12.5px !important; }
+
+  /* Contributing factors: subtle label, not screaming */
+  .pc2-how { padding: 8px 16px 6px !important; }
+  .pc2-how-label {
+    font-size: 8px !important; letter-spacing: 1.2px !important;
+    color: var(--text3) !important; font-weight: 500 !important; margin-bottom: 6px !important;
+  }
+  .pc2-reason { padding: 4px 0 !important; border-bottom: 1px solid rgba(255,255,255,0.03) !important; }
+  .pc2-reason-label { font-size: 12.5px !important; color: var(--text2) !important; }
+  .pc2-pts { font-size: 11px !important; font-weight: 700 !important; }
+
+  /* Pitcher footer */
+  .pc2-pitchers {
+    padding: 8px 16px 11px !important;
+    border-top: 1px solid rgba(255,255,255,0.04) !important; margin-top: 4px !important; gap: 3px !important;
+  }
+  .pc2-sp { font-size: 11.5px !important; }
+  .pc2-sp-team { font-size: 8.5px !important; width: 28px !important; }
+  .pc2-sp-era { font-size: 10px !important; }
+
+  /* Clean badge: less visually dominant */
+  .punt-badge.clean {
+    background: transparent !important;
+    border-color: rgba(255,255,255,0.08) !important; color: #3D506A !important;
+  }
+
+  /* ── TEAM PUNTS LIST ── */
+  .tp-row { padding: 12px 16px !important; gap: 14px !important; border-radius: 12px !important; }
+  .tp-row:hover { background: rgba(255,255,255,0.012) !important; }
+  .tp-name { font-size: 13.5px !important; letter-spacing: -0.2px !important; }
+  .tp-stats { font-size: 10px !important; margin-top: 2px !important; }
+  .tp-game { padding: 6px 8px !important; min-width: 56px !important; border-radius: 8px !important; }
+  .tp-game .tpg-score { font-size: 17px !important; }
+  .tp-game .tpg-when { font-size: 8.5px !important; }
+  .tp-game .tpg-opp  { font-size: 9px !important; }
+
+  /* ── REVIEW QUEUE ── */
+  .rq-panel { border-radius: 14px !important; }
+  .rq-head { padding: 13px 18px !important; }
+  .rq-title { font-size: 12.5px !important; }
+  .rq-count { font-size: 9px !important; padding: 1px 8px !important; }
+  .rq-row { padding: 10px 18px !important; gap: 10px !important; }
+  .rq-matchup { font-size: 13px !important; letter-spacing: -0.1px !important; }
+  .rq-meta { font-size: 9px !important; margin-top: 1px !important; }
+  .rq-reason { padding: 6px 10px !important; font-size: 12px !important; border-radius: 6px !important; }
+  .rq-btn { font-size: 10.5px !important; padding: 6px 13px !important; border-radius: 8px !important; letter-spacing: 0.1px !important; }
+
+  /* ── TEAM CARDS ── */
+  .team-card { border-radius: 12px !important; }
+  .tc-header { padding: 14px 14px 10px !important; }
+  .tc-full { font-size: 13.5px !important; letter-spacing: -0.2px !important; }
+  .tc-abbr { letter-spacing: 1px !important; }
+  .tc-division { letter-spacing: 0.8px !important; }
+  .tc-punt-num { font-size: 24px !important; letter-spacing: -0.5px !important; }
+
+  /* ── HEADER CONTROLS ── */
+  .date-btn { padding: 7px 14px !important; font-size: 11px !important; border-radius: 8px !important; }
+  .fetch-btn {
+    padding: 8px 20px !important; border-radius: 8px !important;
+    font-size: 12px !important; letter-spacing: 0.5px !important;
+  }
+  .signin-btn { border-radius: 8px !important; }
+  .signout-btn { border-radius: 8px !important; }
+
+  /* ── GLOBAL SMALL-ELEMENT POLISH ── */
+  .pill { font-size: 8px !important; letter-spacing: 1.2px !important; border-radius: 3px !important; }
+  .series-badge { font-size: 8.5px !important; padding: 2px 6px !important; border-radius: 3px !important; }
+  .div-btn { font-size: 10px !important; padding: 5px 11px !important; border-radius: 6px !important; letter-spacing: 0.2px !important; }
+  .div-btn.active { font-weight: 600 !important; }
+  .punt-watch-panel { border-radius: 12px !important; }
+  .rq-panel { border-radius: 14px !important; }
+
 </style>
 </head>
 <body>
