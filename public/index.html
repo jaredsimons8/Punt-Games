@@ -8376,90 +8376,139 @@ async function loadReviewBoxScore(gamePk, e) {
   const awayIsPunt = e.puntSide === 'away';
   const homeIsPunt = e.puntSide === 'home';
 
-  // ── Starting lineups ────────────────────────────────────────
-  const buildLineup = (side) => {
+  // ── Starting lineups + in-game substitutions ─────────────────
+  // Returns slots array: [{slot, starter, subs:[]}]
+  // slot = batting position (1-9), starter = first player in that slot,
+  // subs = subsequent players (PH, PR, DEF replacements).
+  const buildLineupWithSubs = (side) => {
     const team = bs.teams?.[side];
     if (!team) return [];
     const players = team.players || {};
-    return Object.values(players)
-      .filter(p => p.battingOrder && parseInt(p.battingOrder) % 100 === 0)
-      .sort((a, b) => parseInt(a.battingOrder) - parseInt(b.battingOrder))
-      .map(p => ({ order: parseInt(p.battingOrder) / 100, name: p.person?.fullName || '—', pos: p.position?.abbreviation || '—' }));
+    const bySlot = {};
+    Object.values(players).forEach(p => {
+      const bo = parseInt(p.battingOrder);
+      if (!bo) return;
+      const slot = Math.floor(bo / 100);
+      if (!bySlot[slot]) bySlot[slot] = [];
+      bySlot[slot].push({
+        name: p.person?.fullName || '—',
+        lastName: (p.person?.fullName || '—').split(' ').slice(-1)[0],
+        pos: p.position?.abbreviation || '—',
+        battingOrder: bo,
+        isSub: bo % 100 !== 0,
+      });
+    });
+    return Object.entries(bySlot)
+      .filter(([slot]) => parseInt(slot) >= 1 && parseInt(slot) <= 9)
+      .sort(([a], [b]) => parseInt(a) - parseInt(b))
+      .map(([slot, ps]) => {
+        ps.sort((a, b) => a.battingOrder - b.battingOrder);
+        return { slot: parseInt(slot), starter: ps[0], subs: ps.slice(1) };
+      });
   };
 
-  const awayLineup = buildLineup('away');
-  const homeLineup = buildLineup('home');
+  const awayLineupSlots = buildLineupWithSubs('away');
+  const homeLineupSlots = buildLineupWithSubs('home');
+  const awayLineup = awayLineupSlots.map(s => ({ order: s.slot, name: s.starter.name, pos: s.starter.pos }));
+  const homeLineup = homeLineupSlots.map(s => ({ order: s.slot, name: s.starter.name, pos: s.starter.pos }));
 
   // Build calibrated (expected) baseline per team through the game date.
   const buildCalLineup = (teamName) => {
     const history = (lineupHistory[teamName] || []).filter(h => h.date <= e.date);
     if (history.length < 10) return [];
-    return buildPositionalBaseline(history); // [{name, pct, slot}]
+    return buildPositionalBaseline(history);
   };
   const awayCalLineup = buildCalLineup(e.away);
   const homeCalLineup = buildCalLineup(e.home);
 
-  if (awayLineup.length || homeLineup.length) {
-    const maxRows = Math.max(awayLineup.length, homeLineup.length);
+  if (awayLineupSlots.length || homeLineupSlots.length) {
     const mono = 'font-family:var(--font-mono);font-size:11px';
+    const maxSlots = Math.max(awayLineupSlots.length, homeLineupSlots.length);
 
-    const colHdr = (teamAbbr, isPunt, sub) =>
-      `<th style="padding:3px 8px;text-align:left;font-size:10px;font-family:var(--font-display);font-weight:700;color:${isPunt ? 'var(--gold)' : 'var(--text3)'}">
-        ${teamAbbr}${isPunt ? ' <span style="font-size:9px;font-family:var(--font-mono);font-weight:400;color:var(--text3)">punting</span>' : ''}
-        ${sub ? `<div style="font-size:9px;font-weight:400;color:var(--text3);font-family:var(--font-mono);margin-top:1px">${sub}</div>` : ''}
-      </th>`;
-
-    // Actual player cell
-    const actualCell = (p, isPunt) => p
-      ? `<td style="padding:2px 8px;${mono};color:${isPunt ? 'var(--text)' : 'var(--text2)'};white-space:nowrap">
-          <span style="color:var(--text3);margin-right:5px">${p.order}.</span>${p.name}
-          <span style="color:var(--text3);margin-left:5px">${p.pos}</span>
-        </td>`
-      : '<td></td>';
-
-    // Calibrated (expected) player cell — gold when different from actual
-    const calCell = (calPlayer, actualPlayer) => {
-      if (!calPlayer) return `<td style="padding:2px 6px;${mono};color:var(--text3)">—</td>`;
-      const same = actualPlayer && calPlayer.name.toLowerCase() === actualPlayer.name.toLowerCase();
-      const color = same ? 'var(--text3)' : 'var(--gold)';
-      const pctStr = calPlayer.pct != null ? `<span style="color:var(--text3);font-size:10px;margin-left:4px">${calPlayer.pct}%</span>` : '';
-      return `<td style="padding:2px 6px;${mono};color:${color};white-space:nowrap">
-        ${same ? '<span style="color:var(--text3);margin-right:4px">✓</span>' : ''}${calPlayer.name}${pctStr}
-      </td>`;
+    const roleColor = pos => {
+      if (pos === 'PH') return '#a78bfa';
+      if (pos === 'PR') return '#34d399';
+      return 'var(--text3)';
     };
 
-    // Thin divider column between the two teams
-    const dividerCell = `<td style="width:1px;background:var(--border);padding:0"></td>`;
+    // Build one side's column HTML (actual + expected sub-columns)
+    const buildSideColumn = (slots, calLineup, isPunt) => {
+      const rows = [];
+      for (let i = 0; i < maxSlots; i++) {
+        const slotObj = slots[i];
+        const cal     = calLineup[i] || null;
+        if (!slotObj) {
+          rows.push(`<tr style="border-top:1px solid rgba(255,255,255,0.04)"><td style="padding:5px 10px"></td><td></td></tr>`);
+          continue;
+        }
+        const { slot, starter, subs } = slotObj;
+        const nameColor = isPunt ? 'var(--text)' : 'var(--text2)';
+        const slotNum = `<span style="color:var(--text3);font-size:10px;min-width:16px;display:inline-block;text-align:right;margin-right:7px">${slot}.</span>`;
 
-    const lineupRows = Array.from({ length: maxRows }, (_, i) => {
-      const a  = awayLineup[i];
-      const h  = homeLineup[i];
-      const ac = awayCalLineup[i] || null;
-      const hc = homeCalLineup[i] || null;
-      return `<tr style="border-top:1px solid var(--border)">
-        ${actualCell(a, awayIsPunt)}${calCell(ac, a)}
-        ${dividerCell}
-        ${actualCell(h, homeIsPunt)}${calCell(hc, h)}
-      </tr>`;
-    }).join('');
+        // Expected cell
+        let calHtml = '';
+        if (cal) {
+          const same = cal.name.toLowerCase() === starter.name.toLowerCase();
+          calHtml = same
+            ? `<span style="color:var(--text3);font-size:10px;margin-right:4px">✓</span><span style="color:var(--text3);${mono}">${cal.name}</span><span style="color:var(--text3);font-size:10px;margin-left:4px">${cal.pct != null ? cal.pct+'%' : ''}</span>`
+            : `<span style="color:var(--gold);${mono}">${cal.name}</span><span style="color:var(--text3);font-size:10px;margin-left:4px">${cal.pct != null ? cal.pct+'%' : ''}</span>`;
+        }
+
+        rows.push(`<tr style="border-top:1px solid rgba(255,255,255,0.05)">
+          <td style="padding:5px 10px;${mono};color:${nameColor};white-space:nowrap;vertical-align:top">
+            ${slotNum}<strong style="font-weight:600">${starter.name}</strong>
+            <span style="color:var(--text3);font-size:10px;margin-left:5px">${starter.pos}</span>
+            ${subs.map(sub => `
+              <div style="padding-left:24px;margin-top:3px;display:flex;align-items:center;gap:5px">
+                <span style="color:${roleColor(sub.pos)};font-size:9px;font-weight:700;font-family:var(--font-mono);background:${roleColor(sub.pos)}22;border:1px solid ${roleColor(sub.pos)}44;border-radius:3px;padding:1px 4px">${sub.pos}</span>
+                <span style="color:var(--text3);font-size:11px">${sub.name}</span>
+              </div>`).join('')}
+          </td>
+          <td style="padding:5px 8px;vertical-align:top;white-space:nowrap">${calHtml}</td>
+        </tr>`);
+      }
+      return rows.join('');
+    };
+
+    const awayRows = buildSideColumn(awayLineupSlots, awayCalLineup, awayIsPunt);
+    const homeRows = buildSideColumn(homeLineupSlots, homeCalLineup, homeIsPunt);
+
+    const teamHdrCell = (teamAbbr, isPunt) =>
+      `<div style="font-family:var(--font-display);font-size:11px;font-weight:700;color:${isPunt ? 'var(--gold)' : 'var(--text3)'}">
+        ${teamAbbr}${isPunt ? ' <span style="font-size:9px;font-family:var(--font-mono);font-weight:400;color:var(--text3);margin-left:4px">punting</span>' : ''}
+      </div>`;
+    const subHdr = (label) =>
+      `<div style="font-size:9px;font-family:var(--font-mono);color:var(--text3);margin-top:2px;letter-spacing:0.5px">${label}</div>`;
 
     const hasAwyCal = awayCalLineup.length > 0;
     const hasHmeCal = homeCalLineup.length > 0;
-    const dividerHdr = `<th style="width:1px;background:var(--border);padding:0"></th>`;
 
     box.insertAdjacentHTML('beforeend', `
-      <div style="margin-top:14px">
-        <div style="font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);font-family:var(--font-mono);margin-bottom:6px">Starting Lineups</div>
-        <table style="border-collapse:collapse;width:100%">
-          <thead><tr>
-            ${colHdr(abbr(e.away), awayIsPunt, 'Actual')}
-            ${colHdr('', false, hasAwyCal ? 'Expected' : '')}
-            ${dividerHdr}
-            ${colHdr(abbr(e.home), homeIsPunt, 'Actual')}
-            ${colHdr('', false, hasHmeCal ? 'Expected' : '')}
-          </tr></thead>
-          <tbody>${lineupRows}</tbody>
-        </table>
+      <div style="margin-top:16px">
+        <div style="font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);font-family:var(--font-mono);margin-bottom:8px">Starting Lineups</div>
+        <div style="display:grid;grid-template-columns:1fr 1px 1fr;gap:0;border:1px solid var(--border);border-radius:var(--r-md);overflow:hidden">
+          <div>
+            <div style="padding:8px 10px;border-bottom:1px solid var(--border);background:rgba(255,255,255,0.03)">
+              ${teamHdrCell(abbr(e.away), awayIsPunt)}
+              <div style="display:flex;gap:24px;margin-top:2px">
+                ${subHdr('Actual')}
+                ${hasAwyCal ? subHdr('Expected') : ''}
+              </div>
+            </div>
+            <table style="border-collapse:collapse;width:100%"><tbody>${awayRows}</tbody></table>
+          </div>
+          <div style="background:var(--border)"></div>
+          <div>
+            <div style="padding:8px 10px;border-bottom:1px solid var(--border);background:rgba(255,255,255,0.03)">
+              ${teamHdrCell(abbr(e.home), homeIsPunt)}
+              <div style="display:flex;gap:24px;margin-top:2px">
+                ${subHdr('Actual')}
+                ${hasHmeCal ? subHdr('Expected') : ''}
+              </div>
+            </div>
+            <table style="border-collapse:collapse;width:100%"><tbody>${homeRows}</tbody></table>
+          </div>
+        </div>
       </div>`);
   }
 
