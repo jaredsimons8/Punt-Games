@@ -3163,7 +3163,15 @@ async function loadUserData() {
     const { data: prefs } = await db.from('user_preferences').select('*').eq('user_id', currentUser.id).single();
     if (prefs?.starred_teams) starredTeams = new Set(prefs.starred_teams);
 
-    const { data: logs } = await db.from('game_log').select('*').eq('user_id', currentUser.id).order('game_date', { ascending: true }).limit(5000);
+    const _pages = [];
+    for (let _p = 0; ; _p++) {
+      const { data: _chunk } = await db.from('game_log').select('*').eq('user_id', currentUser.id).order('game_date', { ascending: true }).range(_p * 1000, _p * 1000 + 999);
+      if (!_chunk || !_chunk.length) break;
+      _pages.push(..._chunk);
+      if (_chunk.length < 1000) break;
+    }
+    const _today = localTodayStr();
+    const logs = _pages.length ? _pages.filter(r => r.game_date <= _today) : null;
     if (logs) {
       state.gameLog = logs.map(row => ({
         id: row.game_id, _dbId: row.id,
@@ -3659,6 +3667,7 @@ async function autoFillMissingGames() {
     if (typeof renderLeaders === 'function') renderLeaders();
     updateRebuildBtn();
     setSyncDot('synced');
+    saveGameLogCache();
     if (prog) {
       if (added > 0) {
         prog.textContent = `Auto-fill complete — ${added} game${added === 1 ? '' : 's'} scored`;
@@ -3796,6 +3805,7 @@ async function rebuildSeasonLog() {
   showToast(completedNormally && datesFailed === 0
     ? `Season scored — ${reviewNow} games in the review queue`
     : `Scoring paused — ${added} added, ${rescored} updated. Click Resume to finish.`);
+  saveGameLogCache();
 }
 // In-memory cache of historical lineups loaded from Supabase.
 // Structure: { teamName: [ { date, lineup: [], sp, spFip, spEra, opp } ] }
