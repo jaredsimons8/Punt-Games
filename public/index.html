@@ -3720,13 +3720,22 @@ function updateRebuildBtn() { /* button removed — scoring is fully automatic *
 async function autoFillMissingGames() {
   if (!currentUser || rebuildInProgress) return;
 
-  // Determine start: checkpoint wins; otherwise use the most recent date
-  // that's already in the game log so we don't re-score everything.
+  // Determine start: take the LATER of checkpoint vs last game_log date.
+  // This prevents re-processing dates already in the log when the checkpoint
+  // is stale (e.g., after a manual rebuild that advanced the log further
+  // than the checkpoint). Both sources can be stale independently.
   const cp = getRebuildCheckpoint();
-  let startFrom = cp?.lastCompletedDate || null;
-  if (!startFrom && state.gameLog.length) {
-    const sorted = state.gameLog.map(e => e.date).sort();
-    startFrom = sorted[sorted.length - 1];
+  const checkpointDate = cp?.lastCompletedDate || null;
+  const logDate = state.gameLog.length
+    ? [...state.gameLog.map(e => e.date)].sort().pop()
+    : null;
+  const startFrom = (checkpointDate && logDate)
+    ? (checkpointDate > logDate ? checkpointDate : logDate)
+    : (checkpointDate || logDate);
+
+  // Sync checkpoint to match game log if log is ahead (avoids re-processing next run)
+  if (logDate && (!checkpointDate || logDate > checkpointDate)) {
+    setRebuildCheckpoint({ lastCompletedDate: logDate });
   }
 
   // Score through yesterday — today's games may still be live.
@@ -8067,6 +8076,10 @@ async function openReviewDetail(id) {
           ${e.puntTeam && e.puntTeam !== '—' ? `<div style="font-family:var(--font-mono);font-size:11px;font-weight:700;color:${rdScoreColor};background:${rdScoreColor}1a;border:1px solid ${rdScoreColor}40;border-radius:4px;padding:2px 7px;letter-spacing:0.5px">${abbr(e.puntTeam)} punting</div>` : ''}
         </div>
         <div style="font-size:9px;text-transform:uppercase;letter-spacing:1.2px;color:var(--text3);font-family:var(--font-mono);margin-bottom:6px">Pre-Game</div>
+        ${(e.seriesGame && e.seriesLength) ? `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);margin-bottom:2px">
+          <span style="color:var(--text3);font-size:12px;font-family:var(--font-mono)">Series context</span>
+          <span style="color:var(--text2);font-family:var(--font-mono);font-size:12px;font-weight:600">Game ${e.seriesGame} of ${e.seriesLength}</span>
+        </div>` : ''}
         <div id="reviewBreakdown-${gamePk}">${breakdownContent}</div>
         <div id="reviewInGame-${gamePk}" style="margin-top:${factorRows ? 12 : 0}px"></div>
       </div>
