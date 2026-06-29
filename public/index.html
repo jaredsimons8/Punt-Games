@@ -7979,30 +7979,74 @@ async function loadReviewBoxScore(gamePk, e) {
   const awayLineup = buildLineup('away');
   const homeLineup = buildLineup('home');
 
+  // Build calibrated (expected) baseline per team through the game date.
+  const buildCalLineup = (teamName) => {
+    const history = (lineupHistory[teamName] || []).filter(h => h.date <= e.date);
+    if (history.length < 10) return [];
+    return buildPositionalBaseline(history); // [{name, pct, slot}]
+  };
+  const awayCalLineup = buildCalLineup(e.away);
+  const homeCalLineup = buildCalLineup(e.home);
+
   if (awayLineup.length || homeLineup.length) {
     const maxRows = Math.max(awayLineup.length, homeLineup.length);
     const mono = 'font-family:var(--font-mono);font-size:11px';
-    const colHdr = (teamAbbr, isPunt) =>
+
+    const colHdr = (teamAbbr, isPunt, sub) =>
       `<th style="padding:3px 8px;text-align:left;font-size:10px;font-family:var(--font-display);font-weight:700;color:${isPunt ? 'var(--gold)' : 'var(--text3)'}">
         ${teamAbbr}${isPunt ? ' <span style="font-size:9px;font-family:var(--font-mono);font-weight:400;color:var(--text3)">punting</span>' : ''}
+        ${sub ? `<div style="font-size:9px;font-weight:400;color:var(--text3);font-family:var(--font-mono);margin-top:1px">${sub}</div>` : ''}
       </th>`;
+
+    // Actual player cell
+    const actualCell = (p, isPunt) => p
+      ? `<td style="padding:2px 8px;${mono};color:${isPunt ? 'var(--text)' : 'var(--text2)'};white-space:nowrap">
+          <span style="color:var(--text3);margin-right:5px">${p.order}.</span>${p.name}
+          <span style="color:var(--text3);margin-left:5px">${p.pos}</span>
+        </td>`
+      : '<td></td>';
+
+    // Calibrated (expected) player cell — gold when different from actual
+    const calCell = (calPlayer, actualPlayer) => {
+      if (!calPlayer) return `<td style="padding:2px 6px;${mono};color:var(--text3)">—</td>`;
+      const same = actualPlayer && calPlayer.name.toLowerCase() === actualPlayer.name.toLowerCase();
+      const color = same ? 'var(--text3)' : 'var(--gold)';
+      const pctStr = calPlayer.pct != null ? `<span style="color:var(--text3);font-size:10px;margin-left:4px">${calPlayer.pct}%</span>` : '';
+      return `<td style="padding:2px 6px;${mono};color:${color};white-space:nowrap">
+        ${same ? '<span style="color:var(--text3);margin-right:4px">✓</span>' : ''}${calPlayer.name}${pctStr}
+      </td>`;
+    };
+
+    // Thin divider column between the two teams
+    const dividerCell = `<td style="width:1px;background:var(--border);padding:0"></td>`;
+
     const lineupRows = Array.from({ length: maxRows }, (_, i) => {
-      const a = awayLineup[i];
-      const h = homeLineup[i];
-      const cell = (p, isPunt) => p
-        ? `<td style="padding:2px 8px;${mono};color:${isPunt ? 'var(--text)' : 'var(--text2)'};white-space:nowrap">
-            <span style="color:var(--text3);margin-right:5px">${p.order}.</span>${p.name}
-            <span style="color:var(--text3);margin-left:5px">${p.pos}</span>
-          </td>`
-        : '<td></td>';
-      return `<tr style="border-top:1px solid var(--border)">${cell(a, awayIsPunt)}${cell(h, homeIsPunt)}</tr>`;
+      const a  = awayLineup[i];
+      const h  = homeLineup[i];
+      const ac = awayCalLineup[i] || null;
+      const hc = homeCalLineup[i] || null;
+      return `<tr style="border-top:1px solid var(--border)">
+        ${actualCell(a, awayIsPunt)}${calCell(ac, a)}
+        ${dividerCell}
+        ${actualCell(h, homeIsPunt)}${calCell(hc, h)}
+      </tr>`;
     }).join('');
+
+    const hasAwyCal = awayCalLineup.length > 0;
+    const hasHmeCal = homeCalLineup.length > 0;
+    const dividerHdr = `<th style="width:1px;background:var(--border);padding:0"></th>`;
 
     box.insertAdjacentHTML('beforeend', `
       <div style="margin-top:14px">
         <div style="font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);font-family:var(--font-mono);margin-bottom:6px">Starting Lineups</div>
         <table style="border-collapse:collapse;width:100%">
-          <thead><tr>${colHdr(abbr(e.away), awayIsPunt)}${colHdr(abbr(e.home), homeIsPunt)}</tr></thead>
+          <thead><tr>
+            ${colHdr(abbr(e.away), awayIsPunt, 'Actual')}
+            ${colHdr('', false, hasAwyCal ? 'Expected' : '')}
+            ${dividerHdr}
+            ${colHdr(abbr(e.home), homeIsPunt, 'Actual')}
+            ${colHdr('', false, hasHmeCal ? 'Expected' : '')}
+          </tr></thead>
           <tbody>${lineupRows}</tbody>
         </table>
       </div>`);
