@@ -3244,6 +3244,11 @@ function isAdmin() {
   return ADMIN_EMAILS.map(e => e.toLowerCase()).includes(currentUser.email.toLowerCase());
 }
 
+// The site has one shared review dataset — the admin's. Everyone who visits
+// (signed in or not) reads game_log under this fixed account; only the admin
+// (gated by isAdmin() above, and by RLS server-side) can write to it.
+const ADMIN_USER_ID = '0442f84a-5fc9-4c1e-a2e7-9c50c0fd8568';
+
 async function initAuth() {
   // App loads immediately / no login required to browse
   const dp = document.getElementById('datePicker');
@@ -3269,7 +3274,15 @@ async function initAuth() {
   // back-to-back detection and calendar view
   loadFullSchedule();
 
-  // Check if already logged in from a previous session
+  // The game log is one shared/public dataset (the admin's) — every visitor
+  // sees it, signed in or not. Restore from cache instantly, then refresh
+  // from Supabase, awaited so today's games (below) don't clobber a saved
+  // override before it's loaded.
+  restoreGameLogCache();
+  await loadUserData().catch(e => console.error('[loadUserData]', e));
+
+  // Check if already logged in from a previous session — this only grants
+  // write access (isAdmin()); regular visitors never see the sign-in UI.
   try {
     const { data: { session } } = await db.auth.getSession();
     if (session?.user) {
@@ -3286,13 +3299,27 @@ async function initAuth() {
     console.warn('Supabase auth unavailable:', e.message);
   }
 
-  // Now load today's games — for a signed-in user, saved data is already in
-  // memory, so logging today's slate can't overwrite a manual verdict.
+  // Now load today's games — saved overrides are already in memory above,
+  // so logging today's slate can't overwrite a manual verdict.
   fetchGames();
 }
 
+// Regular visitors never see a sign-in option — the site is fully public/
+// view-only for them. Visiting once with ?admin in the URL unlocks the Sign
+// In button on this browser (remembered via localStorage) so the admin can
+// authenticate; nobody else ever sees the button.
+function adminUiUnlocked() {
+  try {
+    if (new URLSearchParams(location.search).has('admin')) {
+      localStorage.setItem('tpi_admin_ui', '1');
+      return true;
+    }
+    return localStorage.getItem('tpi_admin_ui') === '1';
+  } catch { return false; }
+}
+
 function showSignInPrompt() {
-  document.getElementById('signinBtn').style.display = '';
+  document.getElementById('signinBtn').style.display = adminUiUnlocked() ? '' : 'none';
   document.getElementById('signoutBtn').style.display = 'none';
   document.getElementById('userEmail').textContent = '';
   document.getElementById('syncDot').style.display = 'none';
@@ -3307,29 +3334,31 @@ async function onUserLoggedIn(user) {
   document.getElementById('signoutBtn').textContent = 'Sign Out';
   document.getElementById('syncDot').style.display = '';
   setSyncDot('synced');
-  restoreGameLogCache(); // instant render from localStorage while Supabase loads
+  // The public game log is already loaded (or loading) by initAuth() for
+  // every visitor — just re-render now that admin-only controls can appear.
   try {
-    await loadUserData(); // authoritative Supabase refresh, saves updated cache
     await loadLineupBaselines();
     renderTeamBreakdown(); renderCalProgress();
     updateStarredPanel();
+    renderReviewQueue(); updateReviewBadge();
     // Score today immediately, then fill any historical gaps in the background.
     scoreTodayBackground().catch(() => {});
     autoFillMissingGames().catch(e => console.error('[autoFill]', e));
   } catch(e) {
-    console.error('Error loading user data:', e);
+    console.error('Error after sign-in:', e);
     setSyncDot('error');
-    showToast('Error loading your data. Please try again.', true);
+    showToast('Error loading admin data. Please try again.', true);
   }
 }
 
 function onUserLoggedOut() {
+  // The game log is public/admin-owned, not per-session — signing out only
+  // drops write access (isAdmin() becomes false). The visible data stays.
   currentUser = null;
-  state.gameLog = []; state.logComments = {}; state.logOverrides = {}; state.logResults = {}; state.teamFeedbackBias = {};
-  starredTeams = new Set();
   document.getElementById('authOverlay').style.display = 'none';
   showSignInPrompt();
   renderCalibratedLineup(); renderTeamBreakdown(); renderCalProgress(); updateStarredPanel();
+  renderReviewQueue(); updateReviewBadge();
 }
 
 function switchAuthTab(tab) {
@@ -3412,9 +3441,8 @@ function debounceSave(key, fn, delay = 800) {
 // Game log: restored synchronously before Supabase loads (instant render).
 // Baselines: restored synchronously; Supabase refreshes in background.
 function saveGameLogCache() {
-  if (!currentUser) return;
   try {
-    localStorage.setItem(`glc_${currentUser.id}`, JSON.stringify({
+    localStorage.setItem(`glc_${ADMIN_USER_ID}`, JSON.stringify({
       ts: Date.now(),
       log: state.gameLog,
       ovr: state.logOverrides,
@@ -3431,10 +3459,11 @@ function normalizeBreakdown(b) {
   return [];
 }
 
+// The game log is public/shared (the admin's curated data) — restored and
+// loaded for every visitor, signed in or not.
 function restoreGameLogCache() {
-  if (!currentUser) return false;
   try {
-    const raw = localStorage.getItem(`glc_${currentUser.id}`);
+    const raw = localStorage.getItem(`glc_${ADMIN_USER_ID}`);
     if (!raw) return false;
     const { log, ovr, res, cmt } = JSON.parse(raw);
     if (!log || !log.length) return false;
@@ -3454,16 +3483,17 @@ function restoreGameLogCache() {
   } catch { return false; }
 }
 
+// Loads the one shared/public dataset (the admin's) — runs for every
+// visitor regardless of sign-in state, since that's what everyone sees.
 async function loadUserData() {
-  if (!currentUser) return;
   setSyncDot('syncing');
   try {
-    const { data: prefs } = await db.from('user_preferences').select('*').eq('user_id', currentUser.id).single();
+    const { data: prefs } = await db.from('user_preferences').select('*').eq('user_id', ADMIN_USER_ID).single();
     if (prefs?.starred_teams) starredTeams = new Set(prefs.starred_teams);
 
     const _pages = [];
     for (let _p = 0; ; _p++) {
-      const { data: _chunk } = await db.from('game_log').select('*').eq('user_id', currentUser.id).order('game_date', { ascending: true }).range(_p * 1000, _p * 1000 + 999);
+      const { data: _chunk } = await db.from('game_log').select('*').eq('user_id', ADMIN_USER_ID).order('game_date', { ascending: true }).range(_p * 1000, _p * 1000 + 999);
       if (!_chunk || !_chunk.length) break;
       _pages.push(..._chunk);
       if (_chunk.length < 1000) break;
@@ -3507,22 +3537,22 @@ async function loadUserData() {
 }
 
 async function saveStarredTeams() {
-  if (!currentUser) return;
+  if (!isAdmin()) return;
   setSyncDot('syncing');
   try {
-    await db.from('user_preferences').upsert({ user_id: currentUser.id, starred_teams: [...starredTeams], updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
+    await db.from('user_preferences').upsert({ user_id: ADMIN_USER_ID, starred_teams: [...starredTeams], updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
     setSyncDot('synced');
   } catch { setSyncDot('error'); }
 }
 
 async function saveGameLogEntry(gameId) {
-  if (!currentUser) return;
+  if (!isAdmin()) return; // writes to the one shared/public review dataset
   setSyncDot('syncing');
   const e = state.gameLog.find(x => x.id === gameId);
   if (!e) return;
   try {
     await db.from('game_log').upsert({
-      user_id: currentUser.id, game_id: gameId,
+      user_id: ADMIN_USER_ID, game_id: gameId,
       game_date: e.date, away_team: e.away, home_team: e.home,
       punt_team: e.puntTeam, punt_side: e.puntSide,
       series_game: e.seriesGame, series_length: e.seriesLength,
@@ -3908,7 +3938,7 @@ function updateRebuildBtn() { /* button removed — scoring is fully automatic *
 // Runs automatically after login; uses the same checkpoint as the manual
 // rebuild so the two don't conflict and resume each other's partial work.
 async function autoFillMissingGames() {
-  if (!currentUser || rebuildInProgress) return;
+  if (!isAdmin() || rebuildInProgress) return;
 
   // Determine start: take the LATER of checkpoint vs last game_log date.
   // This prevents re-processing dates already in the log when the checkpoint
@@ -6625,6 +6655,7 @@ async function retrogradeCalibrationGames(teamName) {
 
 // Check all teams and trigger retrograde for any that just graduated
 async function checkAndRetrograde() {
+  if (!isAdmin()) return; // writes scored games back to the shared log — admin only
   const today = new Date();
   if (today < CALIBRATION_FLOOR) return; // June 1 hard floor / never before then
 
@@ -8196,7 +8227,7 @@ function getUnmarkedReviewGames() {
 function updateReviewBadge() {
   const badge = document.getElementById('reviewBadge');
   if (!badge) return;
-  if (!isAdmin()) { badge.style.display = 'none'; return; }   // admin only
+  // Visible to everyone — it's just a count of the admin's pending decisions.
   const n = getUnmarkedReviewGames().length;
   if (n > 0) { badge.textContent = n; badge.style.display = ''; }
   else badge.style.display = 'none';
@@ -8212,13 +8243,10 @@ function decideReview(id, verdict) {
 function renderReviewQueue() {
   const el = document.getElementById('reviewQueue');
   if (!el) return;
-  if (!currentUser) {
-    el.innerHTML = `<div class="rq-panel"><div class="rq-head"><div class="rq-title">Review Queue</div></div><div class="rq-empty">Sign in to review games and save your punt / no-punt decisions.</div></div>`;
-    return;
-  }
-  if (!isAdmin()) { el.innerHTML = ''; return; }
+  const canDecide = isAdmin();
 
   // All review-band games — both pending and already-decided — newest first.
+  // Visible to every visitor; only the admin gets decision controls below.
   const allReview = state.gameLog
     .filter(e => e.flag === 'review')
     .sort((a, b) => b.date.localeCompare(a.date) || (b.score || 0) - (a.score || 0));
@@ -8228,8 +8256,8 @@ function renderReviewQueue() {
   if (!allReview.length) {
     const totalLogged = state.gameLog.length;
     const msg = totalLogged === 0
-      ? 'No games are in your season log yet. Only dates you actually open get logged — browse dates on the Today tab (or pick past dates) to populate it. If you HAVE opened dates and still see this, your saves may be failing — check the sync indicator and the browser console.'
-      : `No review-band games in your log of ${totalLogged} logged game${totalLogged === 1 ? '' : 's'}. Browse more dates to surface games that score 28–45.`;
+      ? 'No games are in the season log yet.'
+      : `No review-band games in the log of ${totalLogged} logged game${totalLogged === 1 ? '' : 's'}.`;
     el.innerHTML = `<div class="rq-panel"><div class="rq-head"><div class="rq-title">Review Queue</div></div><div class="rq-empty">${msg}</div></div>`;
     return;
   }
@@ -8240,16 +8268,19 @@ function renderReviewQueue() {
     const topFactor = normalizeBreakdown(g.breakdown).filter(f => f.val > 0).sort((a,b) => b.val - a.val)[0];
     const factorHint = topFactor ? ` <span style="color:var(--text3);font-weight:400">· ${topFactor.label}</span>` : '';
     const puntColor = TEAM_COLORS[g.puntTeam] || 'var(--gold)';
+    const actions = canDecide
+      ? `<input class="rq-reason" id="rq-reason-${idAttr}" placeholder="reason (optional)…">
+      <div class="rq-actions">
+        <button class="rq-btn punt" onclick="decideReview('${idJs}','punt')">🚩 Punt</button>
+        <button class="rq-btn clean" onclick="decideReview('${idJs}','clean')">✓ Not a Punt</button>
+      </div>`
+      : `<div style="font-family:var(--font-mono);font-size:11px;color:var(--text3);white-space:nowrap">pending decision</div>`;
     return `<div class="rq-row" style="border-left:3px solid ${puntColor}20">
       <div class="rq-game" style="cursor:pointer;border-left:2px solid ${puntColor};padding-left:8px;margin-left:-2px" onclick="openReviewDetail('${idJs}')" title="Open box score & factors">
         <div class="rq-matchup">${abbr(g.away)} @ ${abbr(g.home)} <span style="font-size:11px;color:var(--text3);font-weight:400">›</span></div>
         <div class="rq-meta">${g.date} · <span style="color:${puntColor};font-weight:700">${g.score}/80</span> · <span style="color:${puntColor}">${abbr(g.puntTeam)}</span>${factorHint}</div>
       </div>
-      <input class="rq-reason" id="rq-reason-${idAttr}" placeholder="reason (optional)…">
-      <div class="rq-actions">
-        <button class="rq-btn punt" onclick="decideReview('${idJs}','punt')">🚩 Punt</button>
-        <button class="rq-btn clean" onclick="decideReview('${idJs}','clean')">✓ Not a Punt</button>
-      </div>
+      ${actions}
     </div>`;
   }).join('');
 
@@ -8260,15 +8291,18 @@ function renderReviewQueue() {
     const vColor = ov === true ? 'var(--red2)' : 'var(--green)';
     const topFactor = normalizeBreakdown(g.breakdown).filter(f => f.val > 0).sort((a,b) => b.val - a.val)[0];
     const factorHint = topFactor ? ` <span style="color:var(--text3);font-weight:400">· ${topFactor.label}</span>` : '';
+    const actions = canDecide
+      ? `<div class="rq-actions">
+        <button class="rq-btn" style="color:var(--text3);border-color:var(--border)" onclick="decideReview('${idJs}','revert')">Revert</button>
+      </div>`
+      : '';
     return `<div class="rq-row" style="opacity:0.72">
       <div class="rq-game" style="cursor:pointer" onclick="openReviewDetail('${idJs}')" title="Open box score & factors">
         <div class="rq-matchup">${abbr(g.away)} @ ${abbr(g.home)} <span style="font-size:11px;color:var(--text3);font-weight:400">›</span></div>
         <div class="rq-meta">${g.date} · <span style="color:var(--gold)">${g.score}/80</span> · ${abbr(g.puntTeam)}${factorHint}</div>
       </div>
       <div style="font-family:var(--font-mono);font-size:11px;color:${vColor};font-weight:700;padding:0 8px;white-space:nowrap">${vLabel} ✓</div>
-      <div class="rq-actions">
-        <button class="rq-btn" style="color:var(--text3);border-color:var(--border)" onclick="decideReview('${idJs}','revert')">Revert</button>
-      </div>
+      ${actions}
     </div>`;
   }).join('');
 
@@ -8316,7 +8350,6 @@ async function resolveGamePkForEntry(e) {
 }
 
 async function openReviewDetail(id) {
-  if (!isAdmin()) return;
   const el = document.getElementById('reviewDetail');
   if (!el) return;
   const e = state.gameLog.find(x => x.id === id);
@@ -8495,6 +8528,17 @@ function renderReviewVerdictBlock(id) {
   const chip = ov === true ? '<span style="color:var(--red2);font-weight:700">🚩 PUNT</span>'
     : ov === false ? '<span style="color:var(--green);font-weight:700">✓ Not a punt</span>'
     : '<span style="color:var(--text3)">No decision yet</span>';
+
+  if (!isAdmin()) {
+    el.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:${reason ? '10px' : '0'}">
+        <div style="font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);font-family:var(--font-mono)">Admin review</div>
+        <div style="font-size:12px;font-family:var(--font-mono)">${chip}</div>
+      </div>
+      ${reason ? `<div style="font-size:13px;color:var(--text2);line-height:1.5">${reason}</div>` : ''}`;
+    return;
+  }
+
   const mkBtn = (label, v, a, col, bgDim) => `<button onclick="setManualVerdict('${sid}','${v}')" style="flex:1;padding:9px 10px;border-radius:var(--r-md);cursor:pointer;font-family:var(--font-mono);font-size:11px;font-weight:700;border:1px solid ${a ? col : 'var(--border2)'};background:${a ? bgDim : 'transparent'};color:${a ? col : 'var(--text2)'}">${label}</button>`;
   el.innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
@@ -8994,7 +9038,6 @@ function saveVerdictReason(id, val) {
 function renderVerdictPanel(logEntry) {
   const el = document.getElementById('gameflowVerdict');
   if (!el) return;
-  if (!isAdmin()) { el.innerHTML = ''; return; }   // edit tool — admin only
   const id = logEntry && (logEntry.id || logEntry.gid);
   if (!id) { el.innerHTML = ''; return; }
 
@@ -9009,6 +9052,18 @@ function renderVerdictPanel(logEntry) {
     : ov === false
     ? `<span style="color:var(--text2);font-weight:700">✓ Classified NOT a punt (manual)</span>`
     : `<span style="color:var(--text3)">Using algorithm verdict — ${algoFlag} · ${score}/80</span>`;
+
+  if (!isAdmin()) {
+    el.innerHTML = `
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:18px 20px">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:${reason ? '12px' : '0'}">
+          <div style="font-family:var(--font-display);font-size:14px;font-weight:800;color:var(--text)">Analyst Verdict</div>
+          <div style="font-size:12px;font-family:var(--font-mono)">${chip}</div>
+        </div>
+        ${reason ? `<div style="font-size:13px;color:var(--text2);line-height:1.5">${reason}</div>` : ''}
+      </div>`;
+    return;
+  }
 
   const btn = (label, v, isActive, activeColor) => `
     <button onclick="setManualVerdict('${sid}','${v}')" style="
@@ -10765,7 +10820,7 @@ let autoRefreshInterval = null;
 // If the user is viewing today on the Today tab, also re-renders the cards.
 let _scoreTodayLock = false;
 async function scoreTodayBackground() {
-  if (_scoreTodayLock || !currentUser) return;
+  if (_scoreTodayLock || !isAdmin()) return; // writes to the shared log — admin only
   _scoreTodayLock = true;
   try {
     const today = localTodayStr();

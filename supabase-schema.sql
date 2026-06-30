@@ -76,6 +76,20 @@ create policy "Users can update own game log"
 create policy "Users can delete own game log"
   on game_log for delete using (auth.uid() = user_id);
 
+-- The site shows one shared/public dataset — the admin's reviewed games and
+-- starred teams. Every visitor reads this regardless of sign-in state; only
+-- the admin (matching this fixed user_id, enforced both client-side via
+-- isAdmin() and here via auth.uid()) can write to it.
+create policy "Public read of admin game log"
+  on game_log for select
+  to public
+  using (user_id = '0442f84a-5fc9-4c1e-a2e7-9c50c0fd8568');
+
+create policy "Public read of admin preferences"
+  on user_preferences for select
+  to public
+  using (user_id = '0442f84a-5fc9-4c1e-a2e7-9c50c0fd8568');
+
 -- ── INDEXES ───────────────────────────────────────────────
 create index if not exists game_log_user_date on game_log(user_id, game_date desc);
 create index if not exists game_log_flag on game_log(user_id, flag);

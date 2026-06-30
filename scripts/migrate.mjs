@@ -79,6 +79,26 @@ const MIGRATIONS = [
     name: 'add_sp_losses_column',
     sql: `alter table shared_lineup_baselines add column if not exists sp_losses integer;`,
   },
+  {
+    name: 'public_read_admin_game_log',
+    sql: `
+      drop policy if exists "Public read of admin game log" on game_log;
+      create policy "Public read of admin game log"
+        on game_log for select
+        to public
+        using (user_id = '0442f84a-5fc9-4c1e-a2e7-9c50c0fd8568');
+    `,
+  },
+  {
+    name: 'public_read_admin_preferences',
+    sql: `
+      drop policy if exists "Public read of admin preferences" on user_preferences;
+      create policy "Public read of admin preferences"
+        on user_preferences for select
+        to public
+        using (user_id = '0442f84a-5fc9-4c1e-a2e7-9c50c0fd8568');
+    `,
+  },
 ];
 
 // ── RUN SQL VIA MANAGEMENT API ───────────────────────────────
