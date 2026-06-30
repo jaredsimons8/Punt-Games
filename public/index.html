@@ -8413,6 +8413,8 @@ async function loadReviewBoxScore(gamePk, e) {
     Object.values(players).forEach(p => {
       const bo = parseInt(p.battingOrder);
       if (!bo) return;
+      // Exclude pitchers — they get batting-order slots in the API data but don't bat (universal DH)
+      if (p.position?.abbreviation === 'P') return;
       const slot = Math.floor(bo / 100);
       if (!bySlot[slot]) bySlot[slot] = [];
       bySlot[slot].push({
