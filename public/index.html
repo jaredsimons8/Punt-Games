@@ -3738,10 +3738,14 @@ async function fetchGames() {
   grid.innerHTML = `<div class="state-box" style="grid-column:1/-1"><div class="spinner"></div><h3>Pulling MLB Data</h3><p>Fetching lineups, pitching stats, and series context...</p></div>`;
 
   try {
-    // Run standings + schedule fetch in parallel / saves ~1-2s
+    // Run standings + schedule + lineup baselines fetch in parallel / saves ~1-2s.
+    // Baselines must finish before fetchNormalLineups() below so it computes
+    // real history-based lineups instead of a low-quality roster fallback that
+    // would later get discarded and re-fetched once baselines land.
     const [, schedule] = await Promise.all([
       fetchStandings(),
       apiFetch(`${BASE}/schedule?sportId=1&date=${dateVal}&hydrate=probablePitcher,team,game(doubleHeader,gameNumber,dayNight)&gameType=R`),
+      loadLineupBaselines(),
     ]);
 
     const games = schedule?.dates?.[0]?.games || [];
@@ -3764,22 +3768,21 @@ async function fetchGames() {
       teamIds.add(g.teams.away.team.id);
     });
 
-    // Run normal lineups fetch in parallel with pitcher stats pre-fetch
+    // Run normal lineups fetch in parallel with pitcher stats pre-fetch.
+    // A full 30-team slate (the common case) covers the same ground as
+    // getCachedNormalLineups(), so route through that shared single-flight
+    // cache instead of fetching all 30 rosters independently — Reviews and
+    // the background scorer reuse the same in-flight/completed fetch instead
+    // of each kicking off their own redundant round of 30 roster requests.
     const uniquePitcherIds = [...new Set(
       games.flatMap(g => [g.teams.home.probablePitcher?.id, g.teams.away.probablePitcher?.id])
         .filter(Boolean)
     )];
 
     const [normalLineups] = await Promise.all([
-      fetchNormalLineups([...teamIds], games),
+      teamIds.size === 30 ? getCachedNormalLineups() : fetchNormalLineups([...teamIds], games),
       prefetchPitcherStats(uniquePitcherIds), // warm the cache for all pitchers at once
     ]);
-
-    // A full 30-team slate covers the same ground as getCachedNormalLineups() —
-    // share it so Reviews/scoreTodayBackground don't re-fetch all 30 rosters again.
-    if (teamIds.size === 30 && !_normalLineupsCache) {
-      _normalLineupsCache = normalLineups;
-    }
 
     const analyzed = (await Promise.all(games.map(g =>
       analyzeGame(g, normalLineups).catch(err => {
@@ -4197,14 +4200,21 @@ function resolveTeamName(raw) {
   return hit ? hit.name : raw;
 }
 
+// Single-flight wrapper: concurrent callers all await the same in-flight
+// load instead of later callers no-op'ing before the data is actually ready
+// (that race used to let fetchGames()/getCachedNormalLineups() run against
+// an empty lineupHistory, forcing a redundant re-fetch once baselines landed).
+let _lineupBaselinesPromise = null;
 async function loadLineupBaselines() {
-  // Only block re-entry if already successfully loaded
   if (lineupBaselinesLoaded) return;
+  if (_lineupBaselinesPromise) return _lineupBaselinesPromise;
+  _lineupBaselinesPromise = _loadLineupBaselinesInner().finally(() => {
+    _lineupBaselinesPromise = null;
+  });
+  return _lineupBaselinesPromise;
+}
 
-  // Set a loading flag (not the success flag) to prevent parallel calls
-  if (loadLineupBaselines._loading) return;
-  loadLineupBaselines._loading = true;
-
+async function _loadLineupBaselinesInner() {
   // Clear in-memory caches before loading fresh
   Object.keys(lineupHistory).forEach(k => delete lineupHistory[k]);
   _normalLineupsCache = null; _normalLineupsCachePromise = null;
@@ -4225,7 +4235,6 @@ async function loadLineupBaselines() {
         renderTeamBreakdown();
         if (state.lastAnalyzed) renderGames(state.lastAnalyzed);
         checkAndRetrograde().catch(() => {});
-        loadLineupBaselines._loading = false;
         // Background refresh if cache is stale (> 60 min)
         if (!ts || Date.now() - ts > 60 * 60 * 1000) {
           setTimeout(() => _refreshBaselinesFromSupabase(BLC_KEY), 1000);
@@ -4316,8 +4325,6 @@ async function loadLineupBaselines() {
   } catch(e) {
     // Don't set lineupBaselinesLoaded — allow retry
     console.warn('Could not load shared lineup baselines:', e.message);
-  } finally {
-    loadLineupBaselines._loading = false;
   }
 }
 
