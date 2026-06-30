@@ -8008,10 +8008,11 @@ function renderReviewQueue() {
     const idJs = String(g.id).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
     const topFactor = normalizeBreakdown(g.breakdown).filter(f => f.val > 0).sort((a,b) => b.val - a.val)[0];
     const factorHint = topFactor ? ` <span style="color:var(--text3);font-weight:400">· ${topFactor.label}</span>` : '';
-    return `<div class="rq-row">
-      <div class="rq-game" style="cursor:pointer" onclick="openReviewDetail('${idJs}')" title="Open box score & factors">
+    const puntColor = TEAM_COLORS[g.puntTeam] || 'var(--gold)';
+    return `<div class="rq-row" style="border-left:3px solid ${puntColor}20">
+      <div class="rq-game" style="cursor:pointer;border-left:2px solid ${puntColor};padding-left:8px;margin-left:-2px" onclick="openReviewDetail('${idJs}')" title="Open box score & factors">
         <div class="rq-matchup">${abbr(g.away)} @ ${abbr(g.home)} <span style="font-size:11px;color:var(--text3);font-weight:400">›</span></div>
-        <div class="rq-meta">${g.date} · <span style="color:var(--gold)">${g.score}/80</span> · ${abbr(g.puntTeam)}${factorHint}</div>
+        <div class="rq-meta">${g.date} · <span style="color:${puntColor};font-weight:700">${g.score}/80</span> · <span style="color:${puntColor}">${abbr(g.puntTeam)}</span>${factorHint}</div>
       </div>
       <input class="rq-reason" id="rq-reason-${idAttr}" placeholder="reason (optional)…">
       <div class="rq-actions">
