@@ -8190,11 +8190,14 @@ async function openReviewDetail(id) {
   loadReviewBoxScore(gamePk, e);
   if (!factorRows && isValidGamePk) recomputeReviewBreakdown(id, e, gamePk);
   if (isValidGamePk) loadReviewInGameSignals(gamePk, e);
-  // Wait two animation frames so the browser finishes layout after innerHTML changes,
-  // then scroll to the correct absolute position (minus 80px for the sticky nav).
-  requestAnimationFrame(() => requestAnimationFrame(() => {
-    window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 80, behavior: 'smooth' });
-  }));
+  // The review queue rows load async from cache, so the review detail's absolute
+  // position keeps shifting down as rows render above it. Wait 500 ms for the
+  // queue to settle, then use scrollIntoView which reads the final position.
+  setTimeout(() => {
+    if (document.getElementById('reviewDetail')?.children.length) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, 500);
   if (isValidGamePk) {
     loadAndRenderGameflowInline(gamePk, e);
   } else {
