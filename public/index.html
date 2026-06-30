@@ -628,10 +628,12 @@
     background: var(--bg3); border: 1px solid var(--border); text-align: center;
   }
   .tp-game .tpg-score { font-family: var(--font-display); font-size: 19px; font-weight: 800; line-height: 1; color: var(--text2); }
-  .tp-game.sev-hi  { background: rgba(224,92,42,0.10); border-color: rgba(224,92,42,0.35); }
+  .tp-game.sev-hi  { background: rgba(224,92,42,0.12); border-color: rgba(224,92,42,0.40); }
   .tp-game.sev-hi  .tpg-score { color: var(--red2); }
-  .tp-game.sev-mid { background: rgba(232,184,75,0.08); border-color: rgba(232,184,75,0.30); }
+  .tp-game.sev-mid { background: rgba(232,184,75,0.09); border-color: rgba(232,184,75,0.32); }
   .tp-game.sev-mid .tpg-score { color: var(--gold); }
+  .tp-game.sev-lo  { background: rgba(232,184,75,0.04); border-color: rgba(232,184,75,0.18); }
+  .tp-game.sev-lo  .tpg-score { color: rgba(232,184,75,0.65); }
   .tp-game .tpg-when { font-family: var(--font-mono); font-size: 9px; color: var(--text3); margin-top: 4px; letter-spacing: 0.3px; }
   .tp-game .tpg-opp  { font-family: var(--font-mono); font-size: 9.5px; color: var(--text2); margin-top: 1px; font-weight: 600; }
   .tp-empty { font-family: var(--font-mono); font-size: 11px; color: var(--text3); font-style: italic; }
@@ -8887,7 +8889,7 @@ function renderTeamBreakdown() {
     // Punt games are the focal content — newest first, each shown as a score chip.
     const gamesHTML = hasPunts
       ? [...td.history].reverse().map(h => {
-          const sev = h.score >= 58 ? 'sev-hi' : h.score >= 50 ? 'sev-mid' : '';
+          const sev = h.score >= 60 ? 'sev-hi' : h.score >= PUNT_THRESH ? 'sev-mid' : 'sev-lo';
           const idJs = (h.id || '').replace(/'/g, "\\'");
           return `
             <div class="tp-game ${sev}" title="${h.date} vs ${h.opp} — punt score ${h.score} · click to view" style="cursor:pointer" onclick="openGameFromTeams('${idJs}')">
