@@ -8169,6 +8169,7 @@ async function openReviewDetail(id) {
   loadReviewBoxScore(gamePk, e);
   if (!factorRows && isValidGamePk) recomputeReviewBreakdown(id, e, gamePk);
   if (isValidGamePk) loadReviewInGameSignals(gamePk, e);
+  el.scrollIntoView({ behavior: 'smooth', block: 'start' });
   if (isValidGamePk) {
     loadAndRenderGameflowInline(gamePk, e);
   } else {
@@ -8209,6 +8210,7 @@ function closeReviewDetail() {
   reviewDetailId = null;
   const el = document.getElementById('reviewDetail');
   if (el) el.innerHTML = '';
+  document.getElementById('reviewQueue')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function renderReviewVerdictBlock(id) {
