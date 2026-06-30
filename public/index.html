@@ -8191,11 +8191,12 @@ async function openReviewDetail(id) {
   if (!factorRows && isValidGamePk) recomputeReviewBreakdown(id, e, gamePk);
   if (isValidGamePk) loadReviewInGameSignals(gamePk, e);
   // The review queue rows load async from cache, so the review detail's absolute
-  // position keeps shifting down as rows render above it. Wait 500 ms for the
-  // queue to settle, then use scrollIntoView which reads the final position.
+  // position shifts down as rows appear above it. Wait 500 ms for the queue to
+  // settle, then read the final position and scroll with a nav-height offset.
   setTimeout(() => {
-    if (document.getElementById('reviewDetail')?.children.length) {
-      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const detEl = document.getElementById('reviewDetail');
+    if (detEl?.children.length) {
+      window.scrollTo({ top: detEl.getBoundingClientRect().top + window.scrollY - 80, behavior: 'smooth' });
     }
   }, 500);
   if (isValidGamePk) {
