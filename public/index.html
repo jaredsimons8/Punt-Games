@@ -1983,28 +1983,24 @@
 
   <!-- COMMISSIONER BRIEF / Season report header -->
   <div style="margin-top:52px;margin-bottom:40px;padding:28px 32px;background:linear-gradient(135deg,rgba(224,92,42,0.08) 0%,rgba(232,184,75,0.04) 50%,var(--surface) 100%);border:1px solid rgba(224,92,42,0.3);border-radius:var(--r-lg)">
-    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:24px;flex-wrap:wrap">
-      <div>
-        <div style="font-family:var(--font-mono);font-size:9px;text-transform:uppercase;letter-spacing:2.5px;color:var(--red2);margin-bottom:10px;font-weight:700">The Punt Index · 2026 Season Report</div>
-        <div style="font-family:var(--font-display);font-size:26px;font-weight:800;letter-spacing:-0.5px;color:var(--text);line-height:1.2;margin-bottom:10px">Measuring Competitive Integrity<br>Across All 30 MLB Clubs</div>
-        <p style="font-size:12px;color:var(--text2);line-height:1.8;max-width:540px;margin:0">Every game in the 2026 season is scored 0–80 for competitive intent using lineup composition, pitching deployment, series context, and in-game behavior. The result is the first systematic, game-by-game record of non-competitive effort in Major League Baseball.</p>
+    <div style="font-family:var(--font-mono);font-size:9px;text-transform:uppercase;letter-spacing:2.5px;color:var(--red2);margin-bottom:10px;font-weight:700">The Punt Index · 2026 Season Report</div>
+    <div style="font-family:var(--font-display);font-size:26px;font-weight:800;letter-spacing:-0.5px;color:var(--text);line-height:1.2;margin-bottom:10px">Measuring Competitive Integrity<br>Across All 30 MLB Clubs</div>
+    <p style="font-size:12px;color:var(--text2);line-height:1.8;max-width:680px;margin:0 0 20px 0">Every game in the 2026 season is scored 0–80 for competitive intent using lineup composition, pitching deployment, series context, and in-game behavior. The result is the first systematic, game-by-game record of non-competitive effort in Major League Baseball.</p>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px">
+      <div style="background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:10px;padding:16px 20px;text-align:center">
+        <div style="font-family:var(--font-mono);font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);margin-bottom:8px">Punt Games (2026)</div>
+        <div style="font-family:var(--font-display);font-size:36px;font-weight:800;color:var(--red2);line-height:1" id="aboutStatPunts">—</div>
       </div>
-      <div style="display:flex;flex-direction:column;gap:8px;min-width:180px">
-        <div style="background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:10px;padding:14px 18px;text-align:center">
-          <div style="font-family:var(--font-mono);font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);margin-bottom:6px">Punt Games (2026)</div>
-          <div style="font-family:var(--font-display);font-size:32px;font-weight:800;color:var(--red2);line-height:1" id="aboutStatPunts">—</div>
-        </div>
-        <div style="background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:10px;padding:14px 18px;text-align:center">
-          <div style="font-family:var(--font-mono);font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);margin-bottom:6px">League Punt Rate</div>
-          <div style="font-family:var(--font-display);font-size:32px;font-weight:800;color:var(--gold);line-height:1" id="aboutStatRate">—</div>
-        </div>
-        <div style="background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:10px;padding:14px 18px;text-align:center">
-          <div style="font-family:var(--font-mono);font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);margin-bottom:6px">Data Source</div>
-          <div style="font-family:var(--font-display);font-size:14px;font-weight:800;color:var(--blue);line-height:1.4">Official<br>MLB Stats API</div>
-        </div>
+      <div style="background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:10px;padding:16px 20px;text-align:center">
+        <div style="font-family:var(--font-mono);font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);margin-bottom:8px">League Punt Rate</div>
+        <div style="font-family:var(--font-display);font-size:36px;font-weight:800;color:var(--gold);line-height:1" id="aboutStatRate">—</div>
+      </div>
+      <div style="background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:10px;padding:16px 20px;text-align:center">
+        <div style="font-family:var(--font-mono);font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);margin-bottom:8px">Data Source</div>
+        <div style="font-family:var(--font-display);font-size:14px;font-weight:800;color:var(--blue);line-height:1.5">Official<br>MLB Stats API</div>
       </div>
     </div>
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:24px">
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:0">
       <div style="padding:16px 18px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:8px">
         <div style="font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--red2);font-family:var(--font-mono);font-weight:700;margin-bottom:8px">Competitive Integrity</div>
         <p style="font-size:12px;color:var(--text2);line-height:1.7;margin:0">Punt games represent deliberate non-effort by one club, denying opponents a fair contest and fans the product they paid for. The Index creates an objective record where none previously existed.</p>
@@ -2080,6 +2076,18 @@
 
 
 
+
+  <!-- MONTH-BY-MONTH TREND -->
+  <div style="margin-bottom:48px">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+      <div style="font-family:var(--font-display);font-size:13px;font-weight:800;letter-spacing:2.5px;text-transform:uppercase;color:var(--text)">Season Timeline</div>
+      <div style="flex:1;height:1px;background:var(--border)"></div>
+      <div style="font-family:var(--font-mono);font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1.5px">Punt Games by Month · 2026</div>
+    </div>
+    <div id="aboutMonthChart" style="background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:10px;padding:20px 24px">
+      <div style="font-size:11px;color:var(--text3);font-family:var(--font-mono)">Loading...</div>
+    </div>
+  </div>
 
   <!-- ALGORITHM PANEL -->
   <div class="algo-panel">
@@ -9033,6 +9041,8 @@ function renderCILeaderboard() {
   if (ap) ap.textContent = totalPunts > 0 ? totalPunts : '—';
   if (ar) ar.textContent = leaguePuntRate != null ? leaguePuntRate.toFixed(1) + '%' : '—';
 
+  renderAboutMonthTrend();
+
   if (!rows.length) { el.innerHTML = ''; return; }
 
   const headerRows = rows.slice(0, rows.length); // show all qualifying teams
@@ -9080,6 +9090,43 @@ function renderCILeaderboard() {
         </div>`;
       }).join('')}
     </div>`;
+}
+
+function renderAboutMonthTrend() {
+  const el = document.getElementById('aboutMonthChart');
+  if (!el) return;
+  const puntGames = (state.gameLog || []).filter(e => effectiveFlag(e) === 'punt');
+  const MONTHS = [
+    { m: 2, label: 'Mar' }, { m: 3, label: 'Apr' }, { m: 4, label: 'May' },
+    { m: 5, label: 'Jun' }, { m: 6, label: 'Jul' }, { m: 7, label: 'Aug' },
+    { m: 8, label: 'Sep/Oct' }
+  ];
+  const counts = {};
+  puntGames.forEach(e => {
+    if (!e.game_date) return;
+    const parts = e.game_date.split('-');
+    if (parts.length < 2) return;
+    const m = parseInt(parts[1], 10) - 1;
+    counts[m] = (counts[m] || 0) + 1;
+  });
+  const currentMonth = new Date().getMonth();
+  const maxCount = Math.max(1, ...MONTHS.map(({ m }) => counts[m] || 0));
+  const bars = MONTHS.map(({ m, label }) => {
+    const count = counts[m] || 0;
+    const pct = (count / maxCount) * 100;
+    const isCurrent = m === currentMonth;
+    const color = isCurrent ? 'rgba(232,184,75,0.75)' : 'rgba(224,92,42,0.55)';
+    return `<div style="display:flex;flex-direction:column;align-items:center;gap:6px;flex:1">
+      <div style="font-family:var(--font-display);font-size:18px;font-weight:800;color:${count > 0 ? 'var(--red2)' : 'var(--border2)'}">
+        ${count > 0 ? count : '·'}
+      </div>
+      <div style="width:100%;background:var(--bg3);border-radius:3px 3px 0 0;height:60px;display:flex;align-items:flex-end;overflow:hidden">
+        <div style="width:100%;height:${Math.max(count > 0 ? 6 : 0, pct)}%;background:${color};border-radius:3px 3px 0 0;transition:height 0.4s"></div>
+      </div>
+      <div style="font-family:var(--font-mono);font-size:9px;text-transform:uppercase;letter-spacing:1px;color:${isCurrent ? 'var(--gold)' : 'var(--text3)'};font-weight:${isCurrent ? '700' : '400'}">${label}</div>
+    </div>`;
+  }).join('');
+  el.innerHTML = `<div style="display:flex;gap:10px;align-items:stretch">${bars}</div>`;
 }
 
 function renderTeamBreakdown() {
