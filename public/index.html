@@ -8190,7 +8190,9 @@ async function openReviewDetail(id) {
   loadReviewBoxScore(gamePk, e);
   if (!factorRows && isValidGamePk) recomputeReviewBreakdown(id, e, gamePk);
   if (isValidGamePk) loadReviewInGameSignals(gamePk, e);
-  el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  // scrollIntoView('start') overshoots when async content later inflates the element.
+  // Instead compute the target position right now and scroll there.
+  window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 80, behavior: 'smooth' });
   if (isValidGamePk) {
     loadAndRenderGameflowInline(gamePk, e);
   } else {
@@ -8231,7 +8233,8 @@ function closeReviewDetail() {
   reviewDetailId = null;
   const el = document.getElementById('reviewDetail');
   if (el) el.innerHTML = '';
-  document.getElementById('reviewQueue')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  const rq = document.getElementById('reviewQueue');
+  if (rq) window.scrollTo({ top: rq.getBoundingClientRect().top + window.scrollY - 80, behavior: 'smooth' });
 }
 
 function renderReviewVerdictBlock(id) {
