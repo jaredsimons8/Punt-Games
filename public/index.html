@@ -5032,7 +5032,8 @@ async function analyzeGame(game, normalLineups) {
     isBackToBack: homeIsBackToBack, hasTravelFatigue: homeHasTravelFatigue, isWestToEast: homeIsWestToEast,
     isDayAfterNight: homeDayAfterNight, consecutiveStreak: homeConsecutiveStreak,
     puntSeriesWins: homeSeries, oppSeriesWins: awaySeries,
-    roadTripLength: 0, // home team is never on a road trip
+    roadTripLength: 0,
+    oppIsBackToBack: awayIsBackToBack, oppIsDayAfterNight: awayDayAfterNight, oppHasTravelFatigue: awayHasTravelFatigue,
   });
   const awayScore = computePuntScore({
     effectiveBenched: awayEB.effectiveBenched,
@@ -5046,6 +5047,7 @@ async function analyzeGame(game, normalLineups) {
     isDayAfterNight: awayDayAfterNight, consecutiveStreak: awayConsecutiveStreak,
     puntSeriesWins: awaySeries, oppSeriesWins: homeSeries,
     roadTripLength: awayRoadTrip,
+    oppIsBackToBack: homeIsBackToBack, oppIsDayAfterNight: homeDayAfterNight, oppHasTravelFatigue: homeHasTravelFatigue,
   });
 
   const topPreGame = Math.max(homeScore, awayScore);
@@ -5642,7 +5644,8 @@ function computePuntScore({ effectiveBenched, eraDelta, fipDelta = null, isLastG
   isDHNightcap, clinched, eliminated, gameDate, teamName,
   spFip, spEra, spStarts, spIp, seriesLength, isBackToBack, hasTravelFatigue, isWestToEast = true,
   isDayAfterNight, consecutiveStreak, puntSeriesWins = null, oppSeriesWins = null,
-  roadTripLength = 0 }) {
+  roadTripLength = 0,
+  oppIsBackToBack = false, oppIsDayAfterNight = false, oppHasTravelFatigue = false }) {
 
   const tq = getLiveTeamQuality(teamName);
 
@@ -5756,22 +5759,27 @@ function computePuntScore({ effectiveBenched, eraDelta, fipDelta = null, isLastG
   if (isDHNightcap) score += 14;
 
   // ── BACK-TO-BACK GAME ────────────────────────────────────
-  // A team playing on no rest has reduced incentive to run out the full
-  // lineup — especially veterans and star players who need recovery.
-  // Scaled by effective motivation: clinched/eliminated teams protect more.
-  if (isBackToBack) score += 6 * effMot;
+  // When BOTH teams are in back-to-back situations the competitive disadvantage
+  // evens out — managers on both sides manage load, so the signal is minimal.
+  // Only a unilateral B2B (one team rested, the other not) is a clear tell.
+  if (isBackToBack) {
+    score += (oppIsBackToBack ? 1.5 : 3.5) * effMot;
+  }
 
   // ── DAY GAME AFTER NIGHT GAME ────────────────────────────
-  // Less than ~16hrs between games. Stronger than B2B alone because
-  // the physical toll of a night game followed by a 1pm start is real.
-  // Managers consistently give aging veterans this game off.
-  if (isDayAfterNight) score += 5 * effMot;
+  // Same symmetry logic as B2B — if both clubs face a short turnaround the
+  // competitive context is neutral. The signal only matters when this team
+  // got less recovery time than the opponent.
+  if (isDayAfterNight) {
+    score += (oppIsDayAfterNight ? 1.0 : 2.5) * effMot;
+  }
 
   // ── CONSECUTIVE GAMES STREAK ─────────────────────────────
-  // Teams playing 10+ consecutive days accumulate fatigue that
-  // shows up in roster decisions. Starts at 7, scales to 14+.
+  // Extended no-rest stretches (7+ consecutive days) wear down a roster in
+  // ways a single B2B doesn't — depth players tire, veterans need management.
+  // This is the primary fatigue signal: meaningful but not decisive alone.
   if (consecutiveStreak >= 7) {
-    const streakBonus = Math.min(9, (consecutiveStreak - 6) * 1.2) * effMot;
+    const streakBonus = Math.min(8, (consecutiveStreak - 6) * 1.0) * effMot;
     score += streakBonus;
   }
 
@@ -5786,10 +5794,14 @@ function computePuntScore({ effectiveBenched, eraDelta, fipDelta = null, isLastG
   }
 
   // ── CROSS-COUNTRY TRAVEL FATIGUE ─────────────────────────
-  // Flying cross-country overnight is a known rest trigger.
-  // West→East (body clock 3h behind): +5 pts — physiologically harder.
-  // East→West (body clock 3h ahead): +3 pts — still meaningful but softer.
-  if (hasTravelFatigue) score += (isWestToEast ? 5 : 3) * effMot;
+  // A real but modest signal — both clubs often travel comparable distances
+  // across a season, so the relative disadvantage is smaller than it appears.
+  // Halved when the opponent is also travel-fatigued (shared condition).
+  // W→E (body 3h behind) is physiologically harder than E→W.
+  if (hasTravelFatigue) {
+    const base = isWestToEast ? 3.0 : 1.5;
+    score += (oppHasTravelFatigue ? base * 0.5 : base) * effMot;
+  }
 
   // ── SPOT STARTER SIGNAL ─────────────────────────────────────────────
   // A spot / emergency starter (≤2 GS this season, high ERA or unknown) is
@@ -9754,6 +9766,10 @@ function buildScoreBreakdown(g) {
   const isW2E   = g.puntSide === 'home' ? g.homeIsWestToEast      : g.awayIsWestToEast;
   const isDAN   = g.puntSide === 'home' ? g.homeDayAfterNight     : g.awayDayAfterNight;
   const streak  = g.puntSide === 'home' ? g.homeConsecutiveStreak : g.awayConsecutiveStreak;
+  // Opponent context — used to show shared-vs-solo fatigue conditions
+  const oppIsB2B  = g.puntSide === 'home' ? g.awayIsBackToBack      : g.homeIsBackToBack;
+  const oppIsDAN  = g.puntSide === 'home' ? g.awayDayAfterNight     : g.homeDayAfterNight;
+  const oppIsFat  = g.puntSide === 'home' ? g.awayHasTravelFatigue  : g.homeHasTravelFatigue;
 
   const factors = [];
   const push = (label, raw, max) => { const v = Math.round(raw * timing); if (v > 0) factors.push({ label, val: v, max }); };
@@ -9818,13 +9834,13 @@ function buildScoreBreakdown(g) {
   if (eliminated) push('Mathematically eliminated', 22, 22);
   if ((clinched || eliminated) && g.isLastGame) push('Clinch/elim + finale', 6, 6);
   if (g.isDHNightcap) push('DH nightcap', 14, 14);
-  if (isB2B)  push('Back-to-back game', 6 * effMot, 6);
-  if (isDAN)  push('Day game after night', 5 * effMot, 5);
-  if (streak >= 7) push(`${streak}-game no-rest stretch`, Math.min(9, (streak - 6) * 1.2) * effMot, 9);
+  if (isB2B)  push(oppIsB2B ? 'Back-to-back (both teams)' : 'Back-to-back game', (oppIsB2B ? 1.5 : 3.5) * effMot, 3.5);
+  if (isDAN)  push(oppIsDAN ? 'Day after night (both teams)' : 'Day game after night', (oppIsDAN ? 1.0 : 2.5) * effMot, 2.5);
+  if (streak >= 7) push(`${streak}-game no-rest stretch`, Math.min(8, (streak - 6) * 1.0) * effMot, 8);
   // Road trip length — only relevant when punt side is the away team
   const roadTrip = g.puntSide === 'away' ? (g.awayRoadTrip || 0) : 0;
   if (roadTrip >= 5) push(`${roadTrip}-game road trip`, Math.min(6, (roadTrip - 4) * 1.5) * effMot, 6);
-  if (isFat)  push(isW2E ? 'West→East travel' : 'East→West travel', (isW2E ? 5 : 3) * effMot, 5);
+  if (isFat) { const base = isW2E ? 3.0 : 1.5; push(isW2E ? 'West→East travel' : 'East→West travel', (oppIsFat ? base * 0.5 : base) * effMot, isW2E ? 3 : 1.5); }
 
   if (aceNote) factors.push({ label: aceNote, val: 0, max: 0, isAceNote: true });
 
