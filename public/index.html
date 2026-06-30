@@ -8141,7 +8141,13 @@ async function openReviewDetail(id) {
       <div style="padding:16px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
         <div style="display:flex;flex-direction:column;gap:8px">
           <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-            <div style="font-family:var(--font-display);font-size:18px;font-weight:800;color:var(--text)">${abbr(e.away)} @ ${abbr(e.home)}</div>
+            <div style="display:flex;align-items:center;gap:6px">
+              ${teamLogoHTML(e.away, abbr(e.away))}
+              <span style="font-family:var(--font-display);font-size:18px;font-weight:800;color:var(--text);border-bottom:2px solid ${TEAM_COLORS[e.away]||'transparent'}">${abbr(e.away)}</span>
+              <span style="font-family:var(--font-mono);font-size:12px;color:var(--text3);margin:0 2px">@</span>
+              ${teamLogoHTML(e.home, abbr(e.home))}
+              <span style="font-family:var(--font-display);font-size:18px;font-weight:800;color:var(--text);border-bottom:2px solid ${TEAM_COLORS[e.home]||'transparent'}">${abbr(e.home)}</span>
+            </div>
             <span class="punt-badge ${rdBadgeClass}">${rdBadgeText}</span>
           </div>
           <div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap">
@@ -8439,6 +8445,29 @@ async function loadReviewBoxScore(gamePk, e) {
   const winId  = decisions.winner?.id;
   const lossId = decisions.loser?.id;
   const saveId = decisions.save?.id;
+
+  // Compact W/L/S decision line (MLB Gameday style) — shown between linescore and full pitching table
+  const decisionLine = (() => {
+    const fmt = (player, label, color) => {
+      if (!player) return null;
+      const allPlayers = { ...bs.teams?.away?.players, ...bs.teams?.home?.players };
+      const p = allPlayers['ID' + player.id];
+      const st = p?.seasonStats?.pitching || {};
+      const record = (st.wins != null && st.losses != null) ? `${st.wins}–${st.losses}` : '';
+      const eraVal = st.era && st.era !== '-.--' && st.era !== 'Infinity' ? ` · ${st.era} ERA` : '';
+      const saves = label === 'SV' && st.saves != null ? ` · ${st.saves} SV` : '';
+      return `<span style="color:var(--text3);font-family:var(--font-mono);font-size:10px"><span style="color:${color};font-weight:700">${label}:</span> ${player.fullName}${record ? ` (${record})` : ''}${eraVal}${saves}</span>`;
+    };
+    const parts = [
+      fmt(decisions.winner, 'W', 'var(--green)'),
+      fmt(decisions.loser,  'L', 'var(--red2)'),
+      fmt(decisions.save,   'SV', 'var(--gold)'),
+    ].filter(Boolean);
+    return parts.length
+      ? `<div style="padding:6px 0 8px;display:flex;gap:18px;flex-wrap:wrap;border-bottom:1px solid var(--border)">${parts.join('')}</div>`
+      : '';
+  })();
+  if (decisionLine) box.insertAdjacentHTML('beforeend', decisionLine);
 
   const buildPitchingRows = (side) => {
     const team = bs.teams?.[side];
