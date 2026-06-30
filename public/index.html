@@ -2472,7 +2472,7 @@
           <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:rgba(74,222,128,0.8);font-family:var(--font-mono);margin-bottom:8px">✓ Clean · 0–27</div>
           <div style="font-size:22px;font-weight:800;color:rgba(74,222,128,0.9);font-family:var(--font-display);margin-bottom:10px">0–27</div>
           <p style="font-size:12px;color:var(--text2);line-height:1.7;margin:0">Normal game. Full or near-full lineup, competitive pitching matchup, no structural reasons to concede. The manager is trying to win.</p>
-          <div style="margin-top:14px;font-size:11px;color:var(--text3);font-family:var(--font-mono)">Typical: full lineup, close series, SP FIP within 1.0</div>
+          <div style="margin-top:14px;font-size:11px;color:var(--text3);font-family:var(--font-mono)">Typical: full lineup, close series, SP ERA within 1.0</div>
         </div>
         <div style="background:var(--surface);border:1px solid rgba(232,184,75,0.2);border-left:3px solid rgba(232,184,75,0.6);border-radius:var(--r-lg);padding:20px 22px">
           <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:var(--gold);font-family:var(--font-mono);margin-bottom:8px">🔍 Review · 28–45</div>
@@ -2512,7 +2512,7 @@
           <span style="font-size:11px;color:var(--green);font-family:var(--font-mono)">+3–12 pts</span>
         </div>
         <div style="display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center">
-          <span style="font-size:12px;color:var(--text2)">FIP delta ≥ 1.5 vs opponent SP</span>
+          <span style="font-size:12px;color:var(--text2)">ERA gap ≥ 1.5 vs opponent SP</span>
           <span style="font-size:11px;color:var(--green);font-family:var(--font-mono)">+10–14 pts</span>
         </div>
         <div style="display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center">
@@ -2556,8 +2556,8 @@
           <span style="font-size:11px;color:var(--green);font-family:var(--font-mono)">+5 × effMot</span>
         </div>
         <div style="display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center">
-          <span style="font-size:12px;color:var(--text2)">West→East travel (B2B)</span>
-          <span style="font-size:11px;color:var(--green);font-family:var(--font-mono)">+5 × effMot</span>
+          <span style="font-size:12px;color:var(--text2)">Cross-timezone travel (W→E +5, E→W +3, B2B)</span>
+          <span style="font-size:11px;color:var(--green);font-family:var(--font-mono)">+3–5 × effMot</span>
         </div>
         <div style="display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center">
           <span style="font-size:12px;color:var(--text2)">Consecutive streak ≥ 7 games</span>
@@ -6485,13 +6485,19 @@ async function fetchRecentILMoves() {
         return type === 'IL' || type === 'DL' || desc.includes('placed') && (desc.includes(' il') || desc.includes('injured list'));
       })
       .slice(0, 8)
-      .map(t => ({
-        playerName: t.player?.nameFirstLast || t.description?.match(/^([^(]+)/)?.[1]?.trim() || '—',
-        teamAbbr: t.toTeam?.abbreviation || t.team?.abbreviation || '—',
-        description: t.description || '',
-        typeDesc: t.typeDesc || 'IL',
-        date: t.date || fmt(today),
-      }));
+      .map(t => {
+        // Extract "First Last" from descriptions like "Team placed LF First Last on the IL..."
+        const nameMatch = (t.description || '').match(
+          /(?:placed|recalled|activated|optioned|designated|transferred|reinstated|selected)\s+(?:(?:LF|RF|CF|1B|2B|3B|SS|C|DH|SP|RP|LHP|RHP|P)\s+)?([A-Z][a-zA-Z.''-]+(?:\s+[A-Z][a-zA-Z.''-]+)+)/
+        );
+        return {
+          playerName: t.player?.nameFirstLast || nameMatch?.[1] || '—',
+          teamAbbr: t.toTeam?.abbreviation || t.team?.abbreviation || '—',
+          description: t.description || '',
+          typeDesc: t.typeDesc || 'IL',
+          date: t.date || fmt(today),
+        };
+      });
     injuryAlertCache = { data: moves, fetched: now };
     return moves;
   } catch { return []; }
@@ -8446,14 +8452,14 @@ async function loadReviewBoxScore(gamePk, e) {
     return buildPositionalBaseline(history);
   };
   // Build the set of player names (lower-cased) who appeared in ANY lineup in the
-  // 14 games immediately before this game date. Expected players NOT in this set
-  // are shown with an "(IL?)" badge instead of a gold punt-signal highlight —
-  // the algorithm shouldn't treat an injured player's absence as a deliberate rest.
+  // 5 games immediately before this game date. Using 5 games (not 14) means a
+  // player who missed the last week is correctly flagged IL? rather than shown as
+  // a gold punt signal — the algorithm shouldn't penalise an injured player's absence.
   const buildRecentlyActive = (teamName) => {
     const history = (lineupHistory[teamName] || [])
       .filter(h => h.date < e.date)
       .sort((a, b) => b.date.localeCompare(a.date))
-      .slice(0, 14);
+      .slice(0, 5);
     const active = new Set();
     history.forEach(entry => (entry.lineup || []).forEach(p => { if (p) active.add(p.toLowerCase()); }));
     return active;
@@ -8474,7 +8480,7 @@ async function loadReviewBoxScore(gamePk, e) {
     };
 
     // Build one side's column HTML (actual + expected sub-columns).
-    // recentlyActive: Set of lower-cased player names seen in the prior 14 games.
+    // recentlyActive: Set of lower-cased player names seen in the prior 5 games.
     // Three states for the "Expected" column:
     //   ✓ gray  — expected player is in the actual lineup (no surprise)
     //   gold    — expected player is absent AND was recently active (genuine punt signal)
