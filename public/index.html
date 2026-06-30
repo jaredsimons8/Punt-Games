@@ -9010,11 +9010,14 @@ function renderCILeaderboard() {
   const el = document.getElementById('ciLeaderboard');
   if (!el) return;
 
-  // Build per-team stats. Only include teams with at least 10 scored games.
+  // Build per-team stats using teamGamesStored (full season baseline count) as the
+  // denominator — same metric the team cards show — so CI Rate is accurate even when
+  // the user hasn't viewed every game date themselves.
   const rows = ALL_TEAMS.map(t => {
     const td = state.teamData[t.name] || { punts: 0, games: 0 };
-    return { t, punts: td.punts, games: td.games, rate: td.games > 0 ? td.punts / td.games : null };
-  }).filter(r => r.games >= 10).sort((a, b) => a.rate - b.rate || a.punts - b.punts);
+    const games = teamGamesStored(t.name) || td.games;
+    return { t, punts: td.punts, games, rate: games > 0 ? td.punts / games : null };
+  }).filter(r => r.games >= 10 && r.rate != null).sort((a, b) => a.rate - b.rate || a.punts - b.punts);
 
   // Compute league-wide totals for the stat strip
   const totalPunts = state.gameLog.filter(e => effectiveFlag(e) === 'punt').length;
