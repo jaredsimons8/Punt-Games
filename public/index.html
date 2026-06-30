@@ -8190,9 +8190,11 @@ async function openReviewDetail(id) {
   loadReviewBoxScore(gamePk, e);
   if (!factorRows && isValidGamePk) recomputeReviewBreakdown(id, e, gamePk);
   if (isValidGamePk) loadReviewInGameSignals(gamePk, e);
-  // scrollIntoView('start') overshoots when async content later inflates the element.
-  // Instead compute the target position right now and scroll there.
-  window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 80, behavior: 'smooth' });
+  // Wait two animation frames so the browser finishes layout after innerHTML changes,
+  // then scroll to the correct absolute position (minus 80px for the sticky nav).
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 80, behavior: 'smooth' });
+  }));
   if (isValidGamePk) {
     loadAndRenderGameflowInline(gamePk, e);
   } else {
