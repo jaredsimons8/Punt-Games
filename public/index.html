@@ -589,6 +589,33 @@
   .hi-score { font-weight: 700; color: var(--red2); }
   .tc-no-punts { font-size: 10px; color: var(--text3); font-family: var(--font-mono); font-style: italic; }
 
+  /* ── COMPETITIVE INTEGRITY LEADERBOARD ── */
+  .ci-leaderboard { background:var(--surface); border:1px solid var(--border); border-radius:var(--r-lg); overflow:hidden; margin-bottom:32px; }
+  .ci-header { display:flex; align-items:center; justify-content:space-between; padding:14px 18px; border-bottom:1px solid var(--border); background:rgba(255,255,255,0.02); }
+  .ci-header-title { font-family:var(--font-mono); font-size:9.5px; text-transform:uppercase; letter-spacing:2px; color:var(--text3); font-weight:700; }
+  .ci-header-meta { font-family:var(--font-mono); font-size:10px; color:var(--text3); }
+  .ci-cols { display:grid; grid-template-columns:30px 1fr 50px 64px 140px; gap:0; padding:7px 18px; border-bottom:1px solid var(--border2); }
+  .ci-cols span { font-size:8.5px; text-transform:uppercase; letter-spacing:1.5px; color:var(--text3); font-family:var(--font-mono); font-weight:700; }
+  .ci-row { display:grid; grid-template-columns:30px 1fr 50px 64px 140px; gap:0; padding:9px 18px; border-bottom:1px solid rgba(255,255,255,0.04); align-items:center; transition:background 0.12s; cursor:pointer; }
+  .ci-row:last-child { border-bottom:none; }
+  .ci-row:hover { background:rgba(255,255,255,0.035); }
+  .ci-row.ci-offender { border-left:2px solid rgba(224,92,42,0.55); }
+  .ci-rank { font-size:10px; font-family:var(--font-mono); color:var(--text3); font-weight:700; }
+  .ci-team { display:flex; align-items:center; gap:7px; min-width:0; }
+  .ci-logo { width:20px; height:20px; object-fit:contain; flex-shrink:0; }
+  .ci-logo-fb { width:20px; height:20px; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:8px; font-weight:800; color:var(--text3); }
+  .ci-name { font-size:12px; font-weight:700; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .ci-div { font-size:9px; color:var(--text3); font-family:var(--font-mono); }
+  .ci-punts { font-size:11px; font-family:var(--font-mono); color:var(--text2); text-align:center; font-weight:600; }
+  .ci-punts.hi { color:var(--red2); }
+  .ci-punts.mid { color:var(--gold); }
+  .ci-score { font-size:11px; font-family:var(--font-mono); font-weight:800; text-align:right; padding-right:12px; }
+  .ci-score.green { color:var(--green); }
+  .ci-score.gold { color:var(--gold); }
+  .ci-score.red { color:var(--red2); }
+  .ci-bar-wrap { height:5px; background:var(--bg3); border-radius:3px; overflow:hidden; }
+  .ci-bar-fill { height:100%; border-radius:3px; }
+
   /* ── TEAM PUNTS (punt-game-first layout) ── */
   .tp-list { display: flex; flex-direction: column; gap: 10px; }
   .tp-row {
@@ -1954,9 +1981,48 @@
   <!-- PAGE: ABOUT -->
   <div class="page" id="page-about">
 
+  <!-- COMMISSIONER BRIEF / Season report header -->
+  <div style="margin-top:52px;margin-bottom:40px;padding:28px 32px;background:linear-gradient(135deg,rgba(224,92,42,0.08) 0%,rgba(232,184,75,0.04) 50%,var(--surface) 100%);border:1px solid rgba(224,92,42,0.3);border-radius:var(--r-lg)">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:24px;flex-wrap:wrap">
+      <div>
+        <div style="font-family:var(--font-mono);font-size:9px;text-transform:uppercase;letter-spacing:2.5px;color:var(--red2);margin-bottom:10px;font-weight:700">The Punt Index · 2026 Season Report</div>
+        <div style="font-family:var(--font-display);font-size:26px;font-weight:800;letter-spacing:-0.5px;color:var(--text);line-height:1.2;margin-bottom:10px">Measuring Competitive Integrity<br>Across All 30 MLB Clubs</div>
+        <p style="font-size:12px;color:var(--text2);line-height:1.8;max-width:540px;margin:0">Every game in the 2026 season is scored 0–80 for competitive intent using lineup composition, pitching deployment, series context, and in-game behavior. The result is the first systematic, game-by-game record of non-competitive effort in Major League Baseball.</p>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px;min-width:180px">
+        <div style="background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:10px;padding:14px 18px;text-align:center">
+          <div style="font-family:var(--font-mono);font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);margin-bottom:6px">Punt Games (2026)</div>
+          <div style="font-family:var(--font-display);font-size:32px;font-weight:800;color:var(--red2);line-height:1" id="aboutStatPunts">—</div>
+        </div>
+        <div style="background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:10px;padding:14px 18px;text-align:center">
+          <div style="font-family:var(--font-mono);font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);margin-bottom:6px">League Punt Rate</div>
+          <div style="font-family:var(--font-display);font-size:32px;font-weight:800;color:var(--gold);line-height:1" id="aboutStatRate">—</div>
+        </div>
+        <div style="background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:10px;padding:14px 18px;text-align:center">
+          <div style="font-family:var(--font-mono);font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);margin-bottom:6px">Data Source</div>
+          <div style="font-family:var(--font-display);font-size:14px;font-weight:800;color:var(--blue);line-height:1.4">Official<br>MLB Stats API</div>
+        </div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:24px">
+      <div style="padding:16px 18px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:8px">
+        <div style="font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--red2);font-family:var(--font-mono);font-weight:700;margin-bottom:8px">Competitive Integrity</div>
+        <p style="font-size:12px;color:var(--text2);line-height:1.7;margin:0">Punt games represent deliberate non-effort by one club, denying opponents a fair contest and fans the product they paid for. The Index creates an objective record where none previously existed.</p>
+      </div>
+      <div style="padding:16px 18px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:8px">
+        <div style="font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--gold);font-family:var(--font-mono);font-weight:700;margin-bottom:8px">Fan Experience</div>
+        <p style="font-size:12px;color:var(--text2);line-height:1.7;margin:0">A fan buying a ticket to a punt game is watching a product inferior to what the same team fields on other nights — without disclosure. The Punt Index gives fans the information in real time, before first pitch.</p>
+      </div>
+      <div style="padding:16px 18px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:8px">
+        <div style="font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--green);font-family:var(--font-mono);font-weight:700;margin-bottom:8px">Data Accountability</div>
+        <p style="font-size:12px;color:var(--text2);line-height:1.7;margin:0">Built entirely on the official MLB Stats API — the same data infrastructure used by every front office in baseball. Every verdict is reproducible, auditable, and grounded in public record.</p>
+      </div>
+    </div>
+  </div>
+
   <!-- ABOUT SECTION -->
   <!-- NOT EVERY LOSS / redesigned editorial section -->
-  <div id="aboutSection" style="margin-top:64px;margin-bottom:48px;padding-top:64px;border-top:1px solid var(--border)">
+  <div id="aboutSection" style="margin-bottom:48px;padding-top:40px;border-top:1px solid var(--border)">
     <div style="border-left:2px solid var(--red);padding-left:22px;margin-bottom:28px">
       <div style="font-family:var(--font-display);font-size:24px;font-weight:800;letter-spacing:-0.5px;line-height:1.15;color:var(--text);margin-bottom:12px">Not Every Loss<br>Is Created Equal</div>
       <p style="font-size:13px;color:var(--text2);line-height:1.8;max-width:660px">If you watch baseball, you know not all 162 games are treated as must-wins. Some losses are the result of circumstance. Others are the result of a decision / a quiet, deliberate concession made before the first pitch is thrown. The Punt Index exists to tell the difference. It tracks when MLB managers field a demonstrably weakened lineup, and flags those games in real time / before the game starts, and throughout the game itself.</p>
@@ -2373,9 +2439,9 @@
       <div class="sub" id="statSeasonLabel">All teams, 2026</div>
     </div>
     <div class="stat-card" style="border-left:3px solid var(--blue)">
-      <div class="label">Data Confidence</div>
-      <div class="value" id="statConfidence" style="color:var(--blue)">—</div>
-      <div class="sub">Baseline coverage</div>
+      <div class="label">League Punt Rate</div>
+      <div class="value" id="statRate" style="color:var(--blue)">—</div>
+      <div class="sub" id="statRateSub">of all scored games</div>
     </div>
   </div>
 
@@ -2399,6 +2465,7 @@
           <button class="div-btn" onclick="setDivFilter('NL West', this)">NL West</button>
         </div>
       </div>
+      <div id="ciLeaderboard"><!-- populated by JS --></div>
       <div class="punt-chart" id="puntChart" style="margin-bottom:32px">
         <!-- populated by JS -->
       </div>
@@ -6079,6 +6146,15 @@ function updateStats(games, dateVal) {
     // (accumulating on each refresh would double/triple-count)
     state.seasonPunts = state.gameLog.filter(e => effectiveFlag(e) === 'punt').length;
     document.getElementById('statSeason').textContent = state.seasonPunts;
+    // Update league punt rate — derived here so it stays in sync with season punts
+    const totalScored = state.gameLog.filter(e => e.flag !== 'postponed').length;
+    const leaguePuntRate = totalScored > 0 ? ((state.seasonPunts / totalScored) * 100).toFixed(1) + '%' : '—';
+    const rEl = document.getElementById('statRate');
+    if (rEl) rEl.textContent = leaguePuntRate;
+    const absPt = document.getElementById('aboutStatPunts');
+    const absRt = document.getElementById('aboutStatRate');
+    if (absPt) absPt.textContent = state.seasonPunts > 0 ? state.seasonPunts : '—';
+    if (absRt) absRt.textContent = leaguePuntRate;
   }
 
   // 4th stat card / avg data confidence across today's games
@@ -7959,6 +8035,9 @@ function setManualVerdict(id, verdict) {
     buildTeamFeedbackBias();
     state.seasonPunts = state.gameLog.filter(e => effectiveFlag(e) === 'punt').length;
     const ss = document.getElementById('statSeason'); if (ss) ss.textContent = state.seasonPunts;
+    const _ts = state.gameLog.filter(e => e.flag !== 'postponed').length;
+    const _rEl = document.getElementById('statRate');
+    if (_rEl) _rEl.textContent = _ts > 0 ? ((state.seasonPunts / _ts) * 100).toFixed(1) + '%' : '—';
     if (typeof renderTeamBreakdown === 'function') renderTeamBreakdown();
     if (typeof renderLeaders === 'function') renderLeaders();
 
@@ -8927,7 +9006,81 @@ function openMostRecentPuntForTeam(teamName) {
   if (latest?.id) openGameFromTeams(latest.id);
 }
 
+function renderCILeaderboard() {
+  const el = document.getElementById('ciLeaderboard');
+  if (!el) return;
+
+  // Build per-team stats. Only include teams with at least 10 scored games.
+  const rows = ALL_TEAMS.map(t => {
+    const td = state.teamData[t.name] || { punts: 0, games: 0 };
+    return { t, punts: td.punts, games: td.games, rate: td.games > 0 ? td.punts / td.games : null };
+  }).filter(r => r.games >= 10).sort((a, b) => a.rate - b.rate || a.punts - b.punts);
+
+  // Compute league-wide totals for the stat strip
+  const totalPunts = state.gameLog.filter(e => effectiveFlag(e) === 'punt').length;
+  const totalScored = state.gameLog.filter(e => e.flag !== 'postponed').length;
+  const leaguePuntRate = totalScored > 0 ? ((totalPunts / totalScored) * 100) : null;
+
+  // Update stat strip rate card
+  const rateEl = document.getElementById('statRate');
+  if (rateEl) rateEl.textContent = leaguePuntRate != null ? leaguePuntRate.toFixed(1) + '%' : '—';
+  // Update About page stats
+  const ap = document.getElementById('aboutStatPunts');
+  const ar = document.getElementById('aboutStatRate');
+  if (ap) ap.textContent = totalPunts > 0 ? totalPunts : '—';
+  if (ar) ar.textContent = leaguePuntRate != null ? leaguePuntRate.toFixed(1) + '%' : '—';
+
+  if (!rows.length) { el.innerHTML = ''; return; }
+
+  const headerRows = rows.slice(0, rows.length); // show all qualifying teams
+
+  const ciColor = (rate) => {
+    const ci = 1 - rate;
+    if (ci >= 0.92) return 'green';
+    if (ci >= 0.82) return 'gold';
+    return 'red';
+  };
+  const barColor = (rate) => {
+    const ci = 1 - rate;
+    if (ci >= 0.92) return 'var(--green)';
+    if (ci >= 0.82) return 'var(--gold)';
+    return 'var(--red2)';
+  };
+  const puntClass = (p) => p >= 12 ? 'hi' : p >= 6 ? 'mid' : '';
+
+  el.innerHTML = `
+    <div class="ci-leaderboard">
+      <div class="ci-header">
+        <span class="ci-header-title">Competitive Integrity Rankings · 2026 Season</span>
+        <span class="ci-header-meta">${rows.length} teams w/ ≥10 scored games · sorted by punt rate</span>
+      </div>
+      <div class="ci-cols">
+        <span>#</span>
+        <span>Team</span>
+        <span style="text-align:center">Punts</span>
+        <span style="text-align:right;padding-right:12px">CI Score</span>
+        <span></span>
+      </div>
+      ${headerRows.map((r, i) => {
+        const logoUrl = getTeamLogo(r.t.name);
+        const logoEl = logoUrl
+          ? `<img class="ci-logo" src="${logoUrl}" alt="${r.t.abbr}" loading="lazy" onerror="this.outerHTML='<span class=\\'ci-logo-fb\\'>${r.t.abbr}</span>'">`
+          : `<span class="ci-logo-fb">${r.t.abbr}</span>`;
+        const ci = (1 - r.rate) * 100;
+        const nameJs = r.t.name.replace(/'/g, "\\'");
+        return `<div class="ci-row${r.punts >= 8 ? ' ci-offender' : ''}" onclick="openMostRecentPuntForTeam('${nameJs}')">
+          <span class="ci-rank">${i + 1}</span>
+          <span class="ci-team">${logoEl}<span><span class="ci-name">${r.t.name}</span><br><span class="ci-div">${r.t.abbr} · ${r.t.division}</span></span></span>
+          <span class="ci-punts ${puntClass(r.punts)}">${r.punts}<span style="font-size:9px;color:var(--text3);font-weight:400"> / ${r.games}</span></span>
+          <span class="ci-score ${ciColor(r.rate)}">${ci.toFixed(1)}%</span>
+          <span><div class="ci-bar-wrap"><div class="ci-bar-fill" style="width:${ci.toFixed(1)}%;background:${barColor(r.rate)}"></div></div></span>
+        </div>`;
+      }).join('')}
+    </div>`;
+}
+
 function renderTeamBreakdown() {
+  renderCILeaderboard();
   const query = (document.getElementById('teamSearch')?.value || '').toLowerCase();
   const grid = document.getElementById('teamsGrid');
 
