@@ -9129,7 +9129,8 @@ function renderAboutTopPunts() {
     const logoEl = logoUrl
       ? `<img src="${logoUrl}" style="width:22px;height:22px;object-fit:contain;vertical-align:middle;margin-right:6px" onerror="this.style.display='none'">`
       : '';
-    return `<div style="display:grid;grid-template-columns:24px 56px 1fr auto;gap:12px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--border2);${i === 0 ? 'border-left:3px solid var(--red2);background:rgba(224,92,42,0.04);' : ''}">
+    const dateForNav = e.date || '';
+    return `<div style="display:grid;grid-template-columns:24px 56px 1fr auto;gap:12px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--border2);${i === 0 ? 'border-left:3px solid var(--red2);background:rgba(224,92,42,0.04);' : ''}cursor:pointer;transition:background 0.12s" onclick="navigatePuntGame('${dateForNav}')" onmouseenter="this.style.background='rgba(255,255,255,0.03)'" onmouseleave="this.style.background='${i===0?'rgba(224,92,42,0.04)':'transparent'}'">
       <span style="font-family:var(--font-mono);font-size:10px;color:var(--text3);font-weight:700">#${i + 1}</span>
       <span style="font-family:var(--font-display);font-size:22px;font-weight:900;color:${scoreColor(e.score)};line-height:1">${e.score}<span style="font-size:10px;color:var(--text3);font-weight:400">/80</span></span>
       <span>
@@ -9140,7 +9141,10 @@ function renderAboutTopPunts() {
         <span style="color:var(--text3);font-size:11px;font-family:var(--font-mono)">${fmtDate(e.date)}</span>
         ${topFactors ? `<div style="font-size:10px;color:var(--text3);margin-top:3px;font-family:var(--font-mono)">${topFactors}</div>` : ''}
       </span>
-      <span style="font-family:var(--font-mono);font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--red2);font-weight:700;white-space:nowrap">${isPuntHome ? 'HOME' : 'AWAY'}</span>
+      <span style="text-align:right;white-space:nowrap">
+        <span style="display:block;font-family:var(--font-mono);font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--red2);font-weight:700">${isPuntHome ? 'HOME' : 'AWAY'}</span>
+        <span style="display:block;font-size:9px;color:var(--text3);margin-top:2px">view →</span>
+      </span>
     </div>`;
   }).join('');
   el.style.cssText = 'background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:10px;overflow:hidden';
@@ -9726,6 +9730,14 @@ function mobileNavTo(section) {
   // Map old mobile nav calls to new page system
   const pageMap = { games: 'today', leaders: 'today', teams: 'teams', roster: 'roster' };
   showPage(pageMap[section] || section);
+}
+
+function navigatePuntGame(dateStr) {
+  if (!dateStr) return;
+  const dp = document.getElementById('datePicker');
+  if (dp) dp.value = dateStr;
+  showPage('today');
+  fetchGames();
 }
 
 // ── GAMEFLOW CHART ────────────────────────────────────────
