@@ -3775,6 +3775,12 @@ async function fetchGames() {
       prefetchPitcherStats(uniquePitcherIds), // warm the cache for all pitchers at once
     ]);
 
+    // A full 30-team slate covers the same ground as getCachedNormalLineups() —
+    // share it so Reviews/scoreTodayBackground don't re-fetch all 30 rosters again.
+    if (teamIds.size === 30 && !_normalLineupsCache) {
+      _normalLineupsCache = normalLineups;
+    }
+
     const analyzed = (await Promise.all(games.map(g =>
       analyzeGame(g, normalLineups).catch(err => {
         console.error('[fetchGames] analyzeGame failed for',
