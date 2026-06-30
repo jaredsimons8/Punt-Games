@@ -1902,8 +1902,8 @@
     <button class="top-nav-tab" id="tab-lineups" onclick="showPage('lineups')">Lineup</button>
     <button class="top-nav-tab" id="tab-roster" onclick="showPage('roster')">Injuries</button>
     <button class="top-nav-tab" id="tab-gameflow" onclick="showPage('gameflow')">Gameflow</button>
-    <button class="top-nav-tab" id="tab-scaling" onclick="showPage('scaling')">Scaling</button>
     <button class="top-nav-tab" id="tab-reviews" onclick="showPage('reviews')">Reviews <span class="nav-badge" id="reviewBadge" style="display:none"></span></button>
+    <button class="top-nav-tab" id="tab-scaling" onclick="showPage('scaling')">Scaling</button>
     <button class="top-nav-tab" id="tab-about" onclick="showPage('about')">About</button>
   </nav>
 
@@ -2127,255 +2127,6 @@
     </div>
   </div>
 
-  <!-- ALGORITHM PANEL -->
-  <div class="algo-panel">
-    <div class="section-hdr" style="margin-bottom:0">
-      <h2>Punt Score Algorithm</h2>
-      <div class="pill gold">2026 Season-Aware</div>
-      <div class="divider"></div>
-      <span style="font-size:12px;color:#7aabdf">📊 Detection activates per team after 60 stored games · Hard floor: June 1</span>
-    </div>
-
-    <!-- OVERVIEW -->
-    <div style="margin-top:18px;font-size:12px;color:var(--text2);line-height:1.8;padding:14px 18px;background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:10px">
-      A punt game is a <strong style="color:var(--text)">verdict, not a pre-game fact</strong>. The score reflects everything / what a manager put on the field, how they managed the game, and what the full arc of events suggests about their intent. Every game is scored on a <strong style="color:var(--text)">0–80 scale</strong> across two independent tracks: a <strong style="color:var(--text)">pre-game score</strong> (lineup + pitching context) and an <strong style="color:var(--text)">in-game score</strong> (behavioral signals during play). A pre-game punt is <strong style="color:var(--text)">locked</strong> and cannot be reversed. A clean pre-game game can still become a punt if in-game behavior / blowout concession, position player pitching, mass substitutions / independently crosses the threshold.
-    </div>
-
-    <!-- SCORE LEGEND -->
-    <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;font-size:11px;font-family:var(--font-mono)">
-      <div style="display:flex;align-items:center;gap:7px;background:rgba(74,222,128,0.08);border:1px solid rgba(74,222,128,0.25);border-radius:6px;padding:6px 12px">
-        <span style="color:var(--green);font-weight:800;font-size:14px">+N</span>
-        <span style="color:var(--text2)">adds to punt score</span>
-      </div>
-      <div style="display:flex;align-items:center;gap:7px;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:6px;padding:6px 12px">
-        <span style="color:var(--text3);font-weight:800;font-size:14px">×N</span>
-        <span style="color:var(--text2)">multiplies existing score</span>
-      </div>
-      <div style="display:flex;align-items:center;gap:7px;background:rgba(224,92,42,0.08);border:1px solid rgba(224,92,42,0.25);border-radius:6px;padding:6px 12px">
-        <span style="color:var(--red2);font-weight:800;font-size:14px">×0.50</span>
-        <span style="color:var(--text2)">ace / #1 starter reduces the score</span>
-      </div>
-      <div style="display:flex;align-items:center;gap:7px;background:rgba(232,184,75,0.08);border:1px solid rgba(232,184,75,0.25);border-radius:6px;padding:6px 12px">
-        <span style="color:var(--gold);font-weight:800;font-size:14px">PUNT ≥ 46</span>
-        <span style="color:var(--text2)">out of 80</span>
-      </div>
-    </div>
-
-    <!-- SCORE SCALE BAR -->
-    <div style="margin-top:18px;padding:16px 18px;background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:8px">
-      <div style="font-size:9px;text-transform:uppercase;letter-spacing:2px;color:var(--text3);font-family:var(--font-mono);margin-bottom:10px">Score Scale / 0 to 80</div>
-      <!-- Track -->
-      <div style="position:relative;height:10px;border-radius:5px;overflow:hidden;background:var(--bg3)">
-        <div style="position:absolute;left:0;top:0;width:35%;height:100%;background:var(--border2)"></div>
-        <div style="position:absolute;left:35%;top:0;width:22%;height:100%;background:rgba(232,184,75,0.5)"></div>
-        <div style="position:absolute;left:57%;top:0;width:43%;height:100%;background:rgba(224,92,42,0.6)"></div>
-      </div>
-      <!-- Labels row -->
-      <div style="position:relative;height:28px;margin-top:4px;font-family:var(--font-mono);font-size:9px">
-        <span style="position:absolute;left:0;color:var(--text3)">0</span>
-        <!-- 2 benched marker ≈ 20/80 = 25% -->
-        <span style="position:absolute;left:25%;transform:translateX(-50%);color:var(--text3);white-space:nowrap">~20<br><span style="color:var(--text3);opacity:0.7">2 benched</span></span>
-        <!-- REVIEW threshold at 28/80 = 35% -->
-        <span style="position:absolute;left:35%;transform:translateX(-50%);color:var(--gold);white-space:nowrap;font-weight:700">28 REVIEW</span>
-        <!-- PUNT threshold at 46/80 = 57.5% -->
-        <span style="position:absolute;left:57%;transform:translateX(-50%);color:var(--red2);white-space:nowrap;font-weight:700">46 PUNT</span>
-        <span style="position:absolute;right:0;color:var(--text3)">80</span>
-      </div>
-    </div>
-
-    <!-- PRE-GAME SCORING -->
-    <div style="margin-top:24px;font-size:9px;text-transform:uppercase;letter-spacing:2.5px;color:var(--text3);margin-bottom:6px;font-family:var(--font-mono)">Lineup &amp; Pitching Evaluation · All values add to punt score (0–80 scale)</div>
-    <div style="font-size:11px;color:var(--text3);margin-bottom:12px;font-family:var(--font-mono)">PUNT ≥ 46 &nbsp;·&nbsp; REVIEW ≥ 28 &nbsp;·&nbsp; lineup values are approximate for a contender (puntMotivation 0.9)</div>
-    <div class="algo-grid">
-      <div class="algo-item">
-        <div class="ai-label">2 Starters Benched</div>
-        <div class="ai-val" style="color:var(--green)">+23</div>
-        <div class="ai-desc">Moderate signal — not enough alone for most games, but reaches REVIEW territory combined with a series finale or fatigue context. Two everyday starters sitting is worth watching. For contenders (mot 0.9) this scores ~23 pts.</div>
-      </div>
-      <div class="algo-item">
-        <div class="ai-label">3 Starters Benched</div>
-        <div class="ai-val" style="color:var(--green)">+30</div>
-        <div class="ai-desc">Strong signal. A contender (mot 0.9) with 3 starters out scores ~30 pts — reaches PUNT territory with a series finale or any fatigue context. A rebuilding team scores ~7. Three deliberate absences without injury explanation is a clear managerial decision.</div>
-      </div>
-      <div class="algo-item">
-        <div class="ai-label">4+ Starters Benched</div>
-        <div class="ai-val" style="color:var(--green)">+40</div>
-        <div class="ai-desc">Near-certain punt for any contender. Four everyday starters sitting pushes a contender directly into PUNT territory on lineup signal alone — before any series position, fatigue, or standings context is added.</div>
-      </div>
-      <div class="algo-item">
-        <div class="ai-label">Spot Starter (≤2 GS, ERA &gt; 5.00)</div>
-        <div class="ai-val" style="color:var(--green)">+5–6</div>
-        <div class="ai-desc">An emergency or spot arm with ≤2 starts and a poor ERA (or no ERA yet) is itself a punt signal — good teams don't burn rotation depth on days they want to win. The ERA gate (>5.00) avoids penalizing legitimate prospects making debut starts. Early-season debuts (before June) are also exempt — a top prospect's first MLB start is not an emergency deployment.</div>
-      </div>
-      <div class="algo-item">
-        <div class="ai-label">ERA / FIP Gap ≥ 1.5 (opponent better)</div>
-        <div class="ai-val" style="color:var(--green)">+10</div>
-        <div class="ai-desc">Clear pitching disadvantage vs opponent's starter. When both pitchers have FIP data, the signal blends <strong style="color:var(--text)">60% ERA + 40% FIP</strong> — FIP strips out luck (BABIP, strand rate) so a pitcher with a fluky high ERA but solid FIP is penalized less. Weighted by start sample (≥4 starts = full weight), capped at 4.0 run difference.</div>
-      </div>
-      <div class="algo-item">
-        <div class="ai-label">Absolute ERA ≥ 6.00 (objectively poor)</div>
-        <div class="ai-val" style="color:var(--green)">+3–5</div>
-        <div class="ai-desc">An objectively bad ERA regardless of the opponent — good teams don't deploy sub-replacement starters on competitive days. Fires only when the ERA is ≥6.00 with ≥3 starts (to avoid early-season noise). Capped at +6 pts; does not stack with the spot-starter signal.</div>
-      </div>
-      <div class="algo-item">
-        <div class="ai-label">Clinched / Eliminated</div>
-        <div class="ai-val" style="color:var(--green)">+22</div>
-        <div class="ai-desc">Division clinched or mathematically eliminated / both remove competitive motivation. Clinched teams protect stars for the postseason; eliminated teams have nothing to fight for. Score breakdown shows the correct reason.</div>
-      </div>
-      <div class="algo-item">
-        <div class="ai-label">Series Finale (G3/3 or G4/4)</div>
-        <div class="ai-val" style="color:var(--green)">+9</div>
-        <div class="ai-desc">G3 of a 3-game set where the punting team has already clinched or leads the series — the classic rest-day window (+4 more for 4-game series). Rubber games (tied series) and series the team is losing do not get this bonus. 2-game series are also excluded.</div>
-      </div>
-      <div class="algo-item">
-        <div class="ai-label">Doubleheader Nightcap</div>
-        <div class="ai-val" style="color:var(--green)">+14</div>
-        <div class="ai-desc">Game 2 of a doubleheader is the single most reliable structural punt signal. Managers routinely rest their core lineup in the nightcap regardless of series context. Detected automatically from the MLB schedule API.</div>
-      </div>
-      <div class="algo-item">
-        <div class="ai-label">Back-to-Back Game</div>
-        <div class="ai-val" style="color:var(--green)">+3–5</div>
-        <div class="ai-desc">Team played yesterday / rest priority rises, especially for contenders protecting everyday players. Motivation-scaled: a top contender (0.9×) gets +4.5 pts, a rebuilding team (0.2×) gets +1. Stacks with travel fatigue.</div>
-      </div>
-      <div class="algo-item">
-        <div class="ai-label">Cross-Country Travel</div>
-        <div class="ai-val" style="color:var(--green)">+2–4</div>
-        <div class="ai-desc">Same-day cross-timezone travel is a structural rest signal. West→East is the harder direction (+5 × motivation) — the body clock runs 3 hours behind. East→West is softer (+3 × motivation) but still meaningful. Both require the team to have played the prior day (stacks with back-to-back).</div>
-      </div>
-      <div class="algo-item">
-        <div class="ai-label">Day Game After Night Game</div>
-        <div class="ai-val" style="color:var(--green)">+2–4</div>
-        <div class="ai-desc">Less than ~16 hours between games. A night game followed by a 1pm start is a known recovery challenge. Managers routinely give aging veterans this game off. Motivation-scaled: contenders (+4.5 pts) protect their stars more aggressively than rebuilding teams (+1 pt).</div>
-      </div>
-      <div class="algo-item">
-        <div class="ai-label">Game 1 Suppression</div>
-        <div class="ai-val" style="color:var(--text3)">×0.65</div>
-        <div class="ai-desc">The ace almost always pitches Game 1 of any series. On top of the #1-starter reduction, G1 punt scores are multiplied down / managers simply do not punt opening games of a set.</div>
-      </div>
-      <div class="algo-item">
-        <div class="ai-label">Consecutive Games Streak (7+)</div>
-        <div class="ai-val" style="color:var(--green)">+2–8</div>
-        <div class="ai-desc">Teams playing 7+ straight days accumulate fatigue that shows up in roster decisions. Scales with streak length — 7 days = ~2 pts, 10+ days = up to 9 pts × motivation. Helps detect end-of-long-homestand or late-road-trip rest days.</div>
-      </div>
-    </div>
-
-    <div style="margin-top:16px;background:rgba(196,161,0,0.06);border:1px solid rgba(196,161,0,0.2);border-radius:10px;padding:14px 18px;font-size:12px;color:var(--text2);line-height:1.8">
-      <strong style="color:var(--gold)">⚖️ Team Quality Multiplier</strong><br>
-      Every lineup and pitching signal is scaled by that team's <strong style="color:var(--text)">punt motivation score</strong> (0.1–0.9). Contenders have high motivation / their star absences carry full weight. Rebuilding teams have low motivation / they're fielding their best available regardless. A 4-player absence from the Dodgers (0.9×) scores nearly 5× higher than the same absence from a rebuilding team (0.2×). The live standings API adjusts these tiers dynamically once teams have played 30+ games.
-    </div>
-
-    <div style="margin-top:12px;background:rgba(29,185,84,0.07);border:1px solid rgba(29,185,84,0.25);border-radius:10px;padding:14px 18px;font-size:12px;color:var(--text2);line-height:1.7">
-      <strong style="color:var(--green)">⬇ Ace Starter Reduction</strong><br>
-      A true ace on the mound signals the team is competing. Deploying ERA ≤ 3.00 (with ≥6 starts) reduces the entire punt score: <strong style="color:var(--text)">×0.75</strong> for standard teams (25% reduction) and <strong style="color:var(--text)">×0.88</strong> for clinched teams (12% reduction — clinched teams may still rest regulars even with their ace). Requires ≥6 starts to avoid noisy early-season ERA inflating or deflating the signal. A manager starting their best arm is making a competitive statement — lineup decisions alone cannot override that.
-    </div>
-
-    <div style="margin-top:24px;font-size:9px;text-transform:uppercase;letter-spacing:2.5px;color:var(--text3);margin-bottom:6px;font-family:var(--font-mono)">In-Game Evaluation (Independent Track · 0–80 scale)</div>
-    <div style="font-size:11px;color:var(--text3);margin-bottom:12px;font-family:var(--font-mono)">These signals can independently confirm a punt even if the pre-game score was clean</div>
-    <div class="algo-grid">
-      <div class="algo-item">
-        <div class="ai-label">Position Player Pitching</div>
-        <div class="ai-val" style="color:var(--green)">+45</div>
-        <div class="ai-desc">The clearest concession signal in baseball. Using a position player on the mound only happens when a manager has completely surrendered. A single occurrence nearly reaches the PUNT threshold on its own.</div>
-      </div>
-      <div class="algo-item">
-        <div class="ai-label">Run Deficit Late (6th+)</div>
-        <div class="ai-val" style="color:var(--green)">+18–50</div>
-        <div class="ai-desc">Down 5+ after the 6th. Scales with both deficit size and inning / a 10-run hole in the 9th is near certainty. Computed as (deficit−4) × inning weight.</div>
-      </div>
-      <div class="algo-item">
-        <div class="ai-label">Early Blowout (4th–5th)</div>
-        <div class="ai-val" style="color:var(--green)">+14</div>
-        <div class="ai-desc">Down 5+ before the 6th. A blowout this early signals the game was effectively over before the manager could formally concede / strong behavioral indicator.</div>
-      </div>
-      <div class="algo-item">
-        <div class="ai-label">Bullpen Concession</div>
-        <div class="ai-val" style="color:var(--green)">+10–22</div>
-        <div class="ai-desc">3+ pitching changes before the 5th inning. Burning the pen early signals the manager isn't managing to win / scales with how many changes occur.</div>
-      </div>
-      <div class="algo-item">
-        <div class="ai-label">Early Star Removal</div>
-        <div class="ai-val" style="color:var(--green)">+10–18</div>
-        <div class="ai-desc">2+ offensive substitutions before the 7th inning in a blowout. Pulling everyday starters mid-game while still technically in reach is a clear concession signal.</div>
-      </div>
-      <div class="algo-item">
-        <div class="ai-label">Low-Leverage Arm, Close Game</div>
-        <div class="ai-val" style="color:var(--green)">+12–20</div>
-        <div class="ai-desc">A mop-up reliever (ERA 6.50+) appearing while the game is within 3 runs / from the 5th inning onward. Bringing in garbage-time arms while the game is still competitive is a manager quietly waving the white flag. +12 for one such arm, +20 for two or more.</div>
-      </div>
-    </div>
-
-    <div style="margin-top:16px;background:rgba(212,43,43,0.06);border:1px solid rgba(212,43,43,0.2);border-radius:10px;padding:14px 18px;font-size:12px;color:var(--text2);line-height:1.8">
-      <strong style="color:var(--red2)">🔒 Pre-Game Lock + Independent In-Game Track</strong><br>
-      Pre-game and in-game are scored on separate 0–80 scales and evaluated independently.<br><br>
-      <strong style="color:var(--text)">Pre-game punt (≥ 46):</strong> Locked. A game confirmed before first pitch stays a punt regardless of in-game outcome. In-game signals add a small bonus but cannot reduce the classification.<br><br>
-      <strong style="color:var(--text)">In-game punt:</strong> A clean or review pre-game can still become a punt from in-game behavior alone. The badge reads <span style="color:#f59e0b;font-family:var(--font-mono)">PUNT · IN-GAME</span> to distinguish it.<br><br>
-      <strong style="color:var(--text)">Blended (neither confirmed):</strong> Pre-game dominates early, shifting toward in-game as innings accumulate. Final games weight in-game at 35%.
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px;font-size:11px">
-        <div style="text-align:center;background:rgba(255,255,255,0.02);border-radius:6px;padding:8px">
-          <div style="color:var(--gold);font-weight:700;font-size:13px">Scheduled</div>
-          <div style="margin-top:4px">100% Pre-Game<br><span style="color:var(--muted)">No in-game data</span></div>
-        </div>
-        <div style="text-align:center;background:rgba(255,255,255,0.02);border-radius:6px;padding:8px">
-          <div style="color:var(--gold);font-weight:700;font-size:13px">Live (1–3)</div>
-          <div style="margin-top:4px">92% Pre / 8% In<br><span style="color:var(--muted)">Early innings</span></div>
-        </div>
-        <div style="text-align:center;background:rgba(255,255,255,0.02);border-radius:6px;padding:8px">
-          <div style="color:var(--gold);font-weight:700;font-size:13px">Live (4–6)</div>
-          <div style="margin-top:4px">82% Pre / 18% In<br><span style="color:var(--muted)">Mid innings</span></div>
-        </div>
-        <div style="text-align:center;background:rgba(255,255,255,0.02);border-radius:6px;padding:8px">
-          <div style="color:var(--gold);font-weight:700;font-size:13px">Final</div>
-          <div style="margin-top:4px">65% Pre / 35% In<br><span style="color:var(--muted)">Full picture</span></div>
-        </div>
-      </div>
-    </div>
-
-    <div style="margin-top:12px;background:rgba(29,100,180,0.07);border:1px solid rgba(29,100,180,0.25);border-radius:10px;padding:14px 18px;font-size:12px;color:var(--text2);line-height:1.8">
-      <strong style="color:#7aabdf">🔄 Living Baseline / Adapts to Roster Changes</strong><br>
-      The algorithm compares each day's batting order against a <strong style="color:var(--text)">recency-weighted composite baseline</strong> built from 60+ stored games. The last 20 games carry full weight, the 20 before that carry half, anything older carries quarter weight. Traded players fade out in ~3 weeks. Injured players returning earn their way back in as they accumulate appearances. The baseline always reflects who the team actually is right now / not who they were in April.
-    </div>
-
-    <div style="margin-top:20px">
-      <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:var(--text2);margin-bottom:10px">⏱ Season Detection Timeline</div>
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
-        <div style="background:rgba(29,100,180,0.1);border:1px solid rgba(29,100,180,0.3);border-radius:8px;padding:10px 12px;text-align:center">
-          <div style="font-family:'Space Grotesk',sans-serif;font-size:22px;color:#6a8aaa">OFF</div>
-          <div style="font-size:9px;text-transform:uppercase;letter-spacing:1px;color:#6a8aaa;margin-top:4px">Under 60 Games</div>
-          <div style="font-size:10px;color:var(--text2);margin-top:4px">Calibration<br>Building baselines</div>
-        </div>
-        <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(240,165,0,0.2);border-radius:8px;padding:10px 12px;text-align:center">
-          <div style="font-family:'Space Grotesk',sans-serif;font-size:22px;color:var(--gold)">×0.70</div>
-          <div style="font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--gold);margin-top:4px">60 Games (min. June)</div>
-          <div style="font-size:10px;color:var(--text2);margin-top:4px">Detection unlocks<br>Baselines ready</div>
-        </div>
-        <div style="background:rgba(212,43,43,0.06);border:1px solid rgba(212,43,43,0.2);border-radius:8px;padding:10px 12px;text-align:center">
-          <div style="font-family:'Space Grotesk',sans-serif;font-size:22px;color:var(--gold)">×0.85</div>
-          <div style="font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--gold);margin-top:4px">July – mid Aug</div>
-          <div style="font-size:10px;color:var(--text2);margin-top:4px">Prime punt season<br>Division races real</div>
-        </div>
-        <div style="background:rgba(212,43,43,0.1);border:1px solid rgba(212,43,43,0.3);border-radius:8px;padding:10px 12px;text-align:center">
-          <div style="font-family:'Space Grotesk',sans-serif;font-size:22px;color:var(--red2)">×1.00</div>
-          <div style="font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--red2);margin-top:4px">Mid-Aug – Sept</div>
-          <div style="font-size:10px;color:var(--text2);margin-top:4px">Full weight<br>Every game matters</div>
-        </div>
-      </div>
-    </div>
-
-    <div style="margin-top:16px;display:flex;gap:12px;flex-wrap:wrap">
-      <div style="background:rgba(212,43,43,0.15);border:1px solid rgba(212,43,43,0.3);border-radius:8px;padding:10px 18px;font-size:12px">
-        <span style="color:var(--red2);font-weight:600">🚩 PUNT GAME</span> &nbsp;Score ≥ 46 <span style="color:var(--text3);font-size:10px">(of 80)</span>
-      </div>
-      <div style="background:rgba(230,126,34,0.12);border:1px solid rgba(230,126,34,0.3);border-radius:8px;padding:10px 18px;font-size:12px">
-        <span style="color:var(--orange);font-weight:600">🔍 MANUAL REVIEW</span> &nbsp;Score 28–45
-      </div>
-      <div style="background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:8px;padding:10px 18px;font-size:12px;color:var(--text2)">
-        ✓ CLEAN &nbsp;Score &lt; 28
-      </div>
-    </div>
-  </div>
-
-  
-
   </div><!-- /page-about -->
 
   <!-- PAGE: LINEUPS -->
@@ -2511,10 +2262,10 @@
           <button class="div-btn" onclick="setDivFilter('NL West', this)">NL West</button>
         </div>
       </div>
-      <div id="ciLeaderboard"><!-- populated by JS --></div>
       <div class="punt-chart" id="puntChart" style="margin-bottom:32px">
         <!-- populated by JS -->
       </div>
+      <div id="ciLeaderboard"><!-- populated by JS --></div>
       <div class="tp-list" id="teamsGrid">
         <!-- populated by JS -->
       </div>
@@ -2749,6 +2500,231 @@
         </div>
         <div style="padding:10px 16px">
           <span style="font-size:11px;color:var(--text3)">Scores are multiplied by the timing factor — September games are scored at full weight because pennant races make every game matter. Early-season games are discounted since standings context hasn't established itself.</span>
+        </div>
+      </div>
+
+      <!-- ALGORITHM PANEL -->
+      <div class="algo-panel">
+        <div class="section-hdr" style="margin-bottom:0">
+          <h2>Punt Score Algorithm</h2>
+          <div class="pill gold">2026 Season-Aware</div>
+          <div class="divider"></div>
+          <span style="font-size:12px;color:#7aabdf">📊 Detection activates per team after 60 stored games · Hard floor: June 1</span>
+        </div>
+
+        <!-- OVERVIEW -->
+        <div style="margin-top:18px;font-size:12px;color:var(--text2);line-height:1.8;padding:14px 18px;background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:10px">
+          A punt game is a <strong style="color:var(--text)">verdict, not a pre-game fact</strong>. The score reflects everything / what a manager put on the field, how they managed the game, and what the full arc of events suggests about their intent. Every game is scored on a <strong style="color:var(--text)">0–80 scale</strong> across two independent tracks: a <strong style="color:var(--text)">pre-game score</strong> (lineup + pitching context) and an <strong style="color:var(--text)">in-game score</strong> (behavioral signals during play). A pre-game punt is <strong style="color:var(--text)">locked</strong> and cannot be reversed. A clean pre-game game can still become a punt if in-game behavior / blowout concession, position player pitching, mass substitutions / independently crosses the threshold.
+        </div>
+
+        <!-- SCORE LEGEND -->
+        <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;font-size:11px;font-family:var(--font-mono)">
+          <div style="display:flex;align-items:center;gap:7px;background:rgba(74,222,128,0.08);border:1px solid rgba(74,222,128,0.25);border-radius:6px;padding:6px 12px">
+            <span style="color:var(--green);font-weight:800;font-size:14px">+N</span>
+            <span style="color:var(--text2)">adds to punt score</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:7px;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:6px;padding:6px 12px">
+            <span style="color:var(--text3);font-weight:800;font-size:14px">×N</span>
+            <span style="color:var(--text2)">multiplies existing score</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:7px;background:rgba(224,92,42,0.08);border:1px solid rgba(224,92,42,0.25);border-radius:6px;padding:6px 12px">
+            <span style="color:var(--red2);font-weight:800;font-size:14px">×0.50</span>
+            <span style="color:var(--text2)">ace / #1 starter reduces the score</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:7px;background:rgba(232,184,75,0.08);border:1px solid rgba(232,184,75,0.25);border-radius:6px;padding:6px 12px">
+            <span style="color:var(--gold);font-weight:800;font-size:14px">PUNT ≥ 46</span>
+            <span style="color:var(--text2)">out of 80</span>
+          </div>
+        </div>
+
+        <!-- PRE-GAME SCORING -->
+        <div style="margin-top:24px;font-size:9px;text-transform:uppercase;letter-spacing:2.5px;color:var(--text3);margin-bottom:6px;font-family:var(--font-mono)">Lineup &amp; Pitching Evaluation · All values add to punt score (0–80 scale)</div>
+        <div style="font-size:11px;color:var(--text3);margin-bottom:12px;font-family:var(--font-mono)">PUNT ≥ 46 &nbsp;·&nbsp; REVIEW ≥ 28 &nbsp;·&nbsp; lineup values are approximate for a contender (puntMotivation 0.9)</div>
+        <div class="algo-grid">
+          <div class="algo-item">
+            <div class="ai-label">2 Starters Benched</div>
+            <div class="ai-val" style="color:var(--green)">+23</div>
+            <div class="ai-desc">Moderate signal — not enough alone for most games, but reaches REVIEW territory combined with a series finale or fatigue context. Two everyday starters sitting is worth watching. For contenders (mot 0.9) this scores ~23 pts.</div>
+          </div>
+          <div class="algo-item">
+            <div class="ai-label">3 Starters Benched</div>
+            <div class="ai-val" style="color:var(--green)">+30</div>
+            <div class="ai-desc">Strong signal. A contender (mot 0.9) with 3 starters out scores ~30 pts — reaches PUNT territory with a series finale or any fatigue context. A rebuilding team scores ~7. Three deliberate absences without injury explanation is a clear managerial decision.</div>
+          </div>
+          <div class="algo-item">
+            <div class="ai-label">4+ Starters Benched</div>
+            <div class="ai-val" style="color:var(--green)">+40</div>
+            <div class="ai-desc">Near-certain punt for any contender. Four everyday starters sitting pushes a contender directly into PUNT territory on lineup signal alone — before any series position, fatigue, or standings context is added.</div>
+          </div>
+          <div class="algo-item">
+            <div class="ai-label">Spot Starter (≤2 GS, ERA &gt; 5.00)</div>
+            <div class="ai-val" style="color:var(--green)">+5–6</div>
+            <div class="ai-desc">An emergency or spot arm with ≤2 starts and a poor ERA (or no ERA yet) is itself a punt signal — good teams don't burn rotation depth on days they want to win. The ERA gate (>5.00) avoids penalizing legitimate prospects making debut starts. Early-season debuts (before June) are also exempt — a top prospect's first MLB start is not an emergency deployment.</div>
+          </div>
+          <div class="algo-item">
+            <div class="ai-label">ERA / FIP Gap ≥ 1.5 (opponent better)</div>
+            <div class="ai-val" style="color:var(--green)">+10</div>
+            <div class="ai-desc">Clear pitching disadvantage vs opponent's starter. When both pitchers have FIP data, the signal blends <strong style="color:var(--text)">60% ERA + 40% FIP</strong> — FIP strips out luck (BABIP, strand rate) so a pitcher with a fluky high ERA but solid FIP is penalized less. Weighted by start sample (≥4 starts = full weight), capped at 4.0 run difference.</div>
+          </div>
+          <div class="algo-item">
+            <div class="ai-label">Absolute ERA ≥ 6.00 (objectively poor)</div>
+            <div class="ai-val" style="color:var(--green)">+3–5</div>
+            <div class="ai-desc">An objectively bad ERA regardless of the opponent — good teams don't deploy sub-replacement starters on competitive days. Fires only when the ERA is ≥6.00 with ≥3 starts (to avoid early-season noise). Capped at +6 pts; does not stack with the spot-starter signal.</div>
+          </div>
+          <div class="algo-item">
+            <div class="ai-label">Clinched / Eliminated</div>
+            <div class="ai-val" style="color:var(--green)">+22</div>
+            <div class="ai-desc">Division clinched or mathematically eliminated / both remove competitive motivation. Clinched teams protect stars for the postseason; eliminated teams have nothing to fight for. Score breakdown shows the correct reason.</div>
+          </div>
+          <div class="algo-item">
+            <div class="ai-label">Series Finale (G3/3 or G4/4)</div>
+            <div class="ai-val" style="color:var(--green)">+9</div>
+            <div class="ai-desc">G3 of a 3-game set where the punting team has already clinched or leads the series — the classic rest-day window (+4 more for 4-game series). Rubber games (tied series) and series the team is losing do not get this bonus. 2-game series are also excluded.</div>
+          </div>
+          <div class="algo-item">
+            <div class="ai-label">Doubleheader Nightcap</div>
+            <div class="ai-val" style="color:var(--green)">+14</div>
+            <div class="ai-desc">Game 2 of a doubleheader is the single most reliable structural punt signal. Managers routinely rest their core lineup in the nightcap regardless of series context. Detected automatically from the MLB schedule API.</div>
+          </div>
+          <div class="algo-item">
+            <div class="ai-label">Back-to-Back Game</div>
+            <div class="ai-val" style="color:var(--green)">+3–5</div>
+            <div class="ai-desc">Team played yesterday / rest priority rises, especially for contenders protecting everyday players. Motivation-scaled: a top contender (0.9×) gets +4.5 pts, a rebuilding team (0.2×) gets +1. Stacks with travel fatigue.</div>
+          </div>
+          <div class="algo-item">
+            <div class="ai-label">Cross-Country Travel</div>
+            <div class="ai-val" style="color:var(--green)">+2–4</div>
+            <div class="ai-desc">Same-day cross-timezone travel is a structural rest signal. West→East is the harder direction (+5 × motivation) — the body clock runs 3 hours behind. East→West is softer (+3 × motivation) but still meaningful. Both require the team to have played the prior day (stacks with back-to-back).</div>
+          </div>
+          <div class="algo-item">
+            <div class="ai-label">Day Game After Night Game</div>
+            <div class="ai-val" style="color:var(--green)">+2–4</div>
+            <div class="ai-desc">Less than ~16 hours between games. A night game followed by a 1pm start is a known recovery challenge. Managers routinely give aging veterans this game off. Motivation-scaled: contenders (+4.5 pts) protect their stars more aggressively than rebuilding teams (+1 pt).</div>
+          </div>
+          <div class="algo-item">
+            <div class="ai-label">Game 1 Suppression</div>
+            <div class="ai-val" style="color:var(--text3)">×0.65</div>
+            <div class="ai-desc">The ace almost always pitches Game 1 of any series. On top of the #1-starter reduction, G1 punt scores are multiplied down / managers simply do not punt opening games of a set.</div>
+          </div>
+          <div class="algo-item">
+            <div class="ai-label">Consecutive Games Streak (7+)</div>
+            <div class="ai-val" style="color:var(--green)">+2–8</div>
+            <div class="ai-desc">Teams playing 7+ straight days accumulate fatigue that shows up in roster decisions. Scales with streak length — 7 days = ~2 pts, 10+ days = up to 9 pts × motivation. Helps detect end-of-long-homestand or late-road-trip rest days.</div>
+          </div>
+        </div>
+
+        <div style="margin-top:16px;background:rgba(196,161,0,0.06);border:1px solid rgba(196,161,0,0.2);border-radius:10px;padding:14px 18px;font-size:12px;color:var(--text2);line-height:1.8">
+          <strong style="color:var(--gold)">⚖️ Team Quality Multiplier</strong><br>
+          Every lineup and pitching signal is scaled by that team's <strong style="color:var(--text)">punt motivation score</strong> (0.1–0.9). Contenders have high motivation / their star absences carry full weight. Rebuilding teams have low motivation / they're fielding their best available regardless. A 4-player absence from the Dodgers (0.9×) scores nearly 5× higher than the same absence from a rebuilding team (0.2×). The live standings API adjusts these tiers dynamically once teams have played 30+ games.
+        </div>
+
+        <div style="margin-top:12px;background:rgba(29,185,84,0.07);border:1px solid rgba(29,185,84,0.25);border-radius:10px;padding:14px 18px;font-size:12px;color:var(--text2);line-height:1.7">
+          <strong style="color:var(--green)">⬇ Ace Starter Reduction</strong><br>
+          A true ace on the mound signals the team is competing. Deploying ERA ≤ 3.00 (with ≥6 starts) reduces the entire punt score: <strong style="color:var(--text)">×0.75</strong> for standard teams (25% reduction) and <strong style="color:var(--text)">×0.88</strong> for clinched teams (12% reduction — clinched teams may still rest regulars even with their ace). Requires ≥6 starts to avoid noisy early-season ERA inflating or deflating the signal. A manager starting their best arm is making a competitive statement — lineup decisions alone cannot override that.
+        </div>
+
+        <div style="margin-top:24px;font-size:9px;text-transform:uppercase;letter-spacing:2.5px;color:var(--text3);margin-bottom:6px;font-family:var(--font-mono)">In-Game Evaluation (Independent Track · 0–80 scale)</div>
+        <div style="font-size:11px;color:var(--text3);margin-bottom:12px;font-family:var(--font-mono)">These signals can independently confirm a punt even if the pre-game score was clean</div>
+        <div class="algo-grid">
+          <div class="algo-item">
+            <div class="ai-label">Position Player Pitching</div>
+            <div class="ai-val" style="color:var(--green)">+45</div>
+            <div class="ai-desc">The clearest concession signal in baseball. Using a position player on the mound only happens when a manager has completely surrendered. A single occurrence nearly reaches the PUNT threshold on its own.</div>
+          </div>
+          <div class="algo-item">
+            <div class="ai-label">Run Deficit Late (6th+)</div>
+            <div class="ai-val" style="color:var(--green)">+18–50</div>
+            <div class="ai-desc">Down 5+ after the 6th. Scales with both deficit size and inning / a 10-run hole in the 9th is near certainty. Computed as (deficit−4) × inning weight.</div>
+          </div>
+          <div class="algo-item">
+            <div class="ai-label">Early Blowout (4th–5th)</div>
+            <div class="ai-val" style="color:var(--green)">+14</div>
+            <div class="ai-desc">Down 5+ before the 6th. A blowout this early signals the game was effectively over before the manager could formally concede / strong behavioral indicator.</div>
+          </div>
+          <div class="algo-item">
+            <div class="ai-label">Bullpen Concession</div>
+            <div class="ai-val" style="color:var(--green)">+10–22</div>
+            <div class="ai-desc">3+ pitching changes before the 5th inning. Burning the pen early signals the manager isn't managing to win / scales with how many changes occur.</div>
+          </div>
+          <div class="algo-item">
+            <div class="ai-label">Early Star Removal</div>
+            <div class="ai-val" style="color:var(--green)">+10–18</div>
+            <div class="ai-desc">2+ offensive substitutions before the 7th inning in a blowout. Pulling everyday starters mid-game while still technically in reach is a clear concession signal.</div>
+          </div>
+          <div class="algo-item">
+            <div class="ai-label">Low-Leverage Arm, Close Game</div>
+            <div class="ai-val" style="color:var(--green)">+12–20</div>
+            <div class="ai-desc">A mop-up reliever (ERA 6.50+) appearing while the game is within 3 runs / from the 5th inning onward. Bringing in garbage-time arms while the game is still competitive is a manager quietly waving the white flag. +12 for one such arm, +20 for two or more.</div>
+          </div>
+        </div>
+
+        <div style="margin-top:16px;background:rgba(212,43,43,0.06);border:1px solid rgba(212,43,43,0.2);border-radius:10px;padding:14px 18px;font-size:12px;color:var(--text2);line-height:1.8">
+          <strong style="color:var(--red2)">🔒 Pre-Game Lock + Independent In-Game Track</strong><br>
+          Pre-game and in-game are scored on separate 0–80 scales and evaluated independently.<br><br>
+          <strong style="color:var(--text)">Pre-game punt (≥ 46):</strong> Locked. A game confirmed before first pitch stays a punt regardless of in-game outcome. In-game signals add a small bonus but cannot reduce the classification.<br><br>
+          <strong style="color:var(--text)">In-game punt:</strong> A clean or review pre-game can still become a punt from in-game behavior alone. The badge reads <span style="color:#f59e0b;font-family:var(--font-mono)">PUNT · IN-GAME</span> to distinguish it.<br><br>
+          <strong style="color:var(--text)">Blended (neither confirmed):</strong> Pre-game dominates early, shifting toward in-game as innings accumulate. Final games weight in-game at 35%.
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px;font-size:11px">
+            <div style="text-align:center;background:rgba(255,255,255,0.02);border-radius:6px;padding:8px">
+              <div style="color:var(--gold);font-weight:700;font-size:13px">Scheduled</div>
+              <div style="margin-top:4px">100% Pre-Game<br><span style="color:var(--muted)">No in-game data</span></div>
+            </div>
+            <div style="text-align:center;background:rgba(255,255,255,0.02);border-radius:6px;padding:8px">
+              <div style="color:var(--gold);font-weight:700;font-size:13px">Live (1–3)</div>
+              <div style="margin-top:4px">92% Pre / 8% In<br><span style="color:var(--muted)">Early innings</span></div>
+            </div>
+            <div style="text-align:center;background:rgba(255,255,255,0.02);border-radius:6px;padding:8px">
+              <div style="color:var(--gold);font-weight:700;font-size:13px">Live (4–6)</div>
+              <div style="margin-top:4px">82% Pre / 18% In<br><span style="color:var(--muted)">Mid innings</span></div>
+            </div>
+            <div style="text-align:center;background:rgba(255,255,255,0.02);border-radius:6px;padding:8px">
+              <div style="color:var(--gold);font-weight:700;font-size:13px">Final</div>
+              <div style="margin-top:4px">65% Pre / 35% In<br><span style="color:var(--muted)">Full picture</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top:12px;background:rgba(29,100,180,0.07);border:1px solid rgba(29,100,180,0.25);border-radius:10px;padding:14px 18px;font-size:12px;color:var(--text2);line-height:1.8">
+          <strong style="color:#7aabdf">🔄 Living Baseline / Adapts to Roster Changes</strong><br>
+          The algorithm compares each day's batting order against a <strong style="color:var(--text)">recency-weighted composite baseline</strong> built from 60+ stored games. The last 20 games carry full weight, the 20 before that carry half, anything older carries quarter weight. Traded players fade out in ~3 weeks. Injured players returning earn their way back in as they accumulate appearances. The baseline always reflects who the team actually is right now / not who they were in April.
+        </div>
+
+        <div style="margin-top:20px">
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:var(--text2);margin-bottom:10px">⏱ Season Detection Timeline</div>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
+            <div style="background:rgba(29,100,180,0.1);border:1px solid rgba(29,100,180,0.3);border-radius:8px;padding:10px 12px;text-align:center">
+              <div style="font-family:'Space Grotesk',sans-serif;font-size:22px;color:#6a8aaa">OFF</div>
+              <div style="font-size:9px;text-transform:uppercase;letter-spacing:1px;color:#6a8aaa;margin-top:4px">Under 60 Games</div>
+              <div style="font-size:10px;color:var(--text2);margin-top:4px">Calibration<br>Building baselines</div>
+            </div>
+            <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(240,165,0,0.2);border-radius:8px;padding:10px 12px;text-align:center">
+              <div style="font-family:'Space Grotesk',sans-serif;font-size:22px;color:var(--gold)">×0.70</div>
+              <div style="font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--gold);margin-top:4px">60 Games (min. June)</div>
+              <div style="font-size:10px;color:var(--text2);margin-top:4px">Detection unlocks<br>Baselines ready</div>
+            </div>
+            <div style="background:rgba(212,43,43,0.06);border:1px solid rgba(212,43,43,0.2);border-radius:8px;padding:10px 12px;text-align:center">
+              <div style="font-family:'Space Grotesk',sans-serif;font-size:22px;color:var(--gold)">×0.85</div>
+              <div style="font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--gold);margin-top:4px">July – mid Aug</div>
+              <div style="font-size:10px;color:var(--text2);margin-top:4px">Prime punt season<br>Division races real</div>
+            </div>
+            <div style="background:rgba(212,43,43,0.1);border:1px solid rgba(212,43,43,0.3);border-radius:8px;padding:10px 12px;text-align:center">
+              <div style="font-family:'Space Grotesk',sans-serif;font-size:22px;color:var(--red2)">×1.00</div>
+              <div style="font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--red2);margin-top:4px">Mid-Aug – Sept</div>
+              <div style="font-size:10px;color:var(--text2);margin-top:4px">Full weight<br>Every game matters</div>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top:16px;display:flex;gap:12px;flex-wrap:wrap">
+          <div style="background:rgba(212,43,43,0.15);border:1px solid rgba(212,43,43,0.3);border-radius:8px;padding:10px 18px;font-size:12px">
+            <span style="color:var(--red2);font-weight:600">🚩 PUNT GAME</span> &nbsp;Score ≥ 46 <span style="color:var(--text3);font-size:10px">(of 80)</span>
+          </div>
+          <div style="background:rgba(230,126,34,0.12);border:1px solid rgba(230,126,34,0.3);border-radius:8px;padding:10px 18px;font-size:12px">
+            <span style="color:var(--orange);font-weight:600">🔍 MANUAL REVIEW</span> &nbsp;Score 28–45
+          </div>
+          <div style="background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:8px;padding:10px 18px;font-size:12px;color:var(--text2)">
+            ✓ CLEAN &nbsp;Score &lt; 28
+          </div>
         </div>
       </div>
 
@@ -8908,8 +8884,8 @@ async function loadReviewBoxScore(gamePk, e) {
       `<div style="font-family:var(--font-display);font-size:11px;font-weight:700;color:${isPunt ? 'var(--gold)' : 'var(--text3)'}">
         ${teamAbbr}${isPunt ? ' <span style="font-size:9px;font-family:var(--font-mono);font-weight:400;color:var(--text3);margin-left:4px">punting</span>' : ''}
       </div>`;
-    const subHdr = (label) =>
-      `<div style="font-size:9px;font-family:var(--font-mono);color:var(--text3);margin-top:2px;letter-spacing:0.5px">${label}</div>`;
+    const colHdr = (label, pad) =>
+      `<th style="text-align:left;padding:0 ${pad} 6px;font-size:9px;font-family:var(--font-mono);font-weight:400;color:var(--text3);letter-spacing:0.5px;white-space:nowrap">${label}</th>`;
 
     const hasAwyCal = awayCalLineup.length > 0;
     const hasHmeCal = homeCalLineup.length > 0;
@@ -8919,25 +8895,23 @@ async function loadReviewBoxScore(gamePk, e) {
         <div style="font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);font-family:var(--font-mono);margin-bottom:8px">Starting Lineups</div>
         <div style="display:grid;grid-template-columns:1fr 1px 1fr;gap:0;border:1px solid var(--border);border-radius:var(--r-md);overflow:hidden">
           <div>
-            <div style="padding:8px 10px;border-bottom:1px solid var(--border);background:rgba(255,255,255,0.03)">
+            <div style="padding:8px 10px 4px;border-bottom:1px solid var(--border);background:rgba(255,255,255,0.03)">
               ${teamHdrCell(abbr(e.away), awayIsPunt)}
-              <div style="display:flex;gap:24px;margin-top:2px">
-                ${subHdr('Actual')}
-                ${hasAwyCal ? subHdr('Expected') : ''}
-              </div>
             </div>
-            <table style="border-collapse:collapse;width:100%"><tbody>${awayRows}</tbody></table>
+            <table style="border-collapse:collapse;width:100%">
+              <thead><tr>${colHdr('Actual', '10px')}${hasAwyCal ? colHdr('Expected', '8px') : ''}</tr></thead>
+              <tbody>${awayRows}</tbody>
+            </table>
           </div>
           <div style="background:var(--border)"></div>
           <div>
-            <div style="padding:8px 10px;border-bottom:1px solid var(--border);background:rgba(255,255,255,0.03)">
+            <div style="padding:8px 10px 4px;border-bottom:1px solid var(--border);background:rgba(255,255,255,0.03)">
               ${teamHdrCell(abbr(e.home), homeIsPunt)}
-              <div style="display:flex;gap:24px;margin-top:2px">
-                ${subHdr('Actual')}
-                ${hasHmeCal ? subHdr('Expected') : ''}
-              </div>
             </div>
-            <table style="border-collapse:collapse;width:100%"><tbody>${homeRows}</tbody></table>
+            <table style="border-collapse:collapse;width:100%">
+              <thead><tr>${colHdr('Actual', '10px')}${hasHmeCal ? colHdr('Expected', '8px') : ''}</tr></thead>
+              <tbody>${homeRows}</tbody>
+            </table>
           </div>
         </div>
       </div>`);
