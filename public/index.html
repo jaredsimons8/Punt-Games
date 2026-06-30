@@ -6535,14 +6535,27 @@ async function fetchRecentILMoves() {
       .slice(0, 8)
       .map(t => {
         // Extract "First Last" from descriptions like "Team placed LF First Last on the IL..."
-        const nameMatch = (t.description || '').match(
+        const desc = t.description || '';
+        const nameMatch = desc.match(
           /(?:placed|recalled|activated|optioned|designated|transferred|reinstated|selected)\s+(?:(?:LF|RF|CF|1B|2B|3B|SS|C|DH|SP|RP|LHP|RHP|P)\s+)?([A-Z][a-zA-Z.''-]+(?:\s+[A-Z][a-zA-Z.''-]+)+)/
         );
+        // Derive team abbreviation from description if API field is missing
+        let teamAbbr = t.toTeam?.abbreviation || t.team?.abbreviation || '';
+        if (!teamAbbr) {
+          const descTeam = desc.match(/^([A-Z][a-zA-Z .']+?)\s+(?:placed|recalled|activated|optioned|designated|transferred|reinstated)/);
+          if (descTeam) {
+            const found = [...ALL_TEAMS].find(x => x.name === descTeam[1].trim() || descTeam[1].trim().endsWith(x.name.split(' ').pop()));
+            teamAbbr = found?.abbr || '';
+          }
+        }
+        // Derive IL type from description: "10-day", "15-day", "60-day"
+        const ilDays = desc.match(/(\d+)-day\s+(?:injured|IL)/i);
+        const typeLabel = ilDays ? `IL ${ilDays[1]}-Day` : (t.typeDesc || 'IL');
         return {
           playerName: t.player?.nameFirstLast || nameMatch?.[1] || '—',
-          teamAbbr: t.toTeam?.abbreviation || t.team?.abbreviation || '—',
-          description: t.description || '',
-          typeDesc: t.typeDesc || 'IL',
+          teamAbbr: teamAbbr || '—',
+          description: desc,
+          typeDesc: typeLabel,
           date: t.date || fmt(today),
         };
       });
