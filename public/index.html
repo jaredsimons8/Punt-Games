@@ -9103,8 +9103,9 @@ function renderAboutMonthTrend() {
   ];
   const counts = {};
   puntGames.forEach(e => {
-    if (!e.game_date) return;
-    const parts = e.game_date.split('-');
+    const dateStr = e.date || e.game_date;
+    if (!dateStr) return;
+    const parts = String(dateStr).split('-');
     if (parts.length < 2) return;
     const m = parseInt(parts[1], 10) - 1;
     counts[m] = (counts[m] || 0) + 1;
@@ -9664,6 +9665,7 @@ function showPage(page) {
     updateReviewBadge();
     const rd = document.getElementById('reviewDetail'); if (rd) rd.innerHTML = '';
   }
+  if (page === 'about') renderAboutMonthTrend();
 }
 
 function mobileNavTo(section) {
