@@ -8969,7 +8969,8 @@ function renderPuntChart() {
       const clickable = t.punts > 0;
       const clickAttr = clickable ? ` style="cursor:pointer" onclick="openMostRecentPuntForTeam('${nameJs}')"` : '';
       if (t.punts > 0) {
-        svg += `<rect class="pc-bar"${clickAttr} x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${barW.toFixed(1)}" height="${h.toFixed(1)}" rx="1.5" fill="var(--red)"><title>${t.name}: ${t.punts} punt${t.punts===1?'':'s'} · click to view latest</title></rect>`;
+        const barColor = TEAM_COLORS[t.name] || 'var(--red)';
+        svg += `<rect class="pc-bar"${clickAttr} x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${barW.toFixed(1)}" height="${h.toFixed(1)}" rx="1.5" fill="${barColor}"><title>${t.name}: ${t.punts} punt${t.punts===1?'':'s'} · click to view latest</title></rect>`;
         svg += `<text class="pc-val-label"${clickAttr} x="${(x+barW/2).toFixed(1)}" y="${(y-3).toFixed(1)}" text-anchor="middle">${t.punts}</text>`;
       }
       svg += `<text class="pc-team-label"${clickAttr} x="${(x+barW/2).toFixed(1)}" y="${(baseY+11).toFixed(1)}" text-anchor="middle">${t.abbr}</text>`;
