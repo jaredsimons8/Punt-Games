@@ -4851,7 +4851,7 @@ async function analyzeGame(game, normalLineups) {
 
   const homeScore = computePuntScore({
     effectiveBenched: homeEB.effectiveBenched,
-    fipDelta: homeStats.fip - awayStats.fip,
+    fipDelta: (homeStats.fip != null && awayStats.fip != null) ? homeStats.fip - awayStats.fip : null,
     eraDelta: (homeStats.era != null && awayStats.era != null) ? homeStats.era - awayStats.era : 0,
     isLastGame, isFirstGame, isDHNightcap,
     clinched: homeClinched, eliminated: homeEliminated,
@@ -4863,7 +4863,7 @@ async function analyzeGame(game, normalLineups) {
   });
   const awayScore = computePuntScore({
     effectiveBenched: awayEB.effectiveBenched,
-    fipDelta: awayStats.fip - homeStats.fip,
+    fipDelta: (awayStats.fip != null && homeStats.fip != null) ? awayStats.fip - homeStats.fip : null,
     eraDelta: (awayStats.era != null && homeStats.era != null) ? awayStats.era - homeStats.era : 0,
     isLastGame, isFirstGame, isDHNightcap,
     clinched: awayClinched, eliminated: awayEliminated,
@@ -5462,7 +5462,7 @@ function buildTeamFeedbackBias() {
 // Fix #6: Back-to-back game adds moderate fatigue bonus (motivation-scaled)
 // Fix #7: West→East same-day travel adds structural fatigue bonus
 // Fix #8: clinched vs eliminated tracked separately (label fix in breakdown)
-function computePuntScore({ effectiveBenched, eraDelta, isLastGame, isFirstGame,
+function computePuntScore({ effectiveBenched, eraDelta, fipDelta = null, isLastGame, isFirstGame,
   isDHNightcap, clinched, eliminated, gameDate, teamName,
   spFip, spEra, spStarts, spIp, seriesLength, isBackToBack, hasTravelFatigue, isWestToEast = true,
   isDayAfterNight, consecutiveStreak, puntSeriesWins = null, oppSeriesWins = null }) {
@@ -5499,13 +5499,21 @@ function computePuntScore({ effectiveBenched, eraDelta, isLastGame, isFirstGame,
     score += lineupRaw * effMot;
   }
 
-  // ── PITCHING SIGNAL (0–14 pts after motivation, ERA-based) ─
-  // Uses ERA delta vs opponent's starter. Weighted by start sample (≥4 = full).
+  // ── PITCHING SIGNAL (0–14 pts after motivation) ─────────
+  // ERA delta vs opponent's starter. Weighted by start sample (≥4 = full).
+  // When both pitchers have FIP data, blend 60% ERA + 40% FIP:
+  //   FIP removes luck (BABIP, strand rate) so a 5.80 ERA / 3.90 FIP pitcher
+  //   gets a reduced signal (likely unlucky, not intentionally weak); a pitcher
+  //   with 4.20 ERA but 5.50 FIP (getting lucky) gets an amplified signal.
   const eraSampleWeight = Math.min(1.0, (spStarts || 0) / 4);
   const clampedEraDelta = Math.min(Math.max(eraDelta, 0), 4.0);
+  const validFip = fipDelta != null && !isNaN(fipDelta);
+  const effectiveDelta = validFip
+    ? Math.min(Math.max(0.6 * clampedEraDelta + 0.4 * Math.min(Math.max(fipDelta, 0), 4.0), 0), 4.0)
+    : clampedEraDelta;
 
-  if (clampedEraDelta > 0 && eraSampleWeight > 0) {
-    const pitchingRaw = 14 * Math.pow(Math.min(clampedEraDelta, 3.0) / 3.0, 0.65);
+  if (effectiveDelta > 0 && eraSampleWeight > 0) {
+    const pitchingRaw = 14 * Math.pow(Math.min(effectiveDelta, 3.0) / 3.0, 0.65);
     score += pitchingRaw * effMot * eraSampleWeight;
   }
 
@@ -5518,6 +5526,18 @@ function computePuntScore({ effectiveBenched, eraDelta, isLastGame, isFirstGame,
   if (spEra != null && spEra >= 6.00 && spStarts >= 3 && eraSampleWeight >= 0.5) {
     const absEraPts = Math.min(6, (spEra - 5.0) * 1.0) * effMot * eraSampleWeight;
     score += absEraPts;
+  }
+
+  // ── SHORT-STARTER PATTERN ─────────────────────────────────
+  // Pitchers averaging < 4.5 IP per start (≥4 GS sample) get yanked before
+  // the lineup turns over twice. MLB average is ~5.1 IP/start; consistently
+  // falling below 4.5 signals a fringe arm — teams don't deploy these on
+  // days they're competing. Scaled by how far below the 4.5 threshold they fall.
+  if (spStarts >= 4 && spIp > 0) {
+    const ipPerStart = spIp / spStarts;
+    if (ipPerStart < 4.5) {
+      score += Math.min(3, (4.5 - ipPerStart) * 2) * effMot;
+    }
   }
 
   // ── SERIES / GAME POSITION CONTEXT ────────────────────────
@@ -8482,7 +8502,8 @@ async function loadReviewBoxScore(gamePk, e) {
       const record = (st.wins != null && st.losses != null) ? `${st.wins}–${st.losses}` : '';
       const eraVal = st.era && st.era !== '-.--' && st.era !== 'Infinity' ? ` · ${st.era} ERA` : '';
       const saves = label === 'SV' && st.saves != null ? ` · ${st.saves} SV` : '';
-      return `<span style="color:var(--text3);font-family:var(--font-mono);font-size:10px"><span style="color:${color};font-weight:700">${label}:</span> ${player.fullName}${record ? ` (${record})` : ''}${eraVal}${saves}</span>`;
+      const headshot = `<img src="https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/${player.id}/headshot/67/current" style="width:20px;height:20px;border-radius:50%;object-fit:cover;vertical-align:middle;margin-right:4px;border:1px solid ${color}40" onerror="this.style.display='none'">`;
+      return `<span style="display:inline-flex;align-items:center;gap:0;color:var(--text3);font-family:var(--font-mono);font-size:10px">${headshot}<span style="color:${color};font-weight:700">${label}:</span>&nbsp;${player.fullName}${record ? ` (${record})` : ''}${eraVal}${saves}</span>`;
     };
     const parts = [
       fmt(decisions.winner, 'W', 'var(--green)'),
@@ -9192,6 +9213,8 @@ function buildScoreBreakdown(g) {
   const eb = (g.puntSide === 'home' ? g.homeEB?.effectiveBenched : g.awayEB?.effectiveBenched) || 0;
   const spEra    = g.puntSide === 'home' ? g.homeSP?.era    : g.awaySP?.era;
   const oppEra   = g.puntSide === 'home' ? g.awaySP?.era    : g.homeSP?.era;
+  const spFip    = g.puntSide === 'home' ? g.homeSP?.fip    : g.awaySP?.fip;
+  const oppFip   = g.puntSide === 'home' ? g.awaySP?.fip    : g.homeSP?.fip;
   const spStarts = (g.puntSide === 'home' ? g.homeSP?.starts : g.awaySP?.starts) || 0;
   const spIp     = (g.puntSide === 'home' ? g.homeSP?.ip     : g.awaySP?.ip)     || 0;
   const spName   = g.puntSide === 'home' ? g.homeSP?.name   : g.awaySP?.name;
@@ -9237,12 +9260,20 @@ function buildScoreBreakdown(g) {
     const ebRound = Math.round(eb);
     push(`${ebRound} regular${ebRound === 1 ? '' : 's'} rested`, 50 * Math.pow(Math.max(0, ebC - 0.5) / 4.0, 0.60) * effMot * g1Suppress, 50);
   }
-  // Pitching signal — ERA delta, start-sample weight, effMot, G1 suppression, timing.
+  // Pitching signal — ERA delta blended with FIP when both available.
   if (spEra != null && oppEra != null && spEra < 90 && oppEra < 90) {
-    const delta = Math.min(Math.max(spEra - oppEra, 0), 4.0);
+    const eraDelta = Math.min(Math.max(spEra - oppEra, 0), 4.0);
     const w = Math.min(1, spStarts / 4);
-    if (delta > 0 && w > 0) {
-      push(`ERA gap (${spEra.toFixed(2)} vs ${oppEra.toFixed(2)})`, 14 * Math.pow(Math.min(delta, 3.0) / 3.0, 0.65) * effMot * w * g1Suppress, 14);
+    const hasFip = spFip != null && oppFip != null && spFip < 90 && oppFip < 90;
+    const fipDelta = hasFip ? Math.min(Math.max(spFip - oppFip, 0), 4.0) : null;
+    const effectiveDelta = hasFip
+      ? Math.min(Math.max(0.6 * eraDelta + 0.4 * fipDelta, 0), 4.0)
+      : eraDelta;
+    if (effectiveDelta > 0 && w > 0) {
+      const label = hasFip
+        ? `ERA gap (${spEra.toFixed(2)} vs ${oppEra.toFixed(2)}) · FIP ${spFip.toFixed(2)} vs ${oppFip.toFixed(2)}`
+        : `ERA gap (${spEra.toFixed(2)} vs ${oppEra.toFixed(2)})`;
+      push(label, 14 * Math.pow(Math.min(effectiveDelta, 3.0) / 3.0, 0.65) * effMot * w * g1Suppress, 14);
     }
   }
   // Spot starter — emergency arm with ≤2 GS is itself a punt signal.
@@ -9260,6 +9291,13 @@ function buildScoreBreakdown(g) {
     if (w >= 0.5) {
       const absPts = Math.min(6, (spEra - 5.0) * 1.0) * effMot * w;
       push(`High ERA (${typeof spEra === 'number' ? spEra.toFixed(2) : spEra} — objectively poor arm)`, absPts, 6);
+    }
+  }
+  // Short-starter pattern — pitchers averaging < 4.5 IP/start can't get through the order twice.
+  if (spStarts >= 4 && spIp > 0) {
+    const ipPerStart = spIp / spStarts;
+    if (ipPerStart < 4.5) {
+      push(`Short-starter pattern (${ipPerStart.toFixed(1)} IP/start avg)`, Math.min(3, (4.5 - ipPerStart) * 2) * effMot, 3);
     }
   }
   // Structural bonuses — NOT G1-suppressed; only the season-timing multiplier.
