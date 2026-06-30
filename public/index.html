@@ -8191,15 +8191,26 @@ async function openReviewDetail(id) {
   loadReviewBoxScore(gamePk, e);
   if (!factorRows && isValidGamePk) recomputeReviewBreakdown(id, e, gamePk);
   if (isValidGamePk) loadReviewInGameSignals(gamePk, e);
-  // The review queue rows load async from cache, so the review detail's absolute
-  // position shifts down as rows appear above it. Wait 500 ms for the queue to
-  // settle, then read the final position and scroll with a nav-height offset.
-  setTimeout(() => {
+  // The review queue renders first from localStorage cache then updates from
+  // Supabase, shifting the review detail's absolute position. Poll until the
+  // queue height is stable for two consecutive 150ms checks, then scroll.
+  (() => {
     const detEl = document.getElementById('reviewDetail');
-    if (detEl?.children.length) {
-      window.scrollTo({ top: detEl.getBoundingClientRect().top + window.scrollY - 80, behavior: 'smooth' });
-    }
-  }, 500);
+    if (!detEl) return;
+    const rq = document.getElementById('reviewQueue');
+    let lastH = -1, stable = 0;
+    const poll = setInterval(() => {
+      const h = rq?.offsetHeight ?? 0;
+      if (h === lastH) { stable++; } else { stable = 0; lastH = h; }
+      if (stable >= 2 || !document.getElementById('reviewDetail')?.children.length) {
+        clearInterval(poll);
+        if (detEl.children.length) {
+          window.scrollTo({ top: detEl.getBoundingClientRect().top + window.scrollY - 80, behavior: 'smooth' });
+        }
+      }
+    }, 150);
+    setTimeout(() => clearInterval(poll), 5000); // safety cap
+  })();
   if (isValidGamePk) {
     loadAndRenderGameflowInline(gamePk, e);
   } else {
