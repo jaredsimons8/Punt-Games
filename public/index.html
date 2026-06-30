@@ -9171,7 +9171,7 @@ function buildScoreBreakdown(g) {
     const delta = Math.min(Math.max(spEra - oppEra, 0), 4.0);
     const w = Math.min(1, spStarts / 4);
     if (delta > 0 && w > 0) {
-      push(`ERA gap (${delta.toFixed(2)})`, 14 * Math.pow(Math.min(delta, 3.0) / 3.0, 0.65) * effMot * w * g1Suppress, 14);
+      push(`ERA gap (${spEra.toFixed(2)} vs ${oppEra.toFixed(2)})`, 14 * Math.pow(Math.min(delta, 3.0) / 3.0, 0.65) * effMot * w * g1Suppress, 14);
     }
   }
   // Spot starter — emergency arm with ≤2 GS is itself a punt signal.
