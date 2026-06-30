@@ -76,13 +76,20 @@ async function fetchPitcherStats(personId) {
       `${MLB_API}/people/${personId}/stats?stats=season&season=${SEASON}&group=pitching`
     );
     const stats = data?.stats?.[0]?.splits?.[0]?.stat || {};
+    const era   = parseFloat(stats.era);
+    const fip   = parseFloat(stats.fieldingIndependentPitching);
+    const ip    = parseFloat(stats.inningsPitched);
+    const wins  = parseInt(stats.wins) || 0;
+    const losses = parseInt(stats.losses) || 0;
     return {
-      era: parseFloat(stats.era) || null,
-      fip: null,
+      era:    (era  && era  < 90) ? era    : null,
+      fip:    (fip  && fip  < 90) ? fip    : null,
+      ip:     (ip   && ip   > 0)  ? ip     : null,
       starts: parseInt(stats.gamesStarted) || 0,
+      wins, losses,
     };
   } catch {
-    return { era: null, fip: null, starts: 0 };
+    return { era: null, fip: null, ip: null, starts: 0, wins: 0, losses: 0 };
   }
 }
 
@@ -116,19 +123,23 @@ async function processDate(dateStr, existing) {
     const needAway = !existing.has(awayKey);
     if (!needHome && !needAway) continue;
 
-    // Get batting orders — try hydrated first, then direct boxscore
+    // Get batting orders + actual pitchers — try hydrated first, then direct boxscore
     let homePlayers = game.boxscore?.teams?.home?.players || {};
     let awayPlayers = game.boxscore?.teams?.away?.players || {};
-    let homeOrder = game.boxscore?.teams?.home?.battingOrder || [];
-    let awayOrder = game.boxscore?.teams?.away?.battingOrder || [];
+    let homeOrder   = game.boxscore?.teams?.home?.battingOrder || [];
+    let awayOrder   = game.boxscore?.teams?.away?.battingOrder || [];
+    let homeActualPitchers = game.boxscore?.teams?.home?.pitchers || [];
+    let awayActualPitchers = game.boxscore?.teams?.away?.pitchers || [];
 
     if (homeOrder.length < 7 || awayOrder.length < 7) {
       try {
         const box = await fetchWithRetry(`${MLB_API}/game/${gamePk}/boxscore`);
         homePlayers = box?.teams?.home?.players || {};
         awayPlayers = box?.teams?.away?.players || {};
-        homeOrder = box?.teams?.home?.battingOrder || [];
-        awayOrder = box?.teams?.away?.battingOrder || [];
+        homeOrder   = box?.teams?.home?.battingOrder || [];
+        awayOrder   = box?.teams?.away?.battingOrder || [];
+        homeActualPitchers = box?.teams?.home?.pitchers || homeActualPitchers;
+        awayActualPitchers = box?.teams?.away?.pitchers || awayActualPitchers;
         await sleep(100);
       } catch { /* use what we have */ }
     }
@@ -137,14 +148,21 @@ async function processDate(dateStr, existing) {
     const homeLineup = homeOrder.map(id => getName(homePlayers, id)).filter(Boolean);
     const awayLineup = awayOrder.map(id => getName(awayPlayers, id)).filter(Boolean);
 
-    // Pitcher stats
-    const homePitcherId = game.teams?.home?.probablePitcher?.id;
-    const awayPitcherId = game.teams?.away?.probablePitcher?.id;
-    const homePitcherName = game.teams?.home?.probablePitcher?.fullName || null;
-    const awayPitcherName = game.teams?.away?.probablePitcher?.fullName || null;
+    // Prefer actual starter from boxscore (first pitcher ID listed) over probablePitcher.
+    // Catches late scratches, bullpen openers, and emergency starts.
+    const homeActualStarterId = homeActualPitchers[0] || null;
+    const awayActualStarterId = awayActualPitchers[0] || null;
+    const homePitcherId = homeActualStarterId || game.teams?.home?.probablePitcher?.id;
+    const awayPitcherId = awayActualStarterId || game.teams?.away?.probablePitcher?.id;
+    const homePitcherName = homeActualStarterId
+      ? (getName(homePlayers, homeActualStarterId) || game.teams?.home?.probablePitcher?.fullName || null)
+      : (game.teams?.home?.probablePitcher?.fullName || null);
+    const awayPitcherName = awayActualStarterId
+      ? (getName(awayPlayers, awayActualStarterId) || game.teams?.away?.probablePitcher?.fullName || null)
+      : (game.teams?.away?.probablePitcher?.fullName || null);
 
-    let homeStats = { era: null };
-    let awayStats = { era: null };
+    let homeStats = { era: null, fip: null, ip: null, starts: 0, wins: 0, losses: 0 };
+    let awayStats = { era: null, fip: null, ip: null, starts: 0, wins: 0, losses: 0 };
 
     if (homePitcherId) { homeStats = await fetchPitcherStats(homePitcherId); await sleep(80); }
     if (awayPitcherId) { awayStats = await fetchPitcherStats(awayPitcherId); await sleep(80); }
@@ -157,7 +175,11 @@ async function processDate(dateStr, existing) {
         lineup: homeLineup,
         sp_name: homePitcherName,
         sp_era: homeStats.era,
-        sp_fip: null,
+        sp_fip: homeStats.fip,
+        sp_ip:  homeStats.ip,
+        sp_starts: homeStats.starts || null,
+        sp_wins:   homeStats.wins   || null,
+        sp_losses: homeStats.losses || null,
         opp_team: awayTeam,
       });
     }
@@ -170,7 +192,11 @@ async function processDate(dateStr, existing) {
         lineup: awayLineup,
         sp_name: awayPitcherName,
         sp_era: awayStats.era,
-        sp_fip: null,
+        sp_fip: awayStats.fip,
+        sp_ip:  awayStats.ip,
+        sp_starts: awayStats.starts || null,
+        sp_wins:   awayStats.wins   || null,
+        sp_losses: awayStats.losses || null,
         opp_team: homeTeam,
       });
     }

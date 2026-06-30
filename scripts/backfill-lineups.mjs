@@ -41,18 +41,28 @@ function* eachDate(start, end) {
   while (d <= last) { yield d.toISOString().slice(0, 10); d.setUTCDate(d.getUTCDate() + 1); }
 }
 
-const eraCache = new Map();
-async function pitcherERA(id, season) {
-  if (!id) return null;
-  if (eraCache.has(id)) return eraCache.get(id);
-  let era = null;
+const statsCache = new Map();
+async function pitcherStats(id, season) {
+  if (!id) return { era: null, fip: null, ip: null, starts: null, wins: null, losses: null };
+  if (statsCache.has(`${id}:${season}`)) return statsCache.get(`${id}:${season}`);
+  let result = { era: null, fip: null, ip: null, starts: null, wins: null, losses: null };
   try {
     const data = await getJSON(`${API}/people/${id}/stats?stats=season&season=${season}&group=pitching`);
-    const st = data?.stats?.[0]?.splits?.[0]?.stat;
-    if (st && st.era != null) { const e = parseFloat(st.era); era = Number.isFinite(e) ? e : null; }
+    const st = data?.stats?.[0]?.splits?.[0]?.stat || {};
+    const era = parseFloat(st.era);
+    const fip = parseFloat(st.fieldingIndependentPitching);
+    const ip  = parseFloat(st.inningsPitched);
+    result = {
+      era:    (era && era < 90)  ? era  : null,
+      fip:    (fip && fip < 90)  ? fip  : null,
+      ip:     (ip  && ip  > 0)   ? ip   : null,
+      starts: parseInt(st.gamesStarted)  || null,
+      wins:   parseInt(st.wins)          || null,
+      losses: parseInt(st.losses)        || null,
+    };
   } catch { /* leave null */ }
-  eraCache.set(id, era);
-  return era;
+  statsCache.set(`${id}:${season}`, result);
+  return result;
 }
 
 // What's already in the table for the range:
@@ -96,11 +106,21 @@ async function processDate(date, state) {
 
   for (const g of games) {
     const gamePk = g.gamePk;
+    const getName = (players, id) => players[`ID${id}`]?.person?.fullName || null;
+
+    // Pre-extract hydrated boxscore data (may be partial; supplemented by direct fetch below)
+    const boxHome = g.boxscore?.teams?.home || {};
+    const boxAway = g.boxscore?.teams?.away || {};
+
     const sides = [
       { team: g.teams?.home?.team?.name, opp: g.teams?.away?.team?.name, side: 'home',
-        pid: g.teams?.home?.probablePitcher?.id, pname: g.teams?.home?.probablePitcher?.fullName || null },
+        probablePid: g.teams?.home?.probablePitcher?.id,
+        pname: g.teams?.home?.probablePitcher?.fullName || null,
+        actualPitchers: boxHome.pitchers || [] },
       { team: g.teams?.away?.team?.name, opp: g.teams?.home?.team?.name, side: 'away',
-        pid: g.teams?.away?.probablePitcher?.id, pname: g.teams?.away?.probablePitcher?.fullName || null },
+        probablePid: g.teams?.away?.probablePitcher?.id,
+        pname: g.teams?.away?.probablePitcher?.fullName || null,
+        actualPitchers: boxAway.pitchers || [] },
     ];
 
     let box = null; // lazy direct boxscore fetch, only if an insert needs it
@@ -121,22 +141,32 @@ async function processDate(date, state) {
         continue;
       }
 
-      // INSERT a missing game — need the batting order
+      // INSERT a missing game — need the batting order + actual starter
       let players = g.boxscore?.teams?.[s.side]?.players || {};
       let order   = g.boxscore?.teams?.[s.side]?.battingOrder || [];
+      let actualPitchers = s.actualPitchers;
       if (order.length < 7) {
         if (box === null) { try { box = await getJSON(`${API}/game/${gamePk}/boxscore`); } catch { box = undefined; } }
         players = box?.teams?.[s.side]?.players || players;
         order   = box?.teams?.[s.side]?.battingOrder || order;
+        actualPitchers = box?.teams?.[s.side]?.pitchers || actualPitchers;
       }
-      const lineup = order.map((id) => players[`ID${id}`]?.person?.fullName).filter(Boolean);
+      const lineup = order.map((id) => getName(players, id)).filter(Boolean);
       if (lineup.length < 7) continue; // no usable order recorded
 
-      const era = await pitcherERA(s.pid, season); await sleep(60);
+      // Use actual starter (first pitcher in boxscore) over probablePitcher
+      const actualStarterId = actualPitchers[0] || null;
+      const pid   = actualStarterId || s.probablePid;
+      const pname = actualStarterId ? (getName(players, actualStarterId) || s.pname) : s.pname;
+
+      const st = await pitcherStats(pid, season); await sleep(60);
       const { error } = await db.from('shared_lineup_baselines')
         .upsert({
           team_name: s.team, game_date: date, game_pk: gamePk,
-          lineup, sp_name: s.pname, sp_era: era, sp_fip: null, opp_team: s.opp,
+          lineup, sp_name: pname,
+          sp_era: st.era, sp_fip: st.fip, sp_ip: st.ip,
+          sp_starts: st.starts, sp_wins: st.wins, sp_losses: st.losses,
+          opp_team: s.opp,
         }, { onConflict: 'team_name,game_pk' });
       if (error) { console.error(`  insert ${s.team} ${date} pk${gamePk}: ${error.message}`); }
       else { state.pkSet.add(pkKey); inserted++; }

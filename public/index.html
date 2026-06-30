@@ -121,6 +121,8 @@
   }
   .date-btn:hover { border-color: var(--gold); color: var(--text); }
   input[type="date"].date-btn { cursor: text; }
+  #datePrevBtn:hover, #dateNextBtn:hover { border-color: var(--gold); color: var(--text); }
+  #dateNextBtn:disabled { opacity: 0.3; cursor: not-allowed; pointer-events: none; }
   .fetch-btn {
     background: linear-gradient(135deg, #E8643A 0%, #D94F20 100%);
     border: none; border-top: 1px solid rgba(255,255,255,0.12);
@@ -591,7 +593,7 @@
 
   /* ── COMPETITIVE INTEGRITY LEADERBOARD ── */
   .ci-leaderboard { background:var(--surface); border:1px solid var(--border); border-radius:var(--r-lg); overflow:hidden; margin-bottom:32px; }
-  .ci-header { display:flex; align-items:center; justify-content:space-between; padding:14px 18px; border-bottom:1px solid var(--border); background:rgba(255,255,255,0.02); }
+  .ci-header { display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; padding:12px 18px; border-bottom:1px solid var(--border); background:rgba(255,255,255,0.02); }
   .ci-header-title { font-family:var(--font-mono); font-size:9.5px; text-transform:uppercase; letter-spacing:2px; color:var(--text3); font-weight:700; }
   .ci-header-meta { font-family:var(--font-mono); font-size:10px; color:var(--text3); }
   .ci-cols { display:grid; grid-template-columns:30px 1fr 50px 64px 140px; gap:0; padding:7px 18px; border-bottom:1px solid var(--border2); }
@@ -1567,8 +1569,9 @@
     .stat-card .sub { font-size: 9px; }
 
     /* ── Date picker + fetch status ── */
-    .date-btn { font-size: 13px; padding: 8px 10px; width: 100%; box-sizing: border-box; }
+    .date-btn { font-size: 13px; padding: 8px 10px; box-sizing: border-box; }
     #fetchStatus { display: block; font-size: 10px; margin-top: 4px; }
+    #gameFilter { max-width: none !important; width: 100%; }
 
     /* ── Section headers ── */
     .section-hdr { flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
@@ -1910,17 +1913,25 @@
   <!-- MAIN CONTENT / full width -->
   <div>
     <div class="section-hdr" style="flex-wrap:wrap;gap:10px">
-      <h2>Today's Games</h2>
+      <h2 id="todayHeading">Today's Games</h2>
       <div id="puntPill" style="display:none;font-size:9px;font-family:var(--font-mono);color:var(--red2);letter-spacing:1px;text-transform:uppercase;border:1px solid rgba(224,92,42,0.3);padding:3px 9px;border-radius:4px;background:var(--red-dim)">🚩 Punt Detected</div>
       <div class="divider"></div>
-      <div style="display:flex;align-items:center;gap:8px;margin-left:auto">
+      <div style="display:flex;align-items:center;gap:6px;margin-left:auto">
+        <button id="datePrevBtn" onclick="shiftDate(-1)" title="Previous day" style="width:28px;height:28px;border-radius:6px;border:1px solid var(--border2);background:var(--bg2);color:var(--text2);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;line-height:1;flex-shrink:0">‹</button>
         <input type="date" id="datePicker" class="date-btn" onchange="fetchGames()" />
+        <button id="dateNextBtn" onclick="shiftDate(1)" title="Next day" style="width:28px;height:28px;border-radius:6px;border:1px solid var(--border2);background:var(--bg2);color:var(--text2);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;line-height:1;flex-shrink:0">›</button>
         <span id="fetchStatus" style="font-size:10px;font-family:var(--font-mono);color:var(--text3);letter-spacing:0.5px;min-width:100px;display:inline-block"></span>
       </div>
     </div>
 
     <!-- Punt Watch strip / rendered inline above the grid -->
     <div id="puntWatchBody"></div>
+
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+      <input type="text" id="gameFilter" placeholder="Filter by team…" oninput="filterGameCards(this.value)" style="flex:1;max-width:200px;background:var(--surface);border:1px solid var(--border2);border-radius:var(--r-md);color:var(--text2);padding:5px 10px;font-family:var(--font-mono);font-size:11px" />
+      <button id="backTodayBtn" onclick="jumpToToday()" title="Jump to today" style="display:none;padding:5px 12px;border-radius:var(--r-md);border:1px solid rgba(232,184,75,0.35);background:rgba(232,184,75,0.08);color:var(--gold);font-family:var(--font-mono);font-size:10px;cursor:pointer;letter-spacing:0.5px">↑ Today</button>
+      <span id="gameFilterCount" style="font-size:10px;color:var(--text3);font-family:var(--font-mono);display:none"></span>
+    </div>
 
     <div class="games-grid" id="gamesGrid">
       <div style="grid-column:1/-1;padding:56px 24px;text-align:center;color:var(--text3)">
@@ -1969,6 +1980,13 @@
         </div>
         <div id="leaderScore" style="padding:8px 0"></div>
       </div>
+      <div class="leader-card">
+        <div class="leader-card-header">
+          <span class="leader-card-title">Most Competitive</span>
+          <span style="font-size:9px;color:var(--text3);font-family:var(--font-mono)">Lowest punt rate (≥10 games)</span>
+        </div>
+        <div id="leaderClean" style="padding:8px 0"></div>
+      </div>
     </div>
   </div>
 
@@ -1986,7 +2004,7 @@
     <div style="font-family:var(--font-mono);font-size:9px;text-transform:uppercase;letter-spacing:2.5px;color:var(--red2);margin-bottom:10px;font-weight:700">The Punt Index · 2026 Season Report</div>
     <div style="font-family:var(--font-display);font-size:26px;font-weight:800;letter-spacing:-0.5px;color:var(--text);line-height:1.2;margin-bottom:10px">Measuring Competitive Integrity<br>Across All 30 MLB Clubs</div>
     <p style="font-size:12px;color:var(--text2);line-height:1.8;max-width:680px;margin:0 0 20px 0">Every game in the 2026 season is scored 0–80 for competitive intent using lineup composition, pitching deployment, series context, and in-game behavior. The result is the first systematic, game-by-game record of non-competitive effort in Major League Baseball.</p>
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px">
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;margin-bottom:20px">
       <div style="background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:10px;padding:16px 20px;text-align:center">
         <div style="font-family:var(--font-mono);font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);margin-bottom:8px">Punt Games (2026)</div>
         <div style="font-family:var(--font-display);font-size:36px;font-weight:800;color:var(--red2);line-height:1" id="aboutStatPunts">—</div>
@@ -1996,8 +2014,13 @@
         <div style="font-family:var(--font-display);font-size:36px;font-weight:800;color:var(--gold);line-height:1" id="aboutStatRate">—</div>
       </div>
       <div style="background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:10px;padding:16px 20px;text-align:center">
-        <div style="font-family:var(--font-mono);font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);margin-bottom:8px">Data Source</div>
-        <div style="font-family:var(--font-display);font-size:14px;font-weight:800;color:var(--blue);line-height:1.5">Official<br>MLB Stats API</div>
+        <div style="font-family:var(--font-mono);font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);margin-bottom:8px">Games Scored</div>
+        <div style="font-family:var(--font-display);font-size:36px;font-weight:800;color:var(--blue);line-height:1" id="aboutStatScored">—</div>
+      </div>
+      <div style="background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:10px;padding:16px 20px;text-align:center;cursor:pointer" id="aboutStatTopCard" onclick="aboutStatTopCard_click()" title="View this team's games">
+        <div style="font-family:var(--font-mono);font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);margin-bottom:8px">Most Active Punter</div>
+        <div style="font-family:var(--font-display);font-size:22px;font-weight:800;color:var(--red2);line-height:1.1" id="aboutStatTopTeam">—</div>
+        <div style="font-family:var(--font-mono);font-size:10px;color:var(--text3);margin-top:4px" id="aboutStatTopCount"></div>
       </div>
     </div>
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:0">
@@ -2013,6 +2036,11 @@
         <div style="font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--green);font-family:var(--font-mono);font-weight:700;margin-bottom:8px">Data Accountability</div>
         <p style="font-size:12px;color:var(--text2);line-height:1.7;margin:0">Built entirely on the official MLB Stats API — the same data infrastructure used by every front office in baseball. Every verdict is reproducible, auditable, and grounded in public record.</p>
       </div>
+    </div>
+    <div id="aboutDataFreshRow" style="display:none;margin-top:12px;padding:8px 16px;border-radius:8px;font-size:11px;font-family:var(--font-mono);align-items:center;gap:10px;background:rgba(255,255,255,0.02);border:1px solid var(--border)">
+      <span style="color:var(--text3)">DATA THROUGH</span>
+      <span id="aboutDataFreshDate" style="color:var(--text2);font-weight:600">—</span>
+      <span id="aboutDataFreshWarn" style="display:none;color:var(--gold);font-weight:700;margin-left:8px">⚠ Collector may be stalled</span>
     </div>
   </div>
 
@@ -2177,12 +2205,12 @@
       <div class="algo-item">
         <div class="ai-label">Spot Starter (≤2 GS, ERA &gt; 5.00)</div>
         <div class="ai-val" style="color:var(--green)">+5–6</div>
-        <div class="ai-desc">An emergency or spot arm with ≤2 starts and a poor ERA (or no ERA yet) is itself a punt signal — good teams don't burn rotation depth on days they want to win. The ERA gate avoids penalizing legitimate prospects making debut starts. Season debuts before June are also exempt (likely a top prospect, not emergency arm).</div>
+        <div class="ai-desc">An emergency or spot arm with ≤2 starts and a poor ERA (or no ERA yet) is itself a punt signal — good teams don't burn rotation depth on days they want to win. The ERA gate (>5.00) avoids penalizing legitimate prospects making debut starts. Early-season debuts (before June) are also exempt — a top prospect's first MLB start is not an emergency deployment.</div>
       </div>
       <div class="algo-item">
-        <div class="ai-label">ERA Gap ≥ 1.5 (opponent better)</div>
+        <div class="ai-label">ERA / FIP Gap ≥ 1.5 (opponent better)</div>
         <div class="ai-val" style="color:var(--green)">+10</div>
-        <div class="ai-desc">Clear pitching disadvantage vs opponent's starter. Uses raw ERA delta so elite rotations aren't penalized for having good arms. Weighted by start sample (≥4 starts = full weight), capped at 4.0 run difference.</div>
+        <div class="ai-desc">Clear pitching disadvantage vs opponent's starter. When both pitchers have FIP data, the signal blends <strong style="color:var(--text)">60% ERA + 40% FIP</strong> — FIP strips out luck (BABIP, strand rate) so a pitcher with a fluky high ERA but solid FIP is penalized less. Weighted by start sample (≥4 starts = full weight), capped at 4.0 run difference.</div>
       </div>
       <div class="algo-item">
         <div class="ai-label">Absolute ERA ≥ 6.00 (objectively poor)</div>
@@ -2837,6 +2865,7 @@ const REVIEW_THRESH = 28;  // out of 80 — flags borderline rest decisions wort
 // CALIBRATION_GAME_THRESHOLD = 60 / defined below in calibration section
 let starredTeams = new Set();
 let activeDivFilter = 'ALL';
+let ciSortMode = 'rate'; // 'rate' (best CI first) | 'punts' (worst offenders first)
 
 // ── TEAM TIMEZONE MAP ─────────────────────────────────────
 // Used to detect West→East same-day travel / a structural rest signal.
@@ -3696,6 +3725,33 @@ async function fetchGames() {
   const dateVal = document.getElementById('datePicker').value;
   if (!dateVal) return;
 
+  // Keep next-day button disabled when on today, enabled otherwise
+  const nextBtn = document.getElementById('dateNextBtn');
+  const todayStr = localTodayStr();
+  if (nextBtn) nextBtn.disabled = (dateVal >= todayStr);
+
+  // Show "Back to Today" button only when browsing a past date
+  const backBtn = document.getElementById('backTodayBtn');
+  if (backBtn) backBtn.style.display = (dateVal < todayStr) ? '' : 'none';
+
+  // Clear any active team filter when navigating dates
+  const filterInput = document.getElementById('gameFilter');
+  if (filterInput && filterInput.value) { filterInput.value = ''; filterGameCards(''); }
+
+  // Update section heading to show the selected date (or "Today")
+  const headingEl = document.getElementById('todayHeading');
+  if (headingEl) {
+    if (dateVal === todayStr) {
+      headingEl.textContent = "Today's Games";
+    } else {
+      const [hy, hm, hd] = dateVal.split('-').map(Number);
+      const hDate = new Date(hy, hm - 1, hd);
+      const dayName = hDate.toLocaleDateString('en-US', { weekday: 'short' });
+      const monthName = hDate.toLocaleDateString('en-US', { month: 'short' });
+      headingEl.textContent = `${dayName}, ${monthName} ${hd}`;
+    }
+  }
+
   const statusEl = document.getElementById('fetchStatus');
   if (statusEl) statusEl.textContent = 'Loading…';
 
@@ -3765,7 +3821,14 @@ async function fetchGames() {
     renderLeaders();
 
     if (statusEl) {
-      statusEl.textContent = `Updated ${new Date().toLocaleTimeString('en-US', { hour:'numeric', minute:'2-digit' })}`;
+      const _actG = analyzed.filter(g => g.flag !== 'postponed');
+      const _pCt = _actG.filter(g => g.flag === 'punt').length;
+      const _rCt = _actG.filter(g => g.flag === 'review').length;
+      const _time = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+      const _summary = _pCt || _rCt
+        ? `${_pCt} punt${_pCt !== 1 ? 's' : ''} · ${_rCt} review${_rCt !== 1 ? 's' : ''} · ${_actG.length} games`
+        : `${_actG.length} games · all clean`;
+      statusEl.textContent = _summary + ` · ${_time}`;
     }
 
     // Save lineup baselines to in-memory cache (fire and forget)
@@ -4231,12 +4294,16 @@ async function loadLineupBaselines() {
         const alreadyLoaded = lineupHistory[team].some(e => `${e.date}|${(e.sp || '').toLowerCase()}` === key);
         if (!alreadyLoaded) {
           lineupHistory[team].push({
-            date:  row.game_date,
-            lineup: row.lineup || [],
-            sp:    row.sp_name,
-            spFip: row.sp_fip,
-            spEra: row.sp_era,
-            opp:   row.opp_team,
+            date:    row.game_date,
+            lineup:  row.lineup || [],
+            sp:      row.sp_name,
+            spFip:   row.sp_fip,
+            spEra:   row.sp_era,
+            spIp:    row.sp_ip    || null,
+            spStarts: row.sp_starts || null,
+            spWins:  row.sp_wins   || null,
+            spLosses: row.sp_losses || null,
+            opp:     row.opp_team,
           });
         }
       });
@@ -4302,7 +4369,7 @@ async function _refreshBaselinesFromSupabase(cacheKey) {
       if (!lineupHistory[team]) lineupHistory[team] = [];
       const key = `${row.game_date}|${(row.sp_name || '').toLowerCase()}`;
       if (!lineupHistory[team].some(e => `${e.date}|${(e.sp || '').toLowerCase()}` === key)) {
-        lineupHistory[team].push({ date: row.game_date, lineup: row.lineup || [], sp: row.sp_name, spFip: row.sp_fip, spEra: row.sp_era, opp: row.opp_team });
+        lineupHistory[team].push({ date: row.game_date, lineup: row.lineup || [], sp: row.sp_name, spFip: row.sp_fip, spEra: row.sp_era, spIp: row.sp_ip || null, spStarts: row.sp_starts || null, spWins: row.sp_wins || null, spLosses: row.sp_losses || null, opp: row.opp_team });
       }
     });
     try { localStorage.setItem(cacheKey, JSON.stringify({ ts: Date.now(), data: lineupHistory })); } catch {}
@@ -4934,6 +5001,26 @@ async function analyzeGame(game, normalLineups) {
   const homeIsWestToEast = homeWestToEast;
   const awayIsWestToEast = awayWestToEast;
 
+  // ── ROAD TRIP LENGTH ─────────────────────────────────────────
+  // Count how many consecutive away games the away team has played going into today.
+  // Long road trips (5+ away games) increase rest incentive — managers protect
+  // veterans from accumulated travel fatigue, especially near the trip's end.
+  const getRoadTripLength = (teamName) => {
+    const sched = state.scheduleLog || [];
+    let tripLen = 0;
+    let d = new Date(gameDate + 'T12:00:00');
+    for (let i = 0; i < 20; i++) {
+      d.setDate(d.getDate() - 1);
+      const ds = d.toISOString().split('T')[0];
+      const isAway = sched.some(e => e.date === ds && e.away === teamName && !e.isPostponed);
+      if (!isAway) break;
+      tripLen++;
+    }
+    return tripLen;
+  };
+  // Road trips only matter when the team is currently the away team (still on the trip).
+  const awayRoadTrip = awayPlayedYesterday ? getRoadTripLength(awayTeam.name) + 1 : 0; // +1 counts today
+
   const homeScore = computePuntScore({
     effectiveBenched: homeEB.effectiveBenched,
     fipDelta: (homeStats.fip != null && awayStats.fip != null) ? homeStats.fip - awayStats.fip : null,
@@ -4945,6 +5032,7 @@ async function analyzeGame(game, normalLineups) {
     isBackToBack: homeIsBackToBack, hasTravelFatigue: homeHasTravelFatigue, isWestToEast: homeIsWestToEast,
     isDayAfterNight: homeDayAfterNight, consecutiveStreak: homeConsecutiveStreak,
     puntSeriesWins: homeSeries, oppSeriesWins: awaySeries,
+    roadTripLength: 0, // home team is never on a road trip
   });
   const awayScore = computePuntScore({
     effectiveBenched: awayEB.effectiveBenched,
@@ -4957,6 +5045,7 @@ async function analyzeGame(game, normalLineups) {
     isBackToBack: awayIsBackToBack, hasTravelFatigue: awayHasTravelFatigue, isWestToEast: awayIsWestToEast,
     isDayAfterNight: awayDayAfterNight, consecutiveStreak: awayConsecutiveStreak,
     puntSeriesWins: awaySeries, oppSeriesWins: homeSeries,
+    roadTripLength: awayRoadTrip,
   });
 
   const topPreGame = Math.max(homeScore, awayScore);
@@ -5075,6 +5164,8 @@ async function analyzeGame(game, normalLineups) {
     homeIsWestToEast, awayIsWestToEast,
     homeDayAfterNight, awayDayAfterNight,
     homeConsecutiveStreak, awayConsecutiveStreak,
+    awayRoadTrip, // consecutive away games the away team has been on the road
+    gameTime: game.gameDate || null,
   };
 }
 
@@ -5550,7 +5641,8 @@ function buildTeamFeedbackBias() {
 function computePuntScore({ effectiveBenched, eraDelta, fipDelta = null, isLastGame, isFirstGame,
   isDHNightcap, clinched, eliminated, gameDate, teamName,
   spFip, spEra, spStarts, spIp, seriesLength, isBackToBack, hasTravelFatigue, isWestToEast = true,
-  isDayAfterNight, consecutiveStreak, puntSeriesWins = null, oppSeriesWins = null }) {
+  isDayAfterNight, consecutiveStreak, puntSeriesWins = null, oppSeriesWins = null,
+  roadTripLength = 0 }) {
 
   const tq = getLiveTeamQuality(teamName);
 
@@ -5681,6 +5773,16 @@ function computePuntScore({ effectiveBenched, eraDelta, fipDelta = null, isLastG
   if (consecutiveStreak >= 7) {
     const streakBonus = Math.min(9, (consecutiveStreak - 6) * 1.2) * effMot;
     score += streakBonus;
+  }
+
+  // ── ROAD TRIP LENGTH ──────────────────────────────────────
+  // Away teams deep into a long road trip (5+ consecutive away games) rest
+  // veterans more freely — physical grind of travel, hotels, and no home
+  // routine compounds over time. Signal scales with trip length, capped at 6 pts.
+  // Only applies to the away team; home team receives 0 by convention.
+  if (roadTripLength >= 5) {
+    const tripBonus = Math.min(6, (roadTripLength - 4) * 1.5) * effMot;
+    score += tripBonus;
   }
 
   // ── CROSS-COUNTRY TRAVEL FATIGUE ─────────────────────────
@@ -5872,6 +5974,8 @@ function renderCard(g, idx) {
   const awayFip = (g.awaySP.fip && g.awaySP.fip < 90) ? g.awaySP.fip : null;
   const homeBad = homeFip !== null && awayFip !== null && homeFip > awayFip + 0.75;
   const awayBad = homeFip !== null && awayFip !== null && awayFip > homeFip + 0.75;
+  const awayIsSpot = g.awaySP.name !== 'TBD' && (g.awaySP.starts || 0) <= 2 && (g.awaySP.era == null || g.awaySP.era > 5.00);
+  const homeIsSpot = g.homeSP.name !== 'TBD' && (g.homeSP.starts || 0) <= 2 && (g.homeSP.era == null || g.homeSP.era > 5.00);
 
   // ── ABSENCE CHIPS ──────────────────────────────────────
   const puntAbsences = g.puntSide === 'home' ? g.homeAbsences : g.awayAbsences;
@@ -6043,8 +6147,8 @@ function renderCard(g, idx) {
     resultChip = `<span class="pc2-result ${won ? 'won' : 'lost'}">${won ? '✓ WON' : '✗ LOST'} ${pr}–${opr}</span>`;
   }
 
-  // Always show the punt score as a ring SVG (postponed shows nothing)
-  const verdictMetric = isPostponedF
+  // Punt score ring: hidden for postponed (no game played) and calibration (score is forced 0)
+  const verdictMetric = (isPostponedF || isCal)
     ? ''
     : scoreCircle;
 
@@ -6065,10 +6169,18 @@ function renderCard(g, idx) {
     }
   }
 
+  // Game start time — only shown for Preview (not yet started) games
+  let gameTimeBadge = '';
+  if (g.gameTime && g.gameStatus === 'Preview' && !isPostponed) {
+    const localTime = formatGameTime(g.gameTime);
+    if (localTime) gameTimeBadge = `<span class="series-badge" style="color:var(--text3);border-color:var(--border)">${localTime}</span>`;
+  }
+
   const tags = [
     `<span class="series-badge" style="${seriesBadgeStyle}">${seriesBadgeText}</span>`,
     isDH ? `<span class="series-badge" style="color:#a78bfa;border-color:rgba(167,139,250,0.3);background:rgba(167,139,250,0.08)">DH·2</span>` : '',
     (g.puntSide === 'home' ? g.homeIsBackToBack : g.awayIsBackToBack) ? `<span class="series-badge" style="color:var(--gold);border-color:rgba(232,184,75,0.3);background:rgba(232,184,75,0.07)" title="Back-to-back">B2B</span>` : '',
+    gameTimeBadge,
   ].filter(Boolean).join('');
 
   // Win-loss records from live standings
@@ -6078,7 +6190,7 @@ function renderCard(g, idx) {
   const homeWL = _homeStd ? `<span class="pc2-record">${_homeStd.wins}–${_homeStd.losses}</span>` : '';
 
   return `
-    <div class="game-card pc2 ${cardClass}" style="animation-delay:${delay}ms" onclick="openGameflowFromCard('${g.gid || idx}')" title="View inning-by-inning Gameflow">
+    <div class="game-card pc2 ${cardClass}" style="animation-delay:${delay}ms" onclick="openGameflowFromCard('${g.gid || idx}')" title="View inning-by-inning Gameflow" data-teams="${[g.home.name, g.away.name, abbr(g.home.name), abbr(g.away.name)].join(' ').toLowerCase()}">
 
       <div class="pc2-head">
         <div class="pc2-matchup">
@@ -6102,15 +6214,15 @@ function renderCard(g, idx) {
       <div class="pc2-pitchers">
         <div class="pc2-sp">
           <span class="pc2-sp-team" style="border-left:2px solid ${TEAM_COLORS[g.away.name]||'var(--border2)'};padding-left:5px">${abbr(g.away.name)}</span>
-          ${g.awaySP.name}
+          ${g.awaySP.name}${awayIsSpot ? ` <span style="font-family:var(--font-mono);font-size:9px;color:var(--gold);opacity:0.8">(spot)</span>` : ''}
           ${(g.awaySP.wins != null && g.awaySP.source === 'current') ? `<span style="font-family:var(--font-mono);font-size:10px;color:var(--text3)">${g.awaySP.wins}–${g.awaySP.losses}</span>` : ''}
-          <span class="pc2-sp-era ${awayBad ? 'bad' : ''}">${eraFmt(g.awaySP.era)} ERA</span>
+          <span class="pc2-sp-era ${awayBad ? 'bad' : ''}">${eraFmt(g.awaySP.era)} ERA${awayFip !== null ? `<span style="opacity:0.5;font-size:9px"> · ${eraFmt(awayFip)} FIP</span>` : ''}</span>
         </div>
         <div class="pc2-sp">
           <span class="pc2-sp-team" style="border-left:2px solid ${TEAM_COLORS[g.home.name]||'var(--border2)'};padding-left:5px">${abbr(g.home.name)}</span>
-          ${g.homeSP.name}
+          ${g.homeSP.name}${homeIsSpot ? ` <span style="font-family:var(--font-mono);font-size:9px;color:var(--gold);opacity:0.8">(spot)</span>` : ''}
           ${(g.homeSP.wins != null && g.homeSP.source === 'current') ? `<span style="font-family:var(--font-mono);font-size:10px;color:var(--text3)">${g.homeSP.wins}–${g.homeSP.losses}</span>` : ''}
-          <span class="pc2-sp-era ${homeBad ? 'bad' : ''}">${eraFmt(g.homeSP.era)} ERA</span>
+          <span class="pc2-sp-era ${homeBad ? 'bad' : ''}">${eraFmt(g.homeSP.era)} ERA${homeFip !== null ? `<span style="opacity:0.5;font-size:9px"> · ${eraFmt(homeFip)} FIP</span>` : ''}</span>
         </div>
       </div>
 
@@ -7691,8 +7803,9 @@ function renderPuntWatch(games) {
     const logoA = getTeamLogo(g.away.name);
     const logoH = getTeamLogo(g.home.name);
 
+    const gidJs = String(g.gid || '').replace(/'/g, "\\'");
     return `
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;padding:10px 14px;background:${bgColor};border:1px solid ${borderColor};border-radius:var(--r-md)">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;padding:10px 14px;background:${bgColor};border:1px solid ${borderColor};border-radius:var(--r-md);cursor:pointer" onclick="openGameflowFromCard('${gidJs}')" title="Open Gameflow">
         <div style="display:flex;align-items:center;gap:10px;min-width:0">
           <span style="font-size:9px;font-weight:700;font-family:var(--font-mono);letter-spacing:1px;color:${scoreColor};white-space:nowrap">${sourceTag}</span>
           <div style="display:flex;align-items:center;gap:5px;flex-shrink:0">
@@ -7702,7 +7815,7 @@ function renderPuntWatch(games) {
             <span style="font-family:var(--font-display);font-size:13px;font-weight:800;color:var(--text)">${abbr(g.home.name)}</span>
             ${logoH ? `<img src="${logoH}" style="width:18px;height:18px;object-fit:contain" alt="">` : ''}
           </div>
-          <span style="font-size:10px;color:var(--text3);font-family:var(--font-mono);white-space:nowrap">${abbr(puntTeam)} · ${benched} out${dhTag}</span>
+          <span style="font-size:10px;color:var(--text3);font-family:var(--font-mono);white-space:nowrap">${abbr(puntTeam)} · ${typeof benched === 'number' ? benched.toFixed(1) : benched} out${dhTag}</span>
         </div>
         <div style="font-family:var(--font-display);font-size:18px;font-weight:800;color:${scoreColor};flex-shrink:0">${score}</div>
       </div>`;
@@ -9024,6 +9137,18 @@ function openMostRecentPuntForTeam(teamName) {
   if (latest?.id) openGameFromTeams(latest.id);
 }
 
+function aboutStatTopCard_click() {
+  const card = document.getElementById('aboutStatTopCard');
+  const teamName = card?.dataset?.team;
+  if (teamName) { showPage('teams'); setTimeout(() => openMostRecentPuntForTeam(teamName), 80); }
+}
+
+function setCiSort(mode) {
+  if (ciSortMode === mode) return;
+  ciSortMode = mode;
+  renderCILeaderboard();
+}
+
 function renderCILeaderboard() {
   const el = document.getElementById('ciLeaderboard');
   if (!el) return;
@@ -9035,7 +9160,11 @@ function renderCILeaderboard() {
     const td = state.teamData[t.name] || { punts: 0, games: 0 };
     const games = teamGamesStored(t.name) || td.games;
     return { t, punts: td.punts, games, rate: games > 0 ? td.punts / games : null };
-  }).filter(r => r.games >= 10 && r.rate != null).sort((a, b) => a.rate - b.rate || a.punts - b.punts);
+  }).filter(r => r.games >= 10 && r.rate != null).sort((a, b) =>
+    ciSortMode === 'punts'
+      ? (b.punts - a.punts || b.rate - a.rate || a.t.name.localeCompare(b.t.name))
+      : (a.rate - b.rate || a.punts - b.punts || a.t.name.localeCompare(b.t.name))
+  );
 
   // Compute league-wide totals for the stat strip
   const totalPunts = state.gameLog.filter(e => effectiveFlag(e) === 'punt').length;
@@ -9048,8 +9177,42 @@ function renderCILeaderboard() {
   // Update About page stats
   const ap = document.getElementById('aboutStatPunts');
   const ar = document.getElementById('aboutStatRate');
+  const asc = document.getElementById('aboutStatScored');
   if (ap) ap.textContent = totalPunts > 0 ? totalPunts : '—';
   if (ar) ar.textContent = leaguePuntRate != null ? leaguePuntRate.toFixed(1) + '%' : '—';
+  if (asc) asc.textContent = totalScored > 0 ? totalScored.toLocaleString() : '—';
+
+  // Most active punter
+  const topOffender = ALL_TEAMS
+    .map(t => ({ name: t.name, abbr: t.abbr, punts: state.teamData[t.name]?.punts || 0 }))
+    .filter(t => t.punts > 0).sort((a, b) => b.punts - a.punts)[0];
+  const attEl = document.getElementById('aboutStatTopTeam');
+  const atcEl = document.getElementById('aboutStatTopCount');
+  if (attEl) attEl.textContent = topOffender ? topOffender.abbr : '—';
+  if (atcEl) atcEl.textContent = topOffender ? `${topOffender.punts} punt${topOffender.punts === 1 ? '' : 's'} this season` : '';
+  // store team name for click handler
+  const atCard = document.getElementById('aboutStatTopCard');
+  if (atCard && topOffender) atCard.dataset.team = topOffender.name;
+
+  // Data freshness
+  const allDates = (state.gameLog || []).filter(e => e.flag !== 'postponed' && (e.date || e.game_date)).map(e => e.date || e.game_date);
+  const lastDataDate = allDates.length ? allDates.slice().sort().pop() : null;
+  const freshRow = document.getElementById('aboutDataFreshRow');
+  const freshDate = document.getElementById('aboutDataFreshDate');
+  const freshWarn = document.getElementById('aboutDataFreshWarn');
+  if (freshRow && lastDataDate) {
+    freshRow.style.display = 'flex';
+    const [, m, d] = lastDataDate.split('-');
+    const months = ['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    if (freshDate) freshDate.textContent = `${months[+m] || m} ${+d}`;
+    // Warn if more than 2 days stale
+    if (freshWarn) {
+      const today = new Date();
+      const last = new Date(lastDataDate + 'T12:00:00');
+      const diffDays = (today - last) / 86400000;
+      freshWarn.style.display = diffDays > 2 ? 'inline' : 'none';
+    }
+  }
 
   renderAboutMonthTrend();
   renderAboutTopPunts();
@@ -9072,11 +9235,16 @@ function renderCILeaderboard() {
   };
   const puntClass = (p) => p >= 12 ? 'hi' : p >= 6 ? 'mid' : '';
 
+  const sortLabel = ciSortMode === 'punts' ? 'worst offenders' : 'best CI score';
   el.innerHTML = `
     <div class="ci-leaderboard">
       <div class="ci-header">
         <span class="ci-header-title">Competitive Integrity Rankings · 2026 Season</span>
-        <span class="ci-header-meta">${rows.length} teams w/ ≥10 scored games · sorted by punt rate</span>
+        <span class="ci-header-meta">${rows.length} teams w/ ≥10 scored games · ${sortLabel}</span>
+        <span style="display:flex;gap:5px;margin-left:auto;flex-shrink:0">
+          <button onclick="setCiSort('rate')" style="font-family:var(--font-mono);font-size:9px;padding:3px 9px;border-radius:4px;border:1px solid ${ciSortMode==='rate'?'var(--blue)':'var(--border2)'};background:${ciSortMode==='rate'?'rgba(91,156,246,0.15)':'transparent'};color:${ciSortMode==='rate'?'var(--blue)':'var(--text3)'};cursor:pointer;letter-spacing:1px;text-transform:uppercase">CI %</button>
+          <button onclick="setCiSort('punts')" style="font-family:var(--font-mono);font-size:9px;padding:3px 9px;border-radius:4px;border:1px solid ${ciSortMode==='punts'?'var(--red2)':'var(--border2)'};background:${ciSortMode==='punts'?'rgba(224,92,42,0.15)':'transparent'};color:${ciSortMode==='punts'?'var(--red2)':'var(--text3)'};cursor:pointer;letter-spacing:1px;text-transform:uppercase">Punts</button>
+        </span>
       </div>
       <div class="ci-cols">
         <span>#</span>
@@ -9119,7 +9287,7 @@ function renderAboutTopPunts() {
   };
   const scoreColor = (s) => s >= 70 ? 'var(--red2)' : s >= 56 ? 'var(--gold)' : 'var(--text2)';
   el.innerHTML = top5.map((e, i) => {
-    const topFactors = (e.breakdown || []).slice(0, 3).map(f => f.label).filter(Boolean).join('  ·  ');
+    const topFactors = (e.breakdown || []).filter(f => f && f.val > 0).sort((a, b) => b.val - a.val).slice(0, 3).map(f => f.label).filter(Boolean).join('  ·  ');
     const isPuntHome = e.puntSide === 'home';
     const puntAbbr = (() => {
       const tm = ALL_TEAMS.find(t => t.name === e.puntTeam);
@@ -9153,45 +9321,76 @@ function renderAboutTopPunts() {
 function renderAboutMonthTrend() {
   const el = document.getElementById('aboutMonthChart');
   if (!el) return;
-  const puntGames = (state.gameLog || []).filter(e => effectiveFlag(e) === 'punt');
+  const allGames = (state.gameLog || []).filter(e => e.flag !== 'postponed');
+  const puntGames = allGames.filter(e => effectiveFlag(e) === 'punt');
   const MONTHS = [
     { m: 2, label: 'Mar' }, { m: 3, label: 'Apr' }, { m: 4, label: 'May' },
     { m: 5, label: 'Jun' }, { m: 6, label: 'Jul' }, { m: 7, label: 'Aug' },
     { m: 8, label: 'Sep/Oct' }
   ];
   const counts = {};
-  puntGames.forEach(e => {
+  const totals = {};
+  const parseMonth = e => {
     const dateStr = e.date || e.game_date;
-    if (!dateStr) return;
+    if (!dateStr) return -1;
     const parts = String(dateStr).split('-');
-    if (parts.length < 2) return;
-    const m = parseInt(parts[1], 10) - 1;
-    counts[m] = (counts[m] || 0) + 1;
-  });
+    return parts.length < 2 ? -1 : parseInt(parts[1], 10) - 1;
+  };
+  puntGames.forEach(e => { const m = parseMonth(e); if (m >= 0) counts[m] = (counts[m] || 0) + 1; });
+  allGames.forEach(e => { const m = parseMonth(e); if (m >= 0) totals[m] = (totals[m] || 0) + 1; });
+
   const currentMonth = new Date().getMonth();
-  const maxCount = Math.max(1, ...MONTHS.map(({ m }) => counts[m] || 0));
-  const bars = MONTHS.map(({ m, label }) => {
+  // Bar heights driven by rate (%), so early months aren't dwarfed by raw volume
+  const rates = MONTHS.map(({ m }) => {
+    const t = totals[m] || 0;
+    return t > 0 ? (counts[m] || 0) / t * 100 : 0;
+  });
+  const maxRate = Math.max(1, ...rates);
+
+  const bars = MONTHS.map(({ m, label }, idx) => {
     const count = counts[m] || 0;
-    const pct = (count / maxCount) * 100;
+    const total = totals[m] || 0;
+    const rate = rates[idx];
+    const pct = (rate / maxRate) * 100;
     const isCurrent = m === currentMonth;
     const color = isCurrent ? 'rgba(232,184,75,0.75)' : 'rgba(224,92,42,0.55)';
-    return `<div style="display:flex;flex-direction:column;align-items:center;gap:6px;flex:1">
-      <div style="font-family:var(--font-display);font-size:18px;font-weight:800;color:${count > 0 ? 'var(--red2)' : 'var(--border2)'}">
-        ${count > 0 ? count : '·'}
+    const rateStr = total > 0 ? rate.toFixed(1) + '%' : '—';
+    const countStr = count > 0 ? `${count}/${total}` : '';
+    return `<div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1">
+      <div style="font-family:var(--font-display);font-size:16px;font-weight:800;color:${count > 0 ? (isCurrent ? 'var(--gold)' : 'var(--red2)') : 'var(--border2)'}">
+        ${total > 0 ? rateStr : '·'}
       </div>
-      <div style="width:100%;background:var(--bg3);border-radius:3px 3px 0 0;height:60px;display:flex;align-items:flex-end;overflow:hidden">
+      ${countStr ? `<div style="font-family:var(--font-mono);font-size:8px;color:var(--text3)">${countStr}</div>` : '<div style="font-size:8px">&nbsp;</div>'}
+      <div style="width:100%;background:var(--bg3);border-radius:3px 3px 0 0;height:56px;display:flex;align-items:flex-end;overflow:hidden">
         <div style="width:100%;height:${Math.max(count > 0 ? 6 : 0, pct)}%;background:${color};border-radius:3px 3px 0 0;transition:height 0.4s"></div>
       </div>
       <div style="font-family:var(--font-mono);font-size:9px;text-transform:uppercase;letter-spacing:1px;color:${isCurrent ? 'var(--gold)' : 'var(--text3)'};font-weight:${isCurrent ? '700' : '400'}">${label}</div>
     </div>`;
   }).join('');
-  el.innerHTML = `<div style="display:flex;gap:10px;align-items:stretch">${bars}</div>`;
+  el.innerHTML = `<div style="display:flex;gap:8px;align-items:stretch">${bars}</div>
+    <div style="margin-top:10px;font-family:var(--font-mono);font-size:9px;color:var(--text3)">Bar height = punt rate · label = punts / games scored that month</div>`;
 }
 
 function renderTeamBreakdown() {
   renderCILeaderboard();
   const query = (document.getElementById('teamSearch')?.value || '').toLowerCase();
   const grid = document.getElementById('teamsGrid');
+
+  // Pre-compute streaks from a single merged log pass
+  const today = localTodayStr();
+  const mergedLog = getMergedLog()
+    .filter(e => (e.flag === 'punt' || e.flag === 'clean' || e.flag === 'review') && e.date <= today && !e.isScheduled);
+  const teamStreaks = {};
+  ALL_TEAMS.forEach(t => {
+    const tlog = mergedLog
+      .filter(e => e.away === t.name || e.home === t.name)
+      .sort((a, b) => b.date.localeCompare(a.date));
+    if (!tlog.length) return;
+    const firstFlag = tlog[0].flag;
+    let count = 0;
+    for (const e of tlog) { if (e.flag === firstFlag) count++; else break; }
+    if (count >= 2) teamStreaks[t.name] = { type: firstFlag, count };
+  });
 
   let filtered = ALL_TEAMS.filter(t => {
     const matchDiv = activeDivFilter === 'ALL' || t.division === activeDivFilter;
@@ -9239,8 +9438,14 @@ function renderTeamBreakdown() {
       : `<div class="tp-empty">No punt games detected this season</div>`;
 
     const record = (td.puntW || td.puntL) ? ` &middot; ${td.puntW}\u2013${td.puntL} in punts` : '';
+    const streak = teamStreaks[t.name];
+    const streakBadge = streak?.type === 'punt'
+      ? ` &middot; <span style="color:var(--red2);font-weight:700">\ud83d\udea9 ${streak.count} straight</span>`
+      : streak?.type === 'clean' && streak.count >= 8
+        ? ` &middot; <span style="color:var(--green);font-weight:700">\u2713 ${streak.count} clean</span>`
+        : '';
     const statsLine = hasPunts
-      ? `<span class="tp-count ${countClass}">${td.punts}</span> punt ${td.punts === 1 ? 'game' : 'games'} &middot; ${rate}% rate${record}`
+      ? `<span class="tp-count ${countClass}">${td.punts}</span> punt ${td.punts === 1 ? 'game' : 'games'} &middot; ${rate}% rate${record}${streakBadge}`
       : `${tracked} game${tracked === 1 ? '' : 's'} tracked &middot; clean`;
 
     return `
@@ -9351,6 +9556,8 @@ function renderLeaders() {
   const byPunts = [...teams].sort((a, b) => b.punts - a.punts).slice(0, 5);
   const byRate  = [...teams].filter(t => t.games >= 10).sort((a, b) => b.rate - a.rate).slice(0, 5);
   const byScore = [...teams].filter(t => t.avgScore > 0).sort((a, b) => b.avgScore - a.avgScore).slice(0, 5);
+  // Most competitive = lowest punt rate, minimum 10 games, ascending rate
+  const byClean = [...teams].filter(t => t.games >= 10).sort((a, b) => a.rate - b.rate || b.games - a.games).slice(0, 5);
 
   const maxPunts = byPunts[0]?.punts || 1;
   const maxRate  = byRate[0]?.rate  || 1;
@@ -9386,9 +9593,39 @@ function renderLeaders() {
   const pEl = document.getElementById('leaderPunts');
   const rEl = document.getElementById('leaderRate');
   const sEl = document.getElementById('leaderScore');
+  const cEl = document.getElementById('leaderClean');
   if (pEl) pEl.innerHTML = renderList(byPunts, t => t.punts, t => `${t.punts}`, '');
   if (rEl) rEl.innerHTML = renderList(byRate,  t => t.rate,  t => `${t.rate.toFixed(1)}%`, 'gold');
   if (sEl) sEl.innerHTML = renderList(byScore, t => t.avgScore, t => `${t.avgScore.toFixed(1)}`, 'green');
+  if (cEl) {
+    // For cleanest teams, rank #1 has the lowest rate — flip the bar so it shows relative to the worst
+    const maxCleanRate = byClean.length ? byClean[byClean.length - 1].rate || 1 : 1;
+    cEl.innerHTML = byClean.map((t, i) => {
+      const logoUrl = getTeamLogo(t.name);
+      const logoEl = logoUrl
+        ? `<img class="leader-logo" src="${logoUrl}" alt="${t.abbr}" onerror="this.outerHTML='<span class=\\'leader-logo-fallback\\'>${t.abbr}</span>'">`
+        : `<span class="leader-logo-fallback">${t.abbr}</span>`;
+      const rankClass = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '';
+      const rankIcon = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i+1}`;
+      // Invert bar: 0% punt rate = full bar (100%), higher rate = shorter bar
+      const pct = maxCleanRate > 0 ? Math.max(10, Math.round((1 - t.rate / maxCleanRate) * 100)) : 100;
+      return `
+        <div class="leader-row">
+          <span class="leader-rank ${rankClass}">${rankIcon}</span>
+          ${logoEl}
+          <div class="leader-name">
+            <div class="leader-abbr">${t.abbr}</div>
+            <div class="leader-div">${t.division}</div>
+          </div>
+          <div style="text-align:right">
+            <div class="leader-val green">${t.rate.toFixed(1)}%</div>
+            <div class="leader-bar-wrap" style="width:60px;margin-top:3px">
+              <div class="leader-bar" style="width:${pct}%;background:var(--green)"></div>
+            </div>
+          </div>
+        </div>`;
+    }).join('');
+  }
 
   document.getElementById('leadersSection').style.display = '';
 }
@@ -9436,6 +9673,7 @@ function renderWatchList(games) {
         logoUrl: getTeamLogo(team.name),
         opp: side === 'home' ? g.away : g.home,
         risk: score >= PUNT_THRESH ? 'high' : 'med',
+        gid: g.gid,
       });
     });
   });
@@ -9449,14 +9687,18 @@ function renderWatchList(games) {
       ? `<img class="watch-logo" src="${r.logoUrl}" alt="${abbr(r.team.name)}" onerror="this.style.display='none'">`
       : '';
     const riskLabel = r.risk === 'high' ? '🚩 HIGH' : '🔍 WATCH';
+    const clickAttr = r.gid ? `onclick="openGameflowFromCard('${String(r.gid).replace(/'/g,"\\'")}')" style="cursor:pointer"` : '';
     return `
-      <div class="watch-card ${r.risk}-risk">
+      <div class="watch-card ${r.risk}-risk" ${clickAttr} title="${r.gid ? 'View Gameflow' : ''}">
         ${logoEl}
         <div class="watch-info">
           <div class="watch-team">${abbr(r.team.name)} vs ${abbr(r.opp.name)}</div>
           <div class="watch-reason">${r.reasons.slice(0, 2).join(' · ')}</div>
         </div>
-        <div class="watch-risk ${r.risk}">${riskLabel}</div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex-shrink:0">
+          <div class="watch-risk ${r.risk}">${riskLabel}</div>
+          <div style="font-family:var(--font-mono);font-size:11px;color:var(--text3)">${r.score}/80</div>
+        </div>
       </div>`;
   }).join('');
 
@@ -9579,6 +9821,9 @@ function buildScoreBreakdown(g) {
   if (isB2B)  push('Back-to-back game', 6 * effMot, 6);
   if (isDAN)  push('Day game after night', 5 * effMot, 5);
   if (streak >= 7) push(`${streak}-game no-rest stretch`, Math.min(9, (streak - 6) * 1.2) * effMot, 9);
+  // Road trip length — only relevant when punt side is the away team
+  const roadTrip = g.puntSide === 'away' ? (g.awayRoadTrip || 0) : 0;
+  if (roadTrip >= 5) push(`${roadTrip}-game road trip`, Math.min(6, (roadTrip - 4) * 1.5) * effMot, 6);
   if (isFat)  push(isW2E ? 'West→East travel' : 'East→West travel', (isW2E ? 5 : 3) * effMot, 5);
 
   if (aceNote) factors.push({ label: aceNote, val: 0, max: 0, isAceNote: true });
@@ -9738,6 +9983,53 @@ function navigatePuntGame(dateStr) {
   if (dp) dp.value = dateStr;
   showPage('today');
   fetchGames();
+}
+
+function shiftDate(delta) {
+  const dp = document.getElementById('datePicker');
+  if (!dp || !dp.value) return;
+  const [y, m, d] = dp.value.split('-').map(Number);
+  const date = new Date(y, m - 1, d);
+  date.setDate(date.getDate() + delta);
+  const next = [
+    date.getFullYear(),
+    String(date.getMonth() + 1).padStart(2, '0'),
+    String(date.getDate()).padStart(2, '0'),
+  ].join('-');
+  const today = localTodayStr();
+  if (next > today) return; // don't navigate into the future
+  dp.value = next;
+  const nextBtn = document.getElementById('dateNextBtn');
+  if (nextBtn) nextBtn.disabled = (next >= today);
+  fetchGames();
+}
+
+function jumpToToday() {
+  const dp = document.getElementById('datePicker');
+  if (!dp) return;
+  dp.value = localTodayStr();
+  fetchGames();
+}
+
+function filterGameCards(query) {
+  const q = (query || '').toLowerCase().trim();
+  const cards = document.querySelectorAll('#gamesGrid .game-card.pc2');
+  let visible = 0;
+  cards.forEach(card => {
+    const teams = card.dataset.teams || '';
+    const show = !q || teams.includes(q);
+    card.style.display = show ? '' : 'none';
+    if (show) visible++;
+  });
+  const countEl = document.getElementById('gameFilterCount');
+  if (countEl) {
+    if (q && cards.length) {
+      countEl.textContent = `${visible}/${cards.length}`;
+      countEl.style.display = '';
+    } else {
+      countEl.style.display = 'none';
+    }
+  }
 }
 
 // ── GAMEFLOW CHART ────────────────────────────────────────
@@ -10523,6 +10815,12 @@ document.addEventListener('keydown', e => {
   if (e.key === 't' && !e.metaKey && !e.ctrlKey && document.activeElement.tagName !== 'INPUT') {
     const dp = document.getElementById('datePicker');
     if (dp) { dp.value = localTodayStr(); fetchGames(); }
+  }
+  // Arrow keys = prev/next day (when Today tab is active and no input focused)
+  const _noInput = document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA';
+  if (_noInput && currentPage === 'today') {
+    if (e.key === 'ArrowLeft' && !e.metaKey) { e.preventDefault(); shiftDate(-1); }
+    if (e.key === 'ArrowRight' && !e.metaKey) { e.preventDefault(); shiftDate(1); }
   }
 });
 
