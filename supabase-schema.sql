@@ -95,3 +95,38 @@ create trigger update_prefs_ts
   for each row execute function update_updated_at();
 
 -- Done! Your database is ready.
+
+-- ── SHARED LINEUP BASELINES ───────────────────────────────
+-- Written daily by GitHub Actions / collect-lineups.js.
+-- One row per (team, game) — both halves of a doubleheader get separate rows.
+-- RLS: anon SELECT allowed (public data). No INSERT/UPDATE from client.
+create table if not exists shared_lineup_baselines (
+  id          bigserial primary key,
+  team_name   text not null,
+  game_date   date not null,
+  game_pk     bigint,
+  lineup      text[] not null default '{}',
+  sp_name     text,
+  sp_era      numeric(5,2),
+  sp_fip      numeric(5,2),
+  sp_ip       numeric(5,1),
+  sp_starts   integer,
+  sp_wins     integer,
+  sp_losses   integer,
+  opp_team    text,
+  created_at  timestamptz default now(),
+  unique(team_name, game_pk)
+);
+
+-- Allow all users (including anonymous) to read collected lineups.
+alter table shared_lineup_baselines enable row level security;
+create policy "Public read shared lineups"
+  on shared_lineup_baselines for select using (true);
+
+-- ── MIGRATION: add pitcher stat columns (run if table already exists) ──
+-- Safe to re-run — IF NOT EXISTS is a no-op on already-present columns.
+alter table shared_lineup_baselines add column if not exists sp_fip     numeric(5,2);
+alter table shared_lineup_baselines add column if not exists sp_ip      numeric(5,1);
+alter table shared_lineup_baselines add column if not exists sp_starts  integer;
+alter table shared_lineup_baselines add column if not exists sp_wins    integer;
+alter table shared_lineup_baselines add column if not exists sp_losses  integer;
