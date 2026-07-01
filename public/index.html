@@ -1056,7 +1056,7 @@
   .skeleton-line.title { height:16px; width:60%; margin-bottom:12px; }
 
   /* ── SEASON LEADERS ── */
-  .leaders-section { margin-top:48px; padding-top:48px; border-top:1px solid var(--border); }
+  .leaders-section { margin-bottom:32px; padding-bottom:32px; border-bottom:1px solid var(--border); }
   .leaders-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:12px; }
   .leader-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--r-lg); overflow:hidden; transition:all 0.15s; }
   .leader-card:hover { border-color:var(--border2); }
@@ -1897,8 +1897,8 @@
 
   <!-- TOP NAV TABS -->
   <nav class="top-nav" id="topNav">
-    <button class="top-nav-tab active" id="tab-today" onclick="showPage('today')">Today</button>
-    <button class="top-nav-tab" id="tab-teams" onclick="showPage('teams')">Team Punts</button>
+    <button class="top-nav-tab active" id="tab-teams" onclick="showPage('teams')">Team Punts</button>
+    <button class="top-nav-tab" id="tab-today" onclick="showPage('today')">Today</button>
     <button class="top-nav-tab" id="tab-lineups" onclick="showPage('lineups')">Lineup</button>
     <button class="top-nav-tab" id="tab-roster" onclick="showPage('roster')">Injuries</button>
     <button class="top-nav-tab" id="tab-gameflow" onclick="showPage('gameflow')">Gameflow</button>
@@ -1908,7 +1908,7 @@
   </nav>
 
   <!-- PAGE: TODAY -->
-  <div class="page active" id="page-today">
+  <div class="page" id="page-today">
 
   <!-- MAIN CONTENT / full width -->
   <div>
@@ -1921,6 +1921,45 @@
         <input type="date" id="datePicker" class="date-btn" onchange="fetchGames()" />
         <button id="dateNextBtn" onclick="shiftDate(1)" title="Next day" style="width:28px;height:28px;border-radius:6px;border:1px solid var(--border2);background:var(--bg2);color:var(--text2);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;line-height:1;flex-shrink:0">›</button>
         <span id="fetchStatus" style="font-size:10px;font-family:var(--font-mono);color:var(--text3);letter-spacing:0.5px;min-width:100px;display:inline-block"></span>
+      </div>
+    </div>
+
+    <!-- SEASON LEADERS -->
+    <div class="leaders-section" id="leadersSection">
+      <div class="section-hdr">
+        <h2>Season Leaders</h2>
+        <div class="pill gold" id="seasonPill">2026</div>
+        <div class="divider"></div>
+      </div>
+      <div class="leaders-grid" id="leadersGrid">
+        <div class="leader-card">
+          <div class="leader-card-header">
+            <span class="leader-card-title">Most Punt Games</span>
+            <span style="font-size:9px;color:var(--text3);font-family:var(--font-mono)">Season total</span>
+          </div>
+          <div id="leaderPunts" style="padding:8px 0"></div>
+        </div>
+        <div class="leader-card">
+          <div class="leader-card-header">
+            <span class="leader-card-title">Highest Punt Rate</span>
+            <span style="font-size:9px;color:var(--text3);font-family:var(--font-mono)">% of games</span>
+          </div>
+          <div id="leaderRate" style="padding:8px 0"></div>
+        </div>
+        <div class="leader-card">
+          <div class="leader-card-header">
+            <span class="leader-card-title">Highest Avg Score</span>
+            <span style="font-size:9px;color:var(--text3);font-family:var(--font-mono)">Punt games only</span>
+          </div>
+          <div id="leaderScore" style="padding:8px 0"></div>
+        </div>
+        <div class="leader-card">
+          <div class="leader-card-header">
+            <span class="leader-card-title">Most Competitive</span>
+            <span style="font-size:9px;color:var(--text3);font-family:var(--font-mono)">Lowest punt rate (≥10 games)</span>
+          </div>
+          <div id="leaderClean" style="padding:8px 0"></div>
+        </div>
       </div>
     </div>
 
@@ -1949,45 +1988,6 @@
       <div class="divider"></div>
     </div>
     <div class="watchlist-grid" id="watchlistGrid"></div>
-  </div>
-
-  <!-- SEASON LEADERS -->
-  <div class="leaders-section" id="leadersSection">
-    <div class="section-hdr">
-      <h2>Season Leaders</h2>
-      <div class="pill gold" id="seasonPill">2026</div>
-      <div class="divider"></div>
-    </div>
-    <div class="leaders-grid" id="leadersGrid">
-      <div class="leader-card">
-        <div class="leader-card-header">
-          <span class="leader-card-title">Most Punt Games</span>
-          <span style="font-size:9px;color:var(--text3);font-family:var(--font-mono)">Season total</span>
-        </div>
-        <div id="leaderPunts" style="padding:8px 0"></div>
-      </div>
-      <div class="leader-card">
-        <div class="leader-card-header">
-          <span class="leader-card-title">Highest Punt Rate</span>
-          <span style="font-size:9px;color:var(--text3);font-family:var(--font-mono)">% of games</span>
-        </div>
-        <div id="leaderRate" style="padding:8px 0"></div>
-      </div>
-      <div class="leader-card">
-        <div class="leader-card-header">
-          <span class="leader-card-title">Highest Avg Score</span>
-          <span style="font-size:9px;color:var(--text3);font-family:var(--font-mono)">Punt games only</span>
-        </div>
-        <div id="leaderScore" style="padding:8px 0"></div>
-      </div>
-      <div class="leader-card">
-        <div class="leader-card-header">
-          <span class="leader-card-title">Most Competitive</span>
-          <span style="font-size:9px;color:var(--text3);font-family:var(--font-mono)">Lowest punt rate (≥10 games)</span>
-        </div>
-        <div id="leaderClean" style="padding:8px 0"></div>
-      </div>
-    </div>
   </div>
 
   <!-- SCROLL TO TOP -->
@@ -2216,7 +2216,7 @@
   </div><!-- /page-roster -->
 
   <!-- PAGE: TEAMS -->
-  <div class="page" id="page-teams">
+  <div class="page active" id="page-teams">
 
   <!-- STAT STRIP -->
   <div class="stat-strip" style="margin-top:32px">
@@ -10049,7 +10049,7 @@ function formatGameTime(isoDate) {
 // ══════════════════════════════════════════════════════════
 
 // ── PAGE NAVIGATION ──────────────────────────────────────
-let currentPage = 'today';
+let currentPage = 'teams';
 
 function showPage(page) {
   currentPage = page;
