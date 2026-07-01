@@ -9708,9 +9708,11 @@ function renderTeamBreakdown() {
       .filter(e => e.away === t.name || e.home === t.name)
       .sort((a, b) => b.date.localeCompare(a.date));
     if (!tlog.length) return;
-    const firstFlag = tlog[0].flag;
+    // effectiveFlag so a manual override is reflected in the streak, same
+    // as everywhere else that classifies games as punt/review/clean.
+    const firstFlag = effectiveFlag(tlog[0]);
     let count = 0;
-    for (const e of tlog) { if (e.flag === firstFlag) count++; else break; }
+    for (const e of tlog) { if (effectiveFlag(e) === firstFlag) count++; else break; }
     if (count >= 2) teamStreaks[t.name] = { type: firstFlag, count };
   });
 
@@ -10090,29 +10092,6 @@ function getDataConfidence(teamName) {
   if (stored < 80) return { pct: 75, label: 'Good', dot: 'partial' };
   if (stored < 120) return { pct: 88, label: 'Strong', dot: 'partial' };
   return { pct: 96, label: 'High', dot: 'full' };
-}
-
-// ══════════════════════════════════════════════════════════
-// STREAK TRACKER / consecutive punt/clean games per team
-// ══════════════════════════════════════════════════════════
-
-function getTeamStreak(teamName) {
-  const today = localTodayStr();
-  const log = getMergedLog()
-    .filter(e => e.away === teamName || e.home === teamName)
-    .filter(e => e.flag === 'punt' || e.flag === 'clean' || e.flag === 'review')
-    .filter(e => e.date <= today && !e.isScheduled) // only past played games
-    .sort((a, b) => b.date.localeCompare(a.date));
-
-  if (!log.length) return null;
-  const firstFlag = log[0].flag;
-  let count = 0;
-  for (const e of log) {
-    if (e.flag === firstFlag) count++;
-    else break;
-  }
-  if (count < 2) return null;
-  return { type: firstFlag, count };
 }
 
 // ══════════════════════════════════════════════════════════
