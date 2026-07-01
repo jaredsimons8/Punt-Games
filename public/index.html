@@ -2141,7 +2141,7 @@
     </div>
 
     <div style="font-size:12px;color:var(--text2);margin-bottom:14px;line-height:1.6">
-      Select a team and date to see the <strong style="color:var(--text)">typical batting order</strong> the algorithm had built through that date. Each slot (1–9) shows whoever most commonly hit there, weighted toward recent games. This positional baseline is what the algorithm compares against — if today's lineup puts a weak hitter in a premium slot, that contributes to the punt score.
+      Select a team and date to see the <strong style="color:var(--text)">typical batting order</strong> the algorithm had built through that date. Each slot (1–9) shows whoever most commonly hit there, weighted toward recent games. This view is for reference only — a player batting in a different slot than usual is not treated as rested or benched; only players missing from the lineup entirely affect the punt score.
     </div>
 
     <!-- Per-team calibration progress / populated by renderCalProgress() -->
@@ -2686,7 +2686,7 @@
 
         <div style="margin-top:12px;background:rgba(29,100,180,0.07);border:1px solid rgba(29,100,180,0.25);border-radius:10px;padding:14px 18px;font-size:12px;color:var(--text2);line-height:1.8">
           <strong style="color:#7aabdf">🔄 Living Baseline / Adapts to Roster Changes</strong><br>
-          The algorithm compares each day's batting order against a <strong style="color:var(--text)">recency-weighted composite baseline</strong> built from 60+ stored games. The last 20 games carry full weight, the 20 before that carry half, anything older carries quarter weight. Traded players fade out in ~3 weeks. Injured players returning earn their way back in as they accumulate appearances. The baseline always reflects who the team actually is right now / not who they were in April.
+          The algorithm compares each day's starting lineup (who's in it, not what order they bat in) against a <strong style="color:var(--text)">recency-weighted composite baseline</strong> built from 60+ stored games. The last 20 games carry full weight, the 20 before that carry half, anything older carries quarter weight. Traded players fade out in ~3 weeks. Injured players returning earn their way back in as they accumulate appearances. The baseline always reflects who the team actually is right now / not who they were in April.
         </div>
 
         <div style="margin-top:20px">
@@ -4465,107 +4465,6 @@ function buildNormalLineupFromHistory(teamName, activeRosterNames = null) {
   return normal.length >= 5 ? normal : null;
 }
 
-// ── ORDER-POSITION BASELINE ─────────────────────────────────
-// Builds a map of player → average batting order position from history.
-// Only considers the last 40 games (recency-weighted) so trades/injuries
-// fade out naturally. Position 1 = leadoff, 4 = cleanup, etc.
-function buildOrderBaseline(teamName) {
-  const history = lineupHistory[teamName] || [];
-  if (history.length < 20) return null; // need some history
-
-  const sorted = [...history].sort((a, b) => b.date.localeCompare(a.date));
-  const recent = sorted.slice(0, 40);
-
-  const posSum = {};   // player -> sum of weighted positions
-  const posCount = {}; // player -> sum of weights
-
-  recent.forEach((entry, idx) => {
-    const weight = idx < 20 ? 1.0 : 0.5;
-    (entry.lineup || []).forEach((player, pos) => {
-      if (!player) return;
-      const p = player.toLowerCase();
-      posSum[p]   = (posSum[p]   || 0) + (pos + 1) * weight; // pos+1 = 1-based order
-      posCount[p] = (posCount[p] || 0) + weight;
-    });
-  });
-
-  // Only include players who appeared in ≥30% of recent games
-  const minCount = recent.length * 0.30;
-  const baseline = {};
-  Object.keys(posSum).forEach(p => {
-    if (posCount[p] >= minCount) {
-      baseline[p] = posSum[p] / posCount[p]; // average batting order position
-    }
-  });
-  return Object.keys(baseline).length >= 5 ? baseline : null;
-}
-
-// ── ORDER-DEGRADATION SIGNAL ─────────────────────────────────
-// Compares today's batting order against the historical position baseline.
-// Flags when premium slots (1–4) are filled with players who normally
-// bat much lower, or when star players are absent from high-leverage spots.
-//
-// Returns: { score: number 0–15, breakdown: string[] }
-// Score is added to effectiveBenched-equivalent before punt scoring.
-function computeOrderDegradation(teamName, todayLineup) {
-  if (!todayLineup || todayLineup.length < 5) return { score: 0, breakdown: [] };
-  const baseline = buildOrderBaseline(teamName);
-  if (!baseline) return { score: 0, breakdown: [] };
-
-  // Premium slots: 1-4 (leadoff through cleanup). These carry the most PA
-  // and run-scoring leverage — a manager punting will often demote stars out
-  // of these spots and promote bench players up into them.
-  const PREMIUM_SLOTS = [1, 2, 3, 4];
-  const PREMIUM_THRESHOLD = 5.5; // player normally bats 6th or lower = "non-premium"
-
-  let degradationPts = 0;
-  const breakdown = [];
-
-  todayLineup.forEach((player, idx) => {
-    if (!player) return;
-    const p = player.toLowerCase();
-    const slot = idx + 1; // 1-based
-    const normalPos = baseline[p];
-
-    if (!PREMIUM_SLOTS.includes(slot)) return; // only care about slots 1–4
-
-    if (normalPos === undefined) {
-      // Player has no baseline history in premium slot — likely a bench player promoted
-      // Check if they appear at all in baseline (any position)
-      // If not in baseline at all, flag as suspicious filler
-      const inBaseline = Object.keys(baseline).includes(p);
-      if (!inBaseline) {
-        degradationPts += 1.5;
-        breakdown.push(`${player} batting ${slot}${ordinal(slot)} with no lineup history`);
-      }
-      return;
-    }
-
-    // Player IS in baseline — check if they're being promoted into a premium slot
-    // well above their typical position
-    const positionPromotion = normalPos - slot; // positive = batting higher than usual
-    if (positionPromotion >= 2.5) {
-      // E.g. normally bats 7th (7.0), today batting 3rd (slot=3) → promotion of 4.0
-      const pts = Math.min(3.0, positionPromotion * 0.6);
-      degradationPts += pts;
-      breakdown.push(`${player} batting ${slot}${ordinal(slot)} (normally ~${Math.round(normalPos)}${ordinal(Math.round(normalPos))})`);
-    }
-  });
-
-  // Also check: are known cleanup/top-of-order regulars completely absent?
-  // This is already handled by effectiveBenched, so we only add a small
-  // positional bonus for the specific premium-slot degradation aspect.
-  degradationPts = Math.min(8, degradationPts); // cap at 8 pts total from order signal
-
-  return { score: Math.round(degradationPts * 10) / 10, breakdown };
-}
-
-function ordinal(n) {
-  const s = ['th','st','nd','rd'];
-  const v = n % 100;
-  return s[(v-20)%10]||s[v]||s[0];
-}
-
 // Per-team active roster cache / populated during fetchNormalLineups
 // Used across the entire analysis pipeline for trade/acquisition awareness
 const liveRosterCache = {}; // { teamName: Set<string lowercase> }
@@ -4901,36 +4800,15 @@ async function analyzeGame(game, normalLineups) {
   const inCalibration = homeCalibrating || awayCalibrating; // either still calibrating = game is uncallable
 
   // Effective benched count / accounts for injuries + platoons
+  // NOTE: a player batting in a different lineup slot than their usual spot
+  // is NOT "rested" or "benched" — they're still in the starting lineup. The
+  // benched signal only counts players who are absent from today's lineup
+  // entirely (compareLineup, above, is a set-membership check by name — order
+  // never factors in). Do not fold batting-order/slot changes into this count.
   const [homeEB, awayEB] = await Promise.all([
     getEffectiveBenchedCount(homeTeam.id, homeTeam.name, homeAbsences.missing, awayPitcherHand),
     getEffectiveBenchedCount(awayTeam.id, awayTeam.name, awayAbsences.missing, homePitcherHand),
   ]);
-
-  // ── ORDER DEGRADATION SIGNAL ─────────────────────────────
-  // Check if premium batting slots (1–4) are filled with players who normally
-  // bat much lower — a classic sign of punting (benching stars, promoting scrubs).
-  // Score is added to effectiveBenched so it feeds the lineup signal naturally.
-  const homeOrderDeg = computeOrderDegradation(homeTeam.name, homeLineup);
-  const awayOrderDeg = computeOrderDegradation(awayTeam.name, awayLineup);
-
-  // Fold order degradation into effectiveBenched (each pt = ~0.5 benched equivalent)
-  // Cap contribution so it doesn't overwhelm the raw missing-player signal
-  if (homeOrderDeg.score > 0) {
-    const bonus = Math.min(1.5, homeOrderDeg.score * 0.5);
-    homeEB.effectiveBenched = Math.round((homeEB.effectiveBenched + bonus) * 10) / 10;
-    homeEB.breakdown.push(...homeOrderDeg.breakdown.map(d => ({
-      player: d, type: 'order-degradation', weight: 0,
-      reason: 'Batting order degradation: weak hitter in premium slot'
-    })));
-  }
-  if (awayOrderDeg.score > 0) {
-    const bonus = Math.min(1.5, awayOrderDeg.score * 0.5);
-    awayEB.effectiveBenched = Math.round((awayEB.effectiveBenched + bonus) * 10) / 10;
-    awayEB.breakdown.push(...awayOrderDeg.breakdown.map(d => ({
-      player: d, type: 'order-degradation', weight: 0,
-      reason: 'Batting order degradation: weak hitter in premium slot'
-    })));
-  }
 
   // Compute punt scores (always 0 during calibration)
   // spFip = this team's own SP FIP (if this is their ace, score = 0 automatically)
@@ -6012,7 +5890,6 @@ function renderCard(g, idx) {
   const puntAbsences = g.puntSide === 'home' ? g.homeAbsences : g.awayAbsences;
   const breakdown = puntEB?.breakdown || [];
   const typeColor = {
-    'order-degradation':  'background:rgba(232,184,75,0.12);color:#E8B84B;border-color:rgba(232,184,75,0.3)',
     'injured-il':         'background:rgba(100,100,100,0.2);color:#888;border-color:#555',
     'injured-dtd':        'background:rgba(150,100,50,0.2);color:#c8894a;border-color:#8a5a2a',
     'platoon-expected':   'background:rgba(29,185,84,0.12);color:#1db954;border-color:rgba(29,185,84,0.3)',
@@ -6021,7 +5898,7 @@ function renderCard(g, idx) {
     'bench':              'background:rgba(255,255,255,0.04);color:#555;border-color:#333',
     'normal':             'background:rgba(212,43,43,0.15);color:#ff3c3c;border-color:rgba(212,43,43,0.25)',
   };
-  const typeIcon = { 'order-degradation':'↕','injured-il':'🩹','injured-dtd':'⚠️','platoon-expected':'↔','platoon-suspicious':'⚑','platoon-secondary':'—','bench':'—','normal':'●' };
+  const typeIcon = { 'injured-il':'🩹','injured-dtd':'⚠️','platoon-expected':'↔','platoon-suspicious':'⚑','platoon-secondary':'—','bench':'—','normal':'●' };
   let absenceChips;
   if (breakdown.length) {
     absenceChips = breakdown.slice(0, 5).map(b => {
@@ -7297,7 +7174,7 @@ async function renderCalibratedLineup() {
     <!-- What this shows -->
     <div style="background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:10px;padding:12px 16px;margin-bottom:16px;font-size:12px;color:var(--text2);line-height:1.7">
       <strong style="color:var(--text)">Calibrated baseline vs the day's lineup.</strong>
-      The left column is ${abbr(teamName)}'s typical batting order through <strong style="color:var(--text)">${throughDate}</strong> (recency-weighted, ${gamesThrough.length} games). The right is the lineup actually fielded on <strong style="color:var(--text)">${dayEntry?.date || throughDate}</strong>. A weaker hitter dropped into a premium slot (1–5) is flagged as a punt signal.
+      The left column is ${abbr(teamName)}'s typical batting order through <strong style="color:var(--text)">${throughDate}</strong> (recency-weighted, ${gamesThrough.length} games). The right is the lineup actually fielded on <strong style="color:var(--text)">${dayEntry?.date || throughDate}</strong>. This comparison is for reference only and does not affect the punt score — a regular starter simply batting in a different slot is not rested or benched, only players missing from the lineup entirely count toward the score.
     </div>
 
     <!-- Comparison card -->
