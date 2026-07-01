@@ -3799,18 +3799,18 @@ async function fetchGames() {
     });
 
     // Run normal lineups fetch in parallel with pitcher stats pre-fetch.
-    // A full 30-team slate (the common case) covers the same ground as
-    // getCachedNormalLineups(), so route through that shared single-flight
-    // cache instead of fetching all 30 rosters independently — Reviews and
-    // the background scorer reuse the same in-flight/completed fetch instead
-    // of each kicking off their own redundant round of 30 roster requests.
+    // getCachedNormalLineups() is always "as of today" — only safe to reuse
+    // when actually viewing today's full slate. Browsing to a past date via
+    // the date picker needs its own as-of-that-date fetch, or every team's
+    // baseline would reflect today's roster instead of the date being viewed.
     const uniquePitcherIds = [...new Set(
       games.flatMap(g => [g.teams.home.probablePitcher?.id, g.teams.away.probablePitcher?.id])
         .filter(Boolean)
     )];
 
+    const isViewingToday = dateVal === todayStr;
     const [normalLineups] = await Promise.all([
-      teamIds.size === 30 ? getCachedNormalLineups() : fetchNormalLineups([...teamIds], games),
+      (isViewingToday && teamIds.size === 30) ? getCachedNormalLineups() : fetchNormalLineups([...teamIds], games, dateVal),
       prefetchPitcherStats(uniquePitcherIds), // warm the cache for all pitchers at once
     ]);
 
@@ -3987,14 +3987,22 @@ async function autoFillMissingGames() {
     const fakeGames = allTeams.map(t => ({
       teams: { home: { team: { id: t.id, name: t.name } }, away: { team: { id: t.id, name: t.name } } }
     }));
-    const normalLineups = await fetchNormalLineups(allTeams.map(t => t.id), fakeGames);
+    // Warms liveRosterCache (the expensive part — 30 roster fetches). The
+    // baseline itself gets rebuilt per-date below via rebuildLineupsAsOf,
+    // which is cheap/synchronous, so each backfilled date is scored against
+    // the lineup baseline as it actually stood on that date — not today's.
+    await fetchNormalLineups(allTeams.map(t => t.id), fakeGames);
+    const allTeamIds = allTeams.map(t => t.id);
+    const idToName = {};
+    allTeams.forEach(t => { idToName[t.id] = t.name; });
 
     for (let i = 0; i < datesToProcess.length; i++) {
       const date = datesToProcess[i];
       if (prog) prog.textContent = `Auto-scoring ${date} … (${i + 1}/${datesToProcess.length} days · ${added} games added)`;
 
       try {
-        const analyzed = await analyzeDateSilent(date, normalLineups);
+        const dateLineups = rebuildLineupsAsOf(allTeamIds, idToName, date);
+        const analyzed = await analyzeDateSilent(date, dateLineups);
         const saveIds = [];
         for (const g of analyzed) {
           if (g.flag === 'postponed') continue;
@@ -4093,14 +4101,21 @@ async function rebuildSeasonLog() {
   let completedNormally = false;
 
   try {
-    // Fetch standings once, and normal (season-long) lineups once for ALL teams —
-    // these don't change per date, so we don't refetch them every day.
+    // Fetch standings once, and warm each team's active roster once — the
+    // roster fetch is the expensive part and is a reasonable "current" proxy
+    // even for historical dates (MLB has no easy historical-roster API).
+    // The lineup BASELINE itself, though, is rebuilt fresh for every date
+    // below (cheap/synchronous) so each day is scored against the baseline
+    // as it actually stood then, not today's.
     await fetchStandings();
     const year = new Date().getFullYear();
     const teamsData = await apiFetch(`${BASE}/teams?sportId=1&season=${year}`);
     const allTeams = (teamsData?.teams || []).filter(t => t && t.id);
     const fakeGames = allTeams.map(t => ({ teams: { home: { team: { id: t.id, name: t.name } }, away: { team: { id: t.id, name: t.name } } } }));
-    const normalLineups = await fetchNormalLineups(allTeams.map(t => t.id), fakeGames);
+    await fetchNormalLineups(allTeams.map(t => t.id), fakeGames);
+    const allTeamIds = allTeams.map(t => t.id);
+    const idToName = {};
+    allTeams.forEach(t => { idToName[t.id] = t.name; });
 
     for (const date of datesToProcess) {
       datesDone++;
@@ -4108,7 +4123,8 @@ async function rebuildSeasonLog() {
 
       let analyzed;
       try {
-        analyzed = await analyzeDateSilent(date, normalLineups);
+        const dateLineups = rebuildLineupsAsOf(allTeamIds, idToName, date);
+        analyzed = await analyzeDateSilent(date, dateLineups);
       } catch (e) {
         datesFailed++;
         console.error('[rebuild] date failed', date, e);
@@ -4426,8 +4442,16 @@ function saveLineupBaseline(teamName, gameDate, lineup, sp, spFip, spEra, oppTea
 // Build a "normal" lineup for a team from stored history.
 // Uses the most frequently appearing players across all stored games.
 // Falls back to API roster if not enough history (< 5 games).
-function buildNormalLineupFromHistory(teamName, activeRosterNames = null) {
-  const history = lineupHistory[teamName] || [];
+function buildNormalLineupFromHistory(teamName, activeRosterNames = null, asOfDate = null) {
+  // asOfDate restricts the baseline to games on/before that date — without
+  // it, scoring a past game (backfill, retrograde, review recompute) would
+  // silently use the team's CURRENT roster/recency, not what "normal" meant
+  // on the date actually being scored (see fetchHomeSeriesWinsSoFar's
+  // neighbor bug for the same class of issue). Live/today scoring passes
+  // today's date, which is a no-op relative to the old unfiltered behavior.
+  const history = asOfDate
+    ? (lineupHistory[teamName] || []).filter(h => h.date <= asOfDate)
+    : (lineupHistory[teamName] || []);
   if (history.length < 60) return null;
 
   // Sort by date descending / most recent first
@@ -4469,7 +4493,7 @@ function buildNormalLineupFromHistory(teamName, activeRosterNames = null) {
 // Used across the entire analysis pipeline for trade/acquisition awareness
 const liveRosterCache = {}; // { teamName: Set<string lowercase> }
 
-async function fetchNormalLineups(teamIds, games) {
+async function fetchNormalLineups(teamIds, games, asOfDate = null) {
   const lineups = {};
   const year = new Date().getFullYear();
 
@@ -4563,7 +4587,7 @@ async function fetchNormalLineups(teamIds, games) {
 
     // Try historical baseline / pass active roster to immediately zero out traded players
     if (teamName) {
-      const historical = buildNormalLineupFromHistory(teamName, activeRosterNames);
+      const historical = buildNormalLineupFromHistory(teamName, activeRosterNames, asOfDate);
       if (historical) {
         lineups[tid] = { players: historical.map(n => ({ name: n })), core: historical, source: 'history' };
         return;
@@ -4578,6 +4602,24 @@ async function fetchNormalLineups(teamIds, games) {
     };
   }));
 
+  return lineups;
+}
+
+// Cheap, synchronous re-build of each team's baseline as of a specific date,
+// reusing the active rosters fetchNormalLineups already fetched into
+// liveRosterCache instead of re-fetching them. Used by bulk backfills that
+// need per-date accuracy (see buildNormalLineupFromHistory's asOfDate) but
+// can't afford a fresh 30-team roster fetch for every date processed.
+function rebuildLineupsAsOf(teamIds, idToName, asOfDate) {
+  const lineups = {};
+  teamIds.forEach(tid => {
+    const teamName = idToName[tid];
+    const activeRosterNames = teamName ? liveRosterCache[teamName] : null;
+    const historical = teamName ? buildNormalLineupFromHistory(teamName, activeRosterNames, asOfDate) : null;
+    lineups[tid] = historical
+      ? { players: historical.map(n => ({ name: n })), core: historical, source: 'history' }
+      : { players: [], core: [], source: 'none' };
+  });
   return lineups;
 }
 
@@ -4699,7 +4741,7 @@ async function fetchLineupOPS(playerNames, teamId) {
 // simultaneously in the same series). Using it as a win/loss tally made
 // the series-finale bonus below silently misfire as "rubber game" (no
 // bonus) on essentially every game, since home/away values always matched.
-async function fetchHomeSeriesWinsSoFar(homeTeamId, gameDate, seriesGame) {
+async function fetchHomeSeriesWinsSoFar(homeTeamId, awayTeamId, gameDate, seriesGame) {
   if (seriesGame <= 1) return null;
   try {
     const start = new Date(gameDate + 'T12:00:00');
@@ -4711,7 +4753,13 @@ async function fetchHomeSeriesWinsSoFar(homeTeamId, gameDate, seriesGame) {
 
     const data = await apiFetch(`${BASE}/schedule?sportId=1&teamId=${homeTeamId}&startDate=${startStr}&endDate=${endStr}&gameType=R`);
     const games = (data?.dates || []).flatMap(d => d.games || []);
-    const finals = games.filter(g => g.status?.abstractGameState === 'Final');
+    // Restrict to games actually against this series' opponent — a makeup
+    // game or doubleheader against a different team landing in this date
+    // window shouldn't be counted as part of the current series.
+    const seriesGames = games.filter(g =>
+      g.teams?.home?.team?.id === awayTeamId || g.teams?.away?.team?.id === awayTeamId
+    );
+    const finals = seriesGames.filter(g => g.status?.abstractGameState === 'Final');
     if (finals.length < seriesGame - 1) return null; // missing a day — don't guess
     const wins = finals.filter(g => g.teams?.home?.team?.id === homeTeamId ? g.teams.home.isWinner : g.teams.away.isWinner).length;
     return wins;
@@ -4767,7 +4815,7 @@ async function analyzeGame(game, normalLineups) {
   // Series wins for each team BEFORE this game, from actual results of the
   // earlier games in the series (used for the finale bonus in scoring below,
   // and for the "leads X–Y" badge in the UI). No-op for game 1 of a series.
-  const homeSeries = await fetchHomeSeriesWinsSoFar(homeTeam.id, game.gameDate?.split('T')[0] || '', seriesGame);
+  const homeSeries = await fetchHomeSeriesWinsSoFar(homeTeam.id, awayTeam.id, game.gameDate?.split('T')[0] || '', seriesGame);
   const awaySeries = homeSeries != null ? (seriesGame - 1 - homeSeries) : null;
 
   // Doubleheader detection / game 2 of a doubleheader is a strong punt signal
@@ -4837,8 +4885,8 @@ async function analyzeGame(game, normalLineups) {
   // entirely (compareLineup, above, is a set-membership check by name — order
   // never factors in). Do not fold batting-order/slot changes into this count.
   const [homeEB, awayEB] = await Promise.all([
-    getEffectiveBenchedCount(homeTeam.id, homeTeam.name, homeAbsences.missing, awayPitcherHand),
-    getEffectiveBenchedCount(awayTeam.id, awayTeam.name, awayAbsences.missing, homePitcherHand),
+    getEffectiveBenchedCount(homeTeam.id, homeTeam.name, homeAbsences.missing, awayPitcherHand, gameDate),
+    getEffectiveBenchedCount(awayTeam.id, awayTeam.name, awayAbsences.missing, homePitcherHand, gameDate),
   ]);
 
   // Compute punt scores (always 0 during calibration)
@@ -5421,14 +5469,18 @@ function analyzePlatoons(teamName, missingPlayers, oppPitcherHand) {
 }
 
 // ── WEIGHTED BENCHED COUNT ────────────────────────────────
-async function getEffectiveBenchedCount(teamId, teamName, missingPlayers, oppPitcherHand) {
+async function getEffectiveBenchedCount(teamId, teamName, missingPlayers, oppPitcherHand, asOfDate = null) {
   try {
   const liveInjuries = await fetchTeamInjuries(teamId);
   const knownInjuries = TEAM_CONTEXT[teamName]?.injuries || {};
   const platoonAnalysis = analyzePlatoons(teamName, missingPlayers, oppPitcherHand);
 
-  // Build a recency-weight map for this team's players
-  const recencyWeights = buildPlayerRecencyWeights(teamName);
+  // Build a recency-weight map for this team's players, as of the date
+  // being scored — without this, re-scoring a past game (backfill,
+  // retrograde, review recompute) would judge which players are "everyday
+  // starters" using TODAY's appearance pattern instead of the pattern that
+  // actually existed on that game's date.
+  const recencyWeights = buildPlayerRecencyWeights(teamName, asOfDate);
 
   // Live roster set / if populated, any missing player NOT on this roster
   // was traded/released and must be hard-zeroed regardless of other signals
@@ -5506,8 +5558,10 @@ async function getEffectiveBenchedCount(teamId, teamName, missingPlayers, oppPit
 // Build a 0.0–1.0 recency score per player based on last 20 games
 // 1.0 = in lineup every game recently (true everyday starter)
 // 0.0 = hasn't appeared recently (traded, injured, or role change)
-function buildPlayerRecencyWeights(teamName) {
-  const history = lineupHistory[teamName] || [];
+function buildPlayerRecencyWeights(teamName, asOfDate = null) {
+  const history = asOfDate
+    ? (lineupHistory[teamName] || []).filter(h => h.date <= asOfDate)
+    : (lineupHistory[teamName] || []);
   if (!history.length) return {};
 
   // Use last 20 games only for recency
@@ -5659,13 +5713,13 @@ function computePuntScore({ effectiveBenched, eraDelta, fipDelta = null, isLastG
   // the series. A rubber game (tied series) is still competitive — the
   // manager has every reason to play to win, so the bonus is suppressed.
   // Trailing teams also get no bonus (series already decided against them).
-  // If series standing is unknown (API returned null), fall back to the
-  // old flat bonus to avoid silently dropping a real signal.
+  // If series standing is unknown (fetch failed, or a game in the series is
+  // missing), don't guess — only apply the bonus on confirmed evidence that
+  // the series is actually decided in the punting team's favor.
   if (isLastGame && seriesLength >= 3) {
     const hasSeriesData = puntSeriesWins != null && oppSeriesWins != null;
-    const isRubberGame = hasSeriesData && puntSeriesWins === oppSeriesWins;
-    const trailingSeries = hasSeriesData && puntSeriesWins < oppSeriesWins;
-    if (!isRubberGame && !trailingSeries) {
+    const seriesClinched = hasSeriesData && puntSeriesWins > oppSeriesWins;
+    if (seriesClinched) {
       score += 9;
       if (seriesLength >= 4) score += 4;
     }
@@ -8498,7 +8552,6 @@ async function recomputeReviewBreakdown(id, e, gamePk) {
   const breakdownEl = document.getElementById('reviewBreakdown-' + gamePk);
   if (!breakdownEl) return;
   try {
-    const normalLineups = await getCachedNormalLineups();
     const sched = await apiFetch(`${BASE}/schedule?sportId=1&date=${e.date}&hydrate=probablePitcher,team,game(doubleHeader,gameNumber,dayNight)&gameType=R`);
     const games = sched?.dates?.[0]?.games || [];
     const targetGame = games.find(g => String(g.gamePk) === String(gamePk));
@@ -8507,6 +8560,23 @@ async function recomputeReviewBreakdown(id, e, gamePk) {
         breakdownEl.innerHTML = '<span style="color:var(--text3);font-size:12px;font-family:var(--font-mono)">Could not locate game on MLB schedule.</span>';
       return;
     }
+
+    // Prefer the baseline as it stood on e.date (source: 'history' means the
+    // team already had 60+ games of history BY that date). Games from before
+    // a team's calibration graduated have no such baseline yet — for those,
+    // fall back to today's hindsight-complete cache, same as the dedicated
+    // calibration retrograde pass does intentionally.
+    const currentLineups = await getCachedNormalLineups();
+    const idToName = {};
+    if (targetGame.teams?.home?.team) idToName[targetGame.teams.home.team.id] = targetGame.teams.home.team.name;
+    if (targetGame.teams?.away?.team) idToName[targetGame.teams.away.team.id] = targetGame.teams.away.team.name;
+    const teamIds = Object.keys(idToName).map(Number);
+    const asOfLineups = rebuildLineupsAsOf(teamIds, idToName, e.date);
+    const normalLineups = {};
+    teamIds.forEach(tid => {
+      normalLineups[tid] = asOfLineups[tid]?.source === 'history' ? asOfLineups[tid] : currentLineups[tid];
+    });
+
     // Bypass the calibration gate so pre-June games can be retrograde-scored
     // for review display (calibration only guards live detection, not review).
     const prevCalib = state.previewIgnoreCalibration;
@@ -10222,9 +10292,11 @@ async function renderGameflowChart(silent = false, inlineOpts = null) {
         container.innerHTML = '<div style="text-align:center;color:var(--text3);font-size:13px;padding:48px"><div class="spinner" style="margin:0 auto 12px"></div>Scoring game…</div>';
       }
       try {
-        // Fetch normal lineups for both teams so analyzeGame has baseline data
+        // Fetch normal lineups for both teams so analyzeGame has baseline data,
+        // as of this game's date (not today's) so a past date scored on the
+        // fly here matches what autoFillMissingGames would have produced.
         const teamIds = [gameInfo.rawGame.teams.home.team.id, gameInfo.rawGame.teams.away.team.id];
-        const normalLineups = await fetchNormalLineups(teamIds, [gameInfo.rawGame]);
+        const normalLineups = await fetchNormalLineups(teamIds, [gameInfo.rawGame], date);
         const scored = await analyzeGame(gameInfo.rawGame, normalLineups);
         if (scored) {
           logEntry = scored;
