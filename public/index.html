@@ -2374,28 +2374,40 @@
           <span style="font-size:11px;color:var(--green);font-family:var(--font-mono)">~40–50 pts</span>
         </div>
         <div style="display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center">
-          <span style="font-size:12px;color:var(--text2)">Weak SP (own pitcher, ERA ≥ 4.50)</span>
-          <span style="font-size:11px;color:var(--green);font-family:var(--font-mono)">+3–12 pts</span>
+          <span style="font-size:12px;color:var(--text2)">ERA gap vs opponent SP (relative, blended w/ FIP)</span>
+          <span style="font-size:11px;color:var(--green);font-family:var(--font-mono)">up to +14 × effMot</span>
         </div>
         <div style="display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center">
-          <span style="font-size:12px;color:var(--text2)">ERA gap ≥ 1.5 vs opponent SP</span>
-          <span style="font-size:11px;color:var(--green);font-family:var(--font-mono)">+10–14 pts</span>
+          <span style="font-size:12px;color:var(--text2)">High ERA (own SP ≥ 6.00, absolute — objectively poor arm)</span>
+          <span style="font-size:11px;color:var(--green);font-family:var(--font-mono)">up to +6 × effMot</span>
         </div>
         <div style="display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center">
-          <span style="font-size:12px;color:var(--text2)">Series finale (G3/3 or G4/4)</span>
+          <span style="font-size:12px;color:var(--text2)">Short-starter pattern (&lt; 4.5 IP/start avg, ≥4 GS)</span>
+          <span style="font-size:11px;color:var(--green);font-family:var(--font-mono)">up to +3 × effMot</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center">
+          <span style="font-size:12px;color:var(--text2)">Spot starter (≤2 GS this season, ERA &gt; 5.00 or unknown)</span>
+          <span style="font-size:11px;color:var(--green);font-family:var(--font-mono)">+7 × effMot</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center">
+          <span style="font-size:12px;color:var(--text2)">Ace on the mound (ERA ≤ 3.00, ≥6 starts) — reduces whole score</span>
+          <span style="font-size:11px;color:var(--red2);font-family:var(--font-mono)">×0.75 (×0.88 if clinched)</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center">
+          <span style="font-size:12px;color:var(--text2)">Series finale, series clinched by punting team (G3+ series)</span>
           <span style="font-size:11px;color:var(--green);font-family:var(--font-mono)">+9 pts flat</span>
         </div>
         <div style="display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center">
-          <span style="font-size:12px;color:var(--text2)">4-game series finale bonus</span>
+          <span style="font-size:12px;color:var(--text2)">+ finale bonus if it's a 4-game series</span>
           <span style="font-size:11px;color:var(--green);font-family:var(--font-mono)">+4 pts flat</span>
         </div>
         <div style="display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center">
-          <span style="font-size:12px;color:var(--text2)">G1 suppression</span>
-          <span style="font-size:11px;color:var(--green);font-family:var(--font-mono)">×0.65 multiplier</span>
+          <span style="font-size:12px;color:var(--text2)">Series finale, NOT clinched (tied or trailing) or series result unknown</span>
+          <span style="font-size:11px;color:var(--text3);font-family:var(--font-mono)">no bonus — never guessed</span>
         </div>
         <div style="display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center">
-          <span style="font-size:12px;color:var(--text2)">2-game series (no finale bonus)</span>
-          <span style="font-size:11px;color:var(--green);font-family:var(--font-mono)">suppressed</span>
+          <span style="font-size:12px;color:var(--text2)">G1 suppression (game 1 of a 3+ game series)</span>
+          <span style="font-size:11px;color:var(--green);font-family:var(--font-mono)">×0.65 on lineup + pitching signals</span>
         </div>
         <div style="display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center">
           <span style="font-size:12px;color:var(--text2)">Clinched division</span>
@@ -2414,23 +2426,31 @@
           <span style="font-size:11px;color:var(--green);font-family:var(--font-mono)">+14 pts flat</span>
         </div>
         <div style="display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center">
-          <span style="font-size:12px;color:var(--text2)">Back-to-back game</span>
-          <span style="font-size:11px;color:var(--green);font-family:var(--font-mono)">+6 × effMot</span>
+          <span style="font-size:12px;color:var(--text2)">Back-to-back game (unilateral; ×0.43 if both teams are)</span>
+          <span style="font-size:11px;color:var(--green);font-family:var(--font-mono)">up to +3.5 × effMot</span>
         </div>
         <div style="display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center">
-          <span style="font-size:12px;color:var(--text2)">Day game after night game</span>
-          <span style="font-size:11px;color:var(--green);font-family:var(--font-mono)">+5 × effMot</span>
+          <span style="font-size:12px;color:var(--text2)">Day game after night game (unilateral; ×0.40 if both teams are)</span>
+          <span style="font-size:11px;color:var(--green);font-family:var(--font-mono)">up to +2.5 × effMot</span>
         </div>
         <div style="display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center">
-          <span style="font-size:12px;color:var(--text2)">Cross-timezone travel (W→E +5, E→W +3, B2B)</span>
-          <span style="font-size:11px;color:var(--green);font-family:var(--font-mono)">+3–5 × effMot</span>
+          <span style="font-size:12px;color:var(--text2)">Cross-timezone travel (West→East; halved if opp. also fatigued)</span>
+          <span style="font-size:11px;color:var(--green);font-family:var(--font-mono)">up to +3.0 × effMot</span>
         </div>
         <div style="display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center">
-          <span style="font-size:12px;color:var(--text2)">Consecutive streak ≥ 7 games</span>
-          <span style="font-size:11px;color:var(--green);font-family:var(--font-mono)">up to +9 × effMot</span>
+          <span style="font-size:12px;color:var(--text2)">Cross-timezone travel (East→West; halved if opp. also fatigued)</span>
+          <span style="font-size:11px;color:var(--green);font-family:var(--font-mono)">up to +1.5 × effMot</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center">
+          <span style="font-size:12px;color:var(--text2)">Consecutive streak ≥ 7 games (no day off)</span>
+          <span style="font-size:11px;color:var(--green);font-family:var(--font-mono)">up to +8 × effMot</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center">
+          <span style="font-size:12px;color:var(--text2)">Road trip ≥ 5 consecutive away games (away team only)</span>
+          <span style="font-size:11px;color:var(--green);font-family:var(--font-mono)">up to +6 × effMot</span>
         </div>
         <div style="padding:10px 16px">
-          <span style="font-size:10px;color:var(--text3);font-family:var(--font-mono)">Note: effMot = effective motivation (0.10–0.90 based on team tier, clinch/elim status)</span>
+          <span style="font-size:10px;color:var(--text3);font-family:var(--font-mono)">Note: effMot = effective motivation (team-tier based; clinched teams floor at 0.85, eliminated teams floor at 0.45)</span>
         </div>
       </div>
 
@@ -2455,15 +2475,23 @@
         </div>
         <div style="display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center">
           <span style="font-size:12px;color:var(--text2)">3+ pitching changes before 5th inning</span>
-          <span style="font-size:11px;color:var(--red2);font-family:var(--font-mono)">+5–22 pts</span>
+          <span style="font-size:11px;color:var(--red2);font-family:var(--font-mono)">+15–22 pts</span>
         </div>
         <div style="display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center">
-          <span style="font-size:12px;color:var(--text2)">2+ offensive subs before 7th in blowout</span>
-          <span style="font-size:11px;color:var(--red2);font-family:var(--font-mono)">+5–18 pts</span>
+          <span style="font-size:12px;color:var(--text2)">2+ offensive subs before 7th, down 4+</span>
+          <span style="font-size:11px;color:var(--red2);font-family:var(--font-mono)">+10–18 pts</span>
         </div>
         <div style="display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center">
-          <span style="font-size:12px;color:var(--text2)">Mop-up arm (ERA 6.50+) in close game</span>
-          <span style="font-size:11px;color:var(--red2);font-family:var(--font-mono)">+12–20 pts</span>
+          <span style="font-size:12px;color:var(--text2)">2+ regulars pulled early (≤1-2 PA), down 4+ (box-score fallback)</span>
+          <span style="font-size:11px;color:var(--red2);font-family:var(--font-mono)">+10–14 pts</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center">
+          <span style="font-size:12px;color:var(--text2)">Mop-up arm (ERA 6.50+) in a game that isn't a comfortable win</span>
+          <span style="font-size:11px;color:var(--red2);font-family:var(--font-mono)">+12 (1 arm) / +20 (2+ arms)</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center">
+          <span style="font-size:12px;color:var(--text2)">Inferior reliever used while losing, with clearly better arms unused</span>
+          <span style="font-size:11px;color:var(--red2);font-family:var(--font-mono)">+10–14 pts</span>
         </div>
       </div>
 
@@ -7024,7 +7052,7 @@ async function renderInjuryAlerts() {
       <span class="ia-team">${m.teamAbbr}</span>
       <span class="ia-name">${m.playerName}</span>
       <span class="ia-status">${m.typeDesc}</span>
-      <span class="ia-desc">${m.description.length > 60 ? m.description.slice(0, 60) + '…' : m.description}</span>
+      <span class="ia-desc" title="${m.description.replace(/"/g, '&quot;')}">${m.description.length > 60 ? m.description.slice(0, 60) + '…' : m.description}</span>
     </div>`).join('');
 }
 
