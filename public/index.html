@@ -4182,7 +4182,7 @@ async function rebuildSeasonLog(force = false) {
         entry.puntSide = g.puntSide;
         entry.puntTeam = (g.flag === 'punt' || g.flag === 'review')
           ? (g.puntSide === 'home' ? g.home.name : g.away.name) : '—';
-        entry.breakdown = (typeof buildScoreBreakdown === 'function' ? buildScoreBreakdown(g) : []) || [];
+        entry.breakdown = g.breakdown || [];
         rescored++; saveIds.push(id);
       }
 
@@ -5017,13 +5017,13 @@ async function analyzeGame(game, normalLineups) {
   // Road trips only matter when the team is currently the away team (still on the trip).
   const awayRoadTrip = awayPlayedYesterday ? getRoadTripLength(awayTeam.name) + 1 : 0; // +1 counts today
 
-  const homeScore = computePuntScore({
+  const homeResult = computePuntScore({
     effectiveBenched: homeEB.effectiveBenched,
     fipDelta: (homeStats.fip != null && awayStats.fip != null) ? homeStats.fip - awayStats.fip : null,
     eraDelta: (homeStats.era != null && awayStats.era != null) ? homeStats.era - awayStats.era : 0,
     isLastGame, isFirstGame, isDHNightcap,
     clinched: homeClinched, eliminated: homeEliminated,
-    gameDate, teamName: homeTeam.name,
+    gameDate, teamName: homeTeam.name, spName: homePitcher?.fullName || 'SP',
     spFip: homeStats.fip, spEra: homeStats.era, spStarts: homeStats.starts || 0, spIp: homeStats.ip || 0, seriesLength,
     isBackToBack: homeIsBackToBack, hasTravelFatigue: homeHasTravelFatigue, isWestToEast: homeIsWestToEast,
     isDayAfterNight: homeDayAfterNight, consecutiveStreak: homeConsecutiveStreak,
@@ -5031,13 +5031,13 @@ async function analyzeGame(game, normalLineups) {
     roadTripLength: 0,
     oppIsBackToBack: awayIsBackToBack, oppIsDayAfterNight: awayDayAfterNight, oppHasTravelFatigue: awayHasTravelFatigue,
   });
-  const awayScore = computePuntScore({
+  const awayResult = computePuntScore({
     effectiveBenched: awayEB.effectiveBenched,
     fipDelta: (awayStats.fip != null && homeStats.fip != null) ? awayStats.fip - homeStats.fip : null,
     eraDelta: (awayStats.era != null && homeStats.era != null) ? awayStats.era - homeStats.era : 0,
     isLastGame, isFirstGame, isDHNightcap,
     clinched: awayClinched, eliminated: awayEliminated,
-    gameDate, teamName: awayTeam.name,
+    gameDate, teamName: awayTeam.name, spName: awayPitcher?.fullName || 'SP',
     spFip: awayStats.fip, spEra: awayStats.era, spStarts: awayStats.starts || 0, spIp: awayStats.ip || 0, seriesLength,
     isBackToBack: awayIsBackToBack, hasTravelFatigue: awayHasTravelFatigue, isWestToEast: awayIsWestToEast,
     isDayAfterNight: awayDayAfterNight, consecutiveStreak: awayConsecutiveStreak,
@@ -5045,9 +5045,15 @@ async function analyzeGame(game, normalLineups) {
     roadTripLength: awayRoadTrip,
     oppIsBackToBack: homeIsBackToBack, oppIsDayAfterNight: homeDayAfterNight, oppHasTravelFatigue: homeHasTravelFatigue,
   });
+  const homeScore = homeResult.score;
+  const awayScore = awayResult.score;
 
   const topPreGame = Math.max(homeScore, awayScore);
   const puntSide = homeScore >= awayScore ? 'home' : 'away';
+  // The breakdown for whichever side is punting — built inline by
+  // computePuntScore as it computed the score, so it's guaranteed to sum
+  // to topPreGame (see computePuntScore's header comment).
+  const preGameBreakdown = puntSide === 'home' ? homeResult.breakdown : awayResult.breakdown;
 
   // ── PRE-GAME LOCK ─────────────────────────────────────────
   // If pre-game analysis already reaches PUNT threshold, that is a confirmed
@@ -5137,6 +5143,7 @@ async function analyzeGame(game, normalLineups) {
     homeEB, awayEB,
     homeScore, awayScore,
     topScore: finalScore,
+    breakdown: preGameBreakdown,
     preGameScore: Math.round(topPreGame),
     inGameScore: Math.round(inGameData.score),
     inGameSignals: inGameData.signals,
@@ -5679,8 +5686,16 @@ function buildTeamFeedbackBias() {
 // Fix #6: Back-to-back game adds moderate fatigue bonus (motivation-scaled)
 // Fix #7: West→East same-day travel adds structural fatigue bonus
 // Fix #8: clinched vs eliminated tracked separately (label fix in breakdown)
+// Returns { score, breakdown }. The breakdown is built INLINE as each
+// factor is computed — score and breakdown are two views of the exact same
+// arithmetic, so they can never diverge. (Previously the displayed
+// breakdown was reconstructed after the fact by a separate function,
+// buildScoreBreakdown, which could drift out of sync with whatever formula
+// actually produced the score — most severely for retrograded calibration
+// games, which used an entirely different, simplified formula. See the
+// "score vs breakdown mismatch" fix for the full writeup.)
 function computePuntScore({ effectiveBenched, eraDelta, fipDelta = null, isLastGame, isFirstGame,
-  isDHNightcap, clinched, eliminated, gameDate, teamName,
+  isDHNightcap, clinched, eliminated, gameDate, teamName, spName = 'SP',
   spFip, spEra, spStarts, spIp, seriesLength, isBackToBack, hasTravelFatigue, isWestToEast = true,
   isDayAfterNight, consecutiveStreak, puntSeriesWins = null, oppSeriesWins = null,
   roadTripLength = 0,
@@ -5692,9 +5707,15 @@ function computePuntScore({ effectiveBenched, eraDelta, fipDelta = null, isLastG
   const tq = getLiveTeamQuality(teamName, gameDate);
 
   // Hard zero during calibration
-  if (isCalibrationPeriod(gameDate, teamName)) return 0;
+  if (isCalibrationPeriod(gameDate, teamName)) return { score: 0, breakdown: [] };
 
-  let score = 0;
+  // g1 = factors suppressed by G1 (lineup/pitching-derived); post = everything
+  // added after G1 suppression is applied (structural/context bonuses). Both
+  // get scaled by timingMult*aceScale at the end; only g1 gets g1Suppress.
+  const g1Factors = [];
+  const postFactors = [];
+  const addG1   = (label, raw, max) => { if (raw > 0) g1Factors.push({ label, raw, max }); };
+  const addPost = (label, raw, max) => { if (raw > 0) postFactors.push({ label, raw, max }); };
 
   // ── EFFECTIVE MOTIVATION ───────────────────────────────────
   // Base motivation comes from team tier (contender/fringe/rebuilding).
@@ -5710,6 +5731,12 @@ function computePuntScore({ effectiveBenched, eraDelta, fipDelta = null, isLastG
   if (clinched)   effMot = Math.max(mot, 0.85);
   else if (eliminated) effMot = Math.max(mot, 0.45);
 
+  // ── G1 SUPPRESSION (computed early — applied per-factor to lineup/pitching) ──
+  // Managers never open a series with deliberate rest — the first game sets
+  // the tone and matters too much competitively. ×0.65 suppress keeps this
+  // from registering unless lineup/pitching signals are very strong.
+  const g1Suppress = (isFirstGame && seriesLength >= 3) ? 0.65 : 1;
+
   // ── LINEUP SIGNAL (0–50 pts after motivation) ─────────────
   // Ceiling raised from 44→50. Curve stays at pow 0.60 (steeper than old 0.75).
   // The key calibration target: 3 starters benched + series finale = PUNT
@@ -5717,8 +5744,9 @@ function computePuntScore({ effectiveBenched, eraDelta, fipDelta = null, isLastG
   // Uses effective motivation so clinched/eliminated teams register correctly.
   const eb = Math.min(effectiveBenched, 4.5);
   if (eb >= 1.0) {
-    const lineupRaw = 50 * Math.pow(Math.max(0, eb - 0.5) / 4.0, 0.60);
-    score += lineupRaw * effMot;
+    const ebRound = Math.round(effectiveBenched);
+    const lineupRaw = 50 * Math.pow(Math.max(0, eb - 0.5) / 4.0, 0.60) * effMot * g1Suppress;
+    addG1(`${ebRound} regular${ebRound === 1 ? '' : 's'} rested`, lineupRaw, 50);
   }
 
   // ── PITCHING SIGNAL (0–14 pts after motivation) ─────────
@@ -5735,8 +5763,11 @@ function computePuntScore({ effectiveBenched, eraDelta, fipDelta = null, isLastG
     : clampedEraDelta;
 
   if (effectiveDelta > 0 && eraSampleWeight > 0) {
-    const pitchingRaw = 14 * Math.pow(Math.min(effectiveDelta, 3.0) / 3.0, 0.65);
-    score += pitchingRaw * effMot * eraSampleWeight;
+    const pitchingRaw = 14 * Math.pow(Math.min(effectiveDelta, 3.0) / 3.0, 0.65) * effMot * eraSampleWeight * g1Suppress;
+    const label = validFip
+      ? `ERA gap (${spEra.toFixed(2)} vs ${(spEra - eraDelta).toFixed(2)}) · FIP ${spFip.toFixed(2)} vs ${(spFip - fipDelta).toFixed(2)}`
+      : `ERA gap (${(spEra ?? 0).toFixed(2)} vs ${((spEra ?? 0) - eraDelta).toFixed(2)})`;
+    addG1(label, pitchingRaw, 14);
   }
 
   // ── ABSOLUTE ERA THRESHOLD ──────────────────────────────────
@@ -5746,8 +5777,8 @@ function computePuntScore({ effectiveBenched, eraDelta, fipDelta = null, isLastG
   // competitive days. Capped at 6 pts so it doesn't overwhelm; not additive
   // with the spot-starter signal (spStarts ≤ 2 already triggers that path).
   if (spEra != null && spEra >= 6.00 && spStarts >= 3 && eraSampleWeight >= 0.5) {
-    const absEraPts = Math.min(6, (spEra - 5.0) * 1.0) * effMot * eraSampleWeight;
-    score += absEraPts;
+    const absEraPts = Math.min(6, (spEra - 5.0) * 1.0) * effMot * eraSampleWeight * g1Suppress;
+    addG1(`High ERA (${spEra.toFixed(2)} — objectively poor arm)`, absEraPts, 6);
   }
 
   // ── SHORT-STARTER PATTERN ─────────────────────────────────
@@ -5758,30 +5789,28 @@ function computePuntScore({ effectiveBenched, eraDelta, fipDelta = null, isLastG
   if (spStarts >= 4 && spIp > 0) {
     const ipPerStart = spIp / spStarts;
     if (ipPerStart < 4.5) {
-      score += Math.min(3, (4.5 - ipPerStart) * 2) * effMot;
+      addG1(`Short-starter pattern (${ipPerStart.toFixed(1)} IP/start avg)`, Math.min(3, (4.5 - ipPerStart) * 2) * effMot * g1Suppress, 3);
     }
   }
 
-  // ── SERIES / GAME POSITION CONTEXT ────────────────────────
-  // G1 suppression: managers never open a series with deliberate rest —
-  // the first game sets the tone and matters too much competitively.
-  // ×0.65 suppress keeps this from registering unless lineup/pitching
-  // signals are very strong.
-  if (isFirstGame && seriesLength >= 3) score *= 0.65;
-
-  // Series finale: only applies when the punting team has already clinched
-  // the series. A rubber game (tied series) is still competitive — the
-  // manager has every reason to play to win, so the bonus is suppressed.
-  // Trailing teams also get no bonus (series already decided against them).
-  // If series standing is unknown (fetch failed, or a game in the series is
-  // missing), don't guess — only apply the bonus on confirmed evidence that
-  // the series is actually decided in the punting team's favor.
+  // ── SERIES FINALE ──────────────────────────────────────────
+  // Only applies when the punting team has already clinched the series. A
+  // rubber game (tied series) is still competitive — the manager has every
+  // reason to play to win, so the bonus is suppressed. Trailing teams also
+  // get no bonus (series already decided against them). If series standing
+  // is unknown (fetch failed, or a game in the series is missing), don't
+  // guess — only apply the bonus on confirmed evidence the series is
+  // actually decided in the punting team's favor. NOT G1-suppressed —
+  // structural bonuses apply at full weight regardless of series position.
   if (isLastGame && seriesLength >= 3) {
     const hasSeriesData = puntSeriesWins != null && oppSeriesWins != null;
     const seriesClinched = hasSeriesData && puntSeriesWins > oppSeriesWins;
     if (seriesClinched) {
-      score += 9;
-      if (seriesLength >= 4) score += 4;
+      const isSweepClinch = puntSeriesWins >= 2 && oppSeriesWins === 0;
+      const lbl = isSweepClinch
+        ? `Series clinched (leads ${puntSeriesWins}–${oppSeriesWins}) — high punt likelihood`
+        : `Series finale (up ${puntSeriesWins}–${oppSeriesWins})`;
+      addPost(lbl, 9 + (seriesLength >= 4 ? 4 : 0), 13);
     }
   }
 
@@ -5789,23 +5818,23 @@ function computePuntScore({ effectiveBenched, eraDelta, fipDelta = null, isLastG
   // These are separate flags with the same structural weight — a team
   // that's clinched is protecting stars for October; a team that's
   // eliminated is giving youngsters looks. Both justify rest decisions.
-  if (clinched)   score += 22;
-  if (eliminated) score += 22;
+  if (clinched)   addPost('Division clinched', 22, 22);
+  if (eliminated) addPost('Mathematically eliminated', 22, 22);
   // Clinch/elimination + finale is the clearest possible punt signal
-  if ((clinched || eliminated) && isLastGame) score += 6;
+  if ((clinched || eliminated) && isLastGame) addPost('Clinch/elim + finale', 6, 6);
 
   // ── DOUBLEHEADER NIGHTCAP ─────────────────────────────────
   // The clearest single-game punt trigger outside of clinch/elimination.
   // Managers always rest at least 1-2 regulars in DH nightcaps.
   // The only exception is a must-win game late in a pennant race.
-  if (isDHNightcap) score += 14;
+  if (isDHNightcap) addPost('DH nightcap', 14, 14);
 
   // ── BACK-TO-BACK GAME ────────────────────────────────────
   // When BOTH teams are in back-to-back situations the competitive disadvantage
   // evens out — managers on both sides manage load, so the signal is minimal.
   // Only a unilateral B2B (one team rested, the other not) is a clear tell.
   if (isBackToBack) {
-    score += (oppIsBackToBack ? 1.5 : 3.5) * effMot;
+    addPost(oppIsBackToBack ? 'Back-to-back (both teams)' : 'Back-to-back game', (oppIsBackToBack ? 1.5 : 3.5) * effMot, 3.5);
   }
 
   // ── DAY GAME AFTER NIGHT GAME ────────────────────────────
@@ -5813,7 +5842,7 @@ function computePuntScore({ effectiveBenched, eraDelta, fipDelta = null, isLastG
   // competitive context is neutral. The signal only matters when this team
   // got less recovery time than the opponent.
   if (isDayAfterNight) {
-    score += (oppIsDayAfterNight ? 1.0 : 2.5) * effMot;
+    addPost(oppIsDayAfterNight ? 'Day after night (both teams)' : 'Day game after night', (oppIsDayAfterNight ? 1.0 : 2.5) * effMot, 2.5);
   }
 
   // ── CONSECUTIVE GAMES STREAK ─────────────────────────────
@@ -5821,8 +5850,7 @@ function computePuntScore({ effectiveBenched, eraDelta, fipDelta = null, isLastG
   // ways a single B2B doesn't — depth players tire, veterans need management.
   // This is the primary fatigue signal: meaningful but not decisive alone.
   if (consecutiveStreak >= 7) {
-    const streakBonus = Math.min(8, (consecutiveStreak - 6) * 1.0) * effMot;
-    score += streakBonus;
+    addPost(`${consecutiveStreak}-game no-rest stretch`, Math.min(8, (consecutiveStreak - 6) * 1.0) * effMot, 8);
   }
 
   // ── ROAD TRIP LENGTH ──────────────────────────────────────
@@ -5831,8 +5859,7 @@ function computePuntScore({ effectiveBenched, eraDelta, fipDelta = null, isLastG
   // routine compounds over time. Signal scales with trip length, capped at 6 pts.
   // Only applies to the away team; home team receives 0 by convention.
   if (roadTripLength >= 5) {
-    const tripBonus = Math.min(6, (roadTripLength - 4) * 1.5) * effMot;
-    score += tripBonus;
+    addPost(`${roadTripLength}-game road trip`, Math.min(6, (roadTripLength - 4) * 1.5) * effMot, 6);
   }
 
   // ── CROSS-COUNTRY TRAVEL FATIGUE ─────────────────────────
@@ -5842,7 +5869,7 @@ function computePuntScore({ effectiveBenched, eraDelta, fipDelta = null, isLastG
   // W→E (body 3h behind) is physiologically harder than E→W.
   if (hasTravelFatigue) {
     const base = isWestToEast ? 3.0 : 1.5;
-    score += (oppHasTravelFatigue ? base * 0.5 : base) * effMot;
+    addPost(isWestToEast ? 'West→East travel' : 'East→West travel', (oppHasTravelFatigue ? base * 0.5 : base) * effMot, isWestToEast ? 3 : 1.5);
   }
 
   // ── SPOT STARTER SIGNAL ─────────────────────────────────────────────
@@ -5856,7 +5883,8 @@ function computePuntScore({ effectiveBenched, eraDelta, fipDelta = null, isLastG
   const isEarlySeasonForDebut = gameDate && gameDate.substring(5, 7) < '06';
   if (spStarts <= 2 && (spEra == null || spEra > 5.00)) {
     if (!(spStarts === 0 && isEarlySeasonForDebut)) {
-      score += 7 * effMot;
+      const debutNote = spStarts === 0 ? ' — season debut' : '';
+      addPost(`Spot starter (${spName}, ${spStarts} GS this season${debutNote})`, 7 * effMot, 7);
     }
   }
 
@@ -5867,21 +5895,41 @@ function computePuntScore({ effectiveBenched, eraDelta, fipDelta = null, isLastG
   //   ×0.88 clinched (12% reduction) — clinched teams can rest regulars even
   //          with their ace, but are less likely to run a full punt
   let aceScale = 1.0;
+  let aceNote = null;
   if (spEra != null && spEra <= 3.00 && spStarts >= 6) {
     aceScale = clinched ? 0.88 : 0.75;
+    aceNote = `Ace on the mound (${spName}, ${spEra.toFixed(2)} ERA) — score reduced by ${Math.round((1 - aceScale) * 100)}%`;
   }
 
   // ── SEASON TIMING ─────────────────────────────────────────
   const timingMult = seasonTimingMultiplier(gameDate, teamName);
-  score = score * timingMult * aceScale;
+  const scale = timingMult * aceScale;
+
+  // Build the final breakdown and score from the SAME scaled values —
+  // this is what guarantees they always sum to match.
+  const breakdown = [...g1Factors, ...postFactors]
+    .map(f => ({ label: f.label, val: Math.round(f.raw * scale), max: f.max }))
+    .filter(f => f.val > 0);
+  let score = breakdown.reduce((s, f) => s + f.val, 0);
 
   // ── USER FEEDBACK BIAS ────────────────────────────────────
   // Small additive from override+comment history. Applied after timing/ace
-  // so early-season games still benefit from review learnings.
-  const feedbackBias = (state.teamFeedbackBias || {})[teamName] || 0;
-  if (feedbackBias !== 0) score += feedbackBias;
+  // so early-season games still benefit from review learnings. Not scaled —
+  // it's already a small, deliberately-tuned correction.
+  const feedbackBias = Math.round((state.teamFeedbackBias || {})[teamName] || 0);
+  if (feedbackBias > 0) {
+    breakdown.push({ label: `Review feedback — punt pattern recognized for ${teamName}`, val: feedbackBias, max: 5 });
+  } else if (feedbackBias < 0) {
+    breakdown.push({ label: `Review feedback — competitive pattern noted for ${teamName} (${feedbackBias} pts)`, val: 0, max: 0, isAceNote: true });
+  }
+  score += feedbackBias;
 
-  return Math.min(Math.max(Math.round(score), 0), 80);
+  if (aceNote) breakdown.push({ label: aceNote, val: 0, max: 0, isAceNote: true });
+  if (spStarts === 0 && isEarlySeasonForDebut) {
+    breakdown.push({ label: `Season debut (${spName}, 0 GS) — not flagged as spot starter (early-season debut)`, val: 0, max: 0, isAceNote: true });
+  }
+
+  return { score: Math.min(Math.max(Math.round(score), 0), 80), breakdown };
 }
 
 
@@ -6159,7 +6207,7 @@ function renderCard(g, idx) {
   // ── NEW SUCCINCT LAYOUT DATA ───────────────────────────
   const puntTeamName = abbr(puntingTeam.name);
   // Contributing factors for any scored game (calibration/postponed have none).
-  const factors = (!isPostponedF && !isCal) ? (buildScoreBreakdown(g) || []) : [];
+  const factors = (!isPostponedF && !isCal) ? (g.breakdown || []) : [];
   const isAceFactorLabel = l => /ace on the mound|top starter|rotation anchor/i.test(l || '');
   const aceNoteFactor = factors.find(f => f.isAceNote && !isAceFactorLabel(f.label));
   const posFactors = factors.filter(f => !f.isMult && !f.isAceNote && f.val > 0).sort((a, b) => b.val - a.val).slice(0, 4);
@@ -6390,7 +6438,7 @@ function buildLogEntry(g, dateVal) {
     score: g.topScore,
     preGameScore: g.preGameScore ?? g.topScore,
     flag: g.flag,
-    breakdown: (typeof buildScoreBreakdown === 'function' ? buildScoreBreakdown(g) : []) || [],
+    breakdown: g.breakdown || [],
   };
 }
 
@@ -6421,7 +6469,7 @@ function addGamesToLog(games, dateVal) {
         existing.puntSide   = g.puntSide;
         existing.puntTeam   = (newFlag === 'punt' || newFlag === 'review')
           ? (g.puntSide === 'home' ? g.home.name : g.away.name) : '—';
-        existing.breakdown  = (typeof buildScoreBreakdown === 'function' ? buildScoreBreakdown(g) : []) || [];
+        existing.breakdown  = g.breakdown || [];
         updatedIds.push(id);
       }
     }
@@ -6570,12 +6618,16 @@ async function retrogradeCalibrationGames(teamName) {
 
     // FIP delta / use stored SP data if available
     const ourFip = storedLineup.spFip && storedLineup.spFip < 90 ? storedLineup.spFip : null;
+    const ourEra = storedLineup.spEra && storedLineup.spEra < 90 ? storedLineup.spEra : null;
+    const ourStarts = storedLineup.spStarts || 0;
+    const ourIp = storedLineup.spIp || 0;
 
     // Get opp stored data
     const oppStored = (lineupHistory[oppName] || []).find(e => e.date === sched.date);
     const oppFip = oppStored?.spFip && oppStored.spFip < 90 ? oppStored.spFip : null;
-    const fipDelta = (ourFip && oppFip) ? ourFip - oppFip : 0;
-    const eraDelta = 0; // ERA not used for retrograde / FIP sufficient
+    const oppEra = oppStored?.spEra && oppStored.spEra < 90 ? oppStored.spEra : null;
+    const fipDelta = (ourFip != null && oppFip != null) ? ourFip - oppFip : null;
+    const eraDelta = (ourEra != null && oppEra != null) ? ourEra - oppEra : 0;
 
     // Series context from scheduleLog entry
     const seriesLength = sched.seriesLength || 3;
@@ -6583,42 +6635,87 @@ async function retrogradeCalibrationGames(teamName) {
     const isLastGame   = seriesGame === seriesLength;
     const isFirstGame  = seriesGame === 1;
 
-    // Score / bypass calibration check since this IS a retrograde pass
-    // We pass the actual game date so timing multiplier applies correctly
-    // (April games get the June multiplier lower bound when active)
-    const retroScore = (() => {
-      const mot = tq.puntMotivation;
-      let score = 0;
-
-      const eb = Math.min(effectiveBenched, 4.5);
-      if (eb >= 1.0) {
-        const lineupRaw = 50 * Math.pow(Math.max(0, eb - 0.5) / 4.0, 0.60);
-        score += lineupRaw * mot;
+    // ── STRUCTURAL SIGNALS ──────────────────────────────────────────
+    // B2B / day-after-night / streak / road trip / travel fatigue are all
+    // derivable from state.scheduleLog (the full-season schedule, already
+    // loaded) without any per-game API calls — same data source analyzeGame
+    // uses for live games, just evaluated against sched.date instead of
+    // today. Clinched/eliminated are skipped: every retrograded game is
+    // strictly before the June 1 calibration floor, when division races are
+    // never actually decided, so those signals would never fire anyway.
+    // Series win/loss context (for the finale bonus) is intentionally
+    // omitted — getting it would require a per-game schedule fetch for 100s
+    // of games, and per the "don't guess" principle, no bonus beats a wrong one.
+    const gDate = sched.date;
+    const yesterdayStr = (() => { const d = new Date(gDate + 'T12:00:00'); d.setDate(d.getDate() - 1); return d.toISOString().split('T')[0]; })();
+    const ourPlayedYesterday = (state.scheduleLog || []).some(e => e.date === yesterdayStr && (e.home === teamName || e.away === teamName) && !e.isPostponed);
+    const oppPlayedYesterday = (state.scheduleLog || []).some(e => e.date === yesterdayStr && (e.home === oppName || e.away === oppName) && !e.isPostponed);
+    const gameTimeD = sched.gameTime ? new Date(sched.gameTime) : null;
+    const isDayGame = gameTimeD ? gameTimeD.getUTCHours() < 22 : false;
+    const isDayAfterNight = isDayGame && ourPlayedYesterday;
+    const oppIsDayAfterNight = isDayGame && oppPlayedYesterday;
+    const getStreak = (nm) => {
+      let streak = 0; const d = new Date(gDate + 'T12:00:00');
+      for (let i = 0; i < 20; i++) {
+        d.setDate(d.getDate() - 1);
+        const ds = d.toISOString().split('T')[0];
+        if (!(state.scheduleLog || []).some(e => e.date === ds && (e.home === nm || e.away === nm) && !e.isPostponed)) break;
+        streak++;
       }
-
-      if (fipDelta > 0) {
-        const clampedDelta = Math.min(fipDelta, 4.0);
-        // No rotationNorm — matches updated computePuntScore
-        if (clampedDelta > 0) {
-          const pitchRaw = 14 * Math.pow(Math.min(clampedDelta, 3.0) / 3.0, 0.65);
-          score += pitchRaw * mot;
-        }
+      return streak;
+    };
+    const consecutiveStreak = ourPlayedYesterday ? getStreak(teamName) : 0;
+    const ourTZ = TEAM_TIMEZONE[teamName] || 'E';
+    const oppTZ = TEAM_TIMEZONE[oppName] || 'E';
+    const westToEast = ourPlayedYesterday && ourTZ === 'E' &&
+      (state.scheduleLog || []).some(e => e.date === yesterdayStr && (e.home === teamName || e.away === teamName) && TEAM_TIMEZONE[e.home] === 'W');
+    const eastToWest = ourPlayedYesterday && ourTZ === 'W' &&
+      (state.scheduleLog || []).some(e => e.date === yesterdayStr && (e.home === teamName || e.away === teamName) && TEAM_TIMEZONE[e.home] === 'E');
+    const oppWestToEast = oppPlayedYesterday && oppTZ === 'E' &&
+      (state.scheduleLog || []).some(e => e.date === yesterdayStr && (e.home === oppName || e.away === oppName) && TEAM_TIMEZONE[e.home] === 'W');
+    const oppEastToWest = oppPlayedYesterday && oppTZ === 'W' &&
+      (state.scheduleLog || []).some(e => e.date === yesterdayStr && (e.home === oppName || e.away === oppName) && TEAM_TIMEZONE[e.home] === 'E');
+    const roadTripLength = (!isHome && ourPlayedYesterday) ? (() => {
+      let tripLen = 0; const d = new Date(gDate + 'T12:00:00');
+      for (let i = 0; i < 20; i++) {
+        d.setDate(d.getDate() - 1);
+        const ds = d.toISOString().split('T')[0];
+        if (!(state.scheduleLog || []).some(e => e.date === ds && e.away === teamName && !e.isPostponed)) break;
+        tripLen++;
       }
+      return tripLen + 1;
+    })() : 0;
 
-      if (isFirstGame && seriesLength >= 3) score *= 0.65;
-      // No finale bonus here: unlike the live scoring path, retrograde passes
-      // don't have series win/loss data available, and applying the bonus
-      // unconditionally (as this used to) would wrongly credit it on rubber
-      // games and series the team was trailing — worse than omitting it.
-
-      // Use a fixed timing multiplier for retrograde / calibration-era games
-      // get a conservative weight since the baseline was still forming.
-      // We use 0.70 (same as June/post-calibration early weight) to reflect
-      // that the baseline is now solid but was being built at game time.
-      score = score * 0.70;
-
-      return Math.min(Math.round(score), 80);
-    })();
+    // Score using the SAME engine as every other scoring path (live games,
+    // rebuildSeasonLog) — score and breakdown are built together and are
+    // therefore guaranteed to be consistent. isCalibrationPeriod's hard
+    // June-1 floor is bypassed the same way recomputeReviewBreakdown does,
+    // via state.previewIgnoreCalibration.
+    const prevPreview = state.previewIgnoreCalibration;
+    state.previewIgnoreCalibration = true;
+    let retroResult;
+    try {
+      retroResult = computePuntScore({
+        effectiveBenched, eraDelta, fipDelta,
+        isLastGame, isFirstGame, isDHNightcap: false,
+        clinched: false, eliminated: false,
+        gameDate: gDate, teamName, spName: (isHome ? sched.homeSP : sched.awaySP) || 'SP',
+        spFip: ourFip, spEra: ourEra, spStarts: ourStarts, spIp: ourIp, seriesLength,
+        isBackToBack: ourPlayedYesterday, hasTravelFatigue: westToEast || eastToWest, isWestToEast: westToEast,
+        isDayAfterNight, consecutiveStreak,
+        puntSeriesWins: null, oppSeriesWins: null,
+        roadTripLength,
+        oppIsBackToBack: oppPlayedYesterday, oppIsDayAfterNight, oppHasTravelFatigue: oppWestToEast || oppEastToWest,
+      });
+    } finally {
+      state.previewIgnoreCalibration = prevPreview;
+    }
+    // Calibration-era games get a conservative discount — the baseline was
+    // still forming when these were played, even though it's solid now.
+    const retroScore = Math.min(80, Math.round(retroResult.score * 0.70));
+    const retroBreakdown = retroResult.breakdown
+      .map(f => ({ ...f, val: Math.round(f.val * 0.70) }))
+      .filter(f => f.val > 0 || f.isAceNote);
 
     const retroFlag = retroScore >= PUNT_THRESH ? 'punt'
       : retroScore >= REVIEW_THRESH ? 'review'
@@ -6641,12 +6738,13 @@ async function retrogradeCalibrationGames(teamName) {
       puntSide: isHome ? 'home' : 'away',
       seriesGame, seriesLength,
       awaySP: sched.awaySP || 'TBD',
-      awaySPEra: null, awaySPFip: null,
+      awaySPEra: isHome ? oppEra : ourEra, awaySPFip: isHome ? oppFip : ourFip,
       homeSP: sched.homeSP || 'TBD',
-      homeSPEra: null, homeSPFip: null,
+      homeSPEra: isHome ? ourEra : oppEra, homeSPFip: isHome ? ourFip : oppFip,
       benched: effectiveBenched,
       score: retroScore,
       flag: retroFlag,
+      breakdown: retroBreakdown,
       isRetrograde: true,
     };
 
@@ -8644,20 +8742,37 @@ async function recomputeReviewBreakdown(id, e, gamePk) {
     // for review display (calibration only guards live detection, not review).
     const prevCalib = state.previewIgnoreCalibration;
     state.previewIgnoreCalibration = true;
-    let analyzed, freshBreakdown;
+    let analyzed;
     try {
       analyzed = await analyzeGame(targetGame, normalLineups);
-      freshBreakdown = (typeof buildScoreBreakdown === 'function' ? buildScoreBreakdown(analyzed) : []) || [];
     } finally {
       state.previewIgnoreCalibration = prevCalib;
     }
+    // analyzed.breakdown is built inline by computePuntScore as it computes
+    // the score, so the two can never diverge. If we're recomputing at all
+    // (only happens when the stored breakdown is empty/missing — a legacy
+    // entry), the stored score is equally unreliable, so replace both
+    // together rather than bolting a fresh breakdown onto a stale score.
+    const freshBreakdown = analyzed.breakdown || [];
 
     // Save back if fresh recompute has content; otherwise keep what was stored.
     const logEntry = state.gameLog.find(x => x.id === id);
     const storedBreakdown = (logEntry?.breakdown || []);
     const newBreakdown = freshBreakdown.some(f => f && f.val > 0) ? freshBreakdown : storedBreakdown;
     if (logEntry && freshBreakdown.some(f => f && f.val > 0)) {
-      logEntry.breakdown = newBreakdown; saveGameLogEntry(id).catch(() => {});
+      logEntry.breakdown = newBreakdown;
+      logEntry.score = analyzed.topScore;
+      logEntry.flag = logEntry.flag === 'review' ? 'review' : analyzed.flag;
+      logEntry.puntSide = analyzed.puntSide;
+      logEntry.puntTeam = (analyzed.flag === 'punt' || analyzed.flag === 'review')
+        ? (analyzed.puntSide === 'home' ? analyzed.home.name : analyzed.away.name) : '—';
+      saveGameLogEntry(id).catch(() => {});
+      // Score/flag/badge in the header were rendered from the old (stale)
+      // entry before this recompute ran — re-render the whole panel now
+      // that state.gameLog has the corrected values. openReviewDetail reads
+      // fresh from state.gameLog, and won't re-recurse here since
+      // logEntry.breakdown is now populated.
+      if (reviewDetailId === id) { openReviewDetail(id); return; }
     }
     if (document.getElementById('reviewBreakdown-' + gamePk) !== breakdownEl) return;
 
@@ -9811,145 +9926,12 @@ function renderWatchList(games) {
   section.style.display = '';
 }
 
-// ══════════════════════════════════════════════════════════
-// SCORE BREAKDOWN / why did this game score what it scored
-// ══════════════════════════════════════════════════════════
-
-function buildScoreBreakdown(g) {
-  if (!g || g.inCalibration) return null;
-
-  const teamName = g.puntSide === 'home' ? g.home.name : g.away.name;
-  // Use the game's own date so this display reconstruction matches whatever
-  // team-quality tier actually produced g.score, instead of drifting toward
-  // today's standings for an older game.
-  const tq = getLiveTeamQuality(teamName, g.date);
-  const eb = (g.puntSide === 'home' ? g.homeEB?.effectiveBenched : g.awayEB?.effectiveBenched) || 0;
-  const spEra    = g.puntSide === 'home' ? g.homeSP?.era    : g.awaySP?.era;
-  const oppEra   = g.puntSide === 'home' ? g.awaySP?.era    : g.homeSP?.era;
-  const spFip    = g.puntSide === 'home' ? g.homeSP?.fip    : g.awaySP?.fip;
-  const oppFip   = g.puntSide === 'home' ? g.awaySP?.fip    : g.homeSP?.fip;
-  const spStarts = (g.puntSide === 'home' ? g.homeSP?.starts : g.awaySP?.starts) || 0;
-  const spIp     = (g.puntSide === 'home' ? g.homeSP?.ip     : g.awaySP?.ip)     || 0;
-  const spName   = g.puntSide === 'home' ? g.homeSP?.name   : g.awaySP?.name;
-
-  // ── EFFECTIVE MOTIVATION (mirror engine) ──
-  const clinched   = g.puntSide === 'home' ? g.homeClinched   : g.awayClinched;
-  const eliminated = g.puntSide === 'home' ? g.homeEliminated : g.awayEliminated;
-  const mot = tq.puntMotivation;
-  let effMot = mot;
-  if (clinched) effMot = Math.max(mot, 0.85);
-  else if (eliminated) effMot = Math.max(mot, 0.45);
-
-  // ── ACE SCALE (mirrors computePuntScore) ─────────────────────────────
-  const aceScale = (spEra != null && spEra <= 3.00 && spStarts >= 6) ? (clinched ? 0.88 : 0.75) : 1.0;
-  const aceNote  = aceScale < 1.0
-    ? `Ace on mound (${spName || 'SP'}, ${typeof spEra === 'number' ? spEra.toFixed(2) : spEra} ERA) — score reduced by ${Math.round((1 - aceScale) * 100)}%`
-    : null;
-
-  const SL = g.seriesLength || 0;
-  const puntSeriesWins = g.puntSide === 'home' ? g.homeSeries : g.awaySeries;
-  const oppSeriesWins  = g.puntSide === 'home' ? g.awaySeries : g.homeSeries;
-  const hasSeriesData  = puntSeriesWins != null && oppSeriesWins != null;
-  const isRubberGame   = hasSeriesData && puntSeriesWins === oppSeriesWins;
-  const trailingSeries = hasSeriesData && puntSeriesWins < oppSeriesWins;
-  // Engine applies G1 suppression to lineup+pitching only, and multiplies the whole
-  // score by season-timing AND the ace reduction. We distribute all of them
-  // per-factor so the displayed values sum to the actual score for every matchup.
-  const g1Suppress = (g.isFirstGame && SL >= 3) ? 0.65 : 1;
-  const timing = seasonTimingMultiplier(g.date, teamName) * aceScale;
-
-  const isB2B   = g.puntSide === 'home' ? g.homeIsBackToBack      : g.awayIsBackToBack;
-  const isFat   = g.puntSide === 'home' ? g.homeHasTravelFatigue  : g.awayHasTravelFatigue;
-  const isW2E   = g.puntSide === 'home' ? g.homeIsWestToEast      : g.awayIsWestToEast;
-  const isDAN   = g.puntSide === 'home' ? g.homeDayAfterNight     : g.awayDayAfterNight;
-  const streak  = g.puntSide === 'home' ? g.homeConsecutiveStreak : g.awayConsecutiveStreak;
-  // Opponent context — used to show shared-vs-solo fatigue conditions
-  const oppIsB2B  = g.puntSide === 'home' ? g.awayIsBackToBack      : g.homeIsBackToBack;
-  const oppIsDAN  = g.puntSide === 'home' ? g.awayDayAfterNight     : g.homeDayAfterNight;
-  const oppIsFat  = g.puntSide === 'home' ? g.awayHasTravelFatigue  : g.homeHasTravelFatigue;
-
-  const factors = [];
-  const push = (label, raw, max) => { const v = Math.round(raw * timing); if (v > 0) factors.push({ label, val: v, max }); };
-
-  // Lineup signal — effMot, G1 suppression (engine order), timing.
-  const ebC = Math.min(eb, 4.5);
-  if (ebC >= 1.0) {
-    const ebRound = Math.round(eb);
-    push(`${ebRound} regular${ebRound === 1 ? '' : 's'} rested`, 50 * Math.pow(Math.max(0, ebC - 0.5) / 4.0, 0.60) * effMot * g1Suppress, 50);
-  }
-  // Pitching signal — ERA delta blended with FIP when both available.
-  if (spEra != null && oppEra != null && spEra < 90 && oppEra < 90) {
-    const eraDelta = Math.min(Math.max(spEra - oppEra, 0), 4.0);
-    const w = Math.min(1, spStarts / 4);
-    const hasFip = spFip != null && oppFip != null && spFip < 90 && oppFip < 90;
-    const fipDelta = hasFip ? Math.min(Math.max(spFip - oppFip, 0), 4.0) : null;
-    const effectiveDelta = hasFip
-      ? Math.min(Math.max(0.6 * eraDelta + 0.4 * fipDelta, 0), 4.0)
-      : eraDelta;
-    if (effectiveDelta > 0 && w > 0) {
-      const label = hasFip
-        ? `ERA gap (${spEra.toFixed(2)} vs ${oppEra.toFixed(2)}) · FIP ${spFip.toFixed(2)} vs ${oppFip.toFixed(2)}`
-        : `ERA gap (${spEra.toFixed(2)} vs ${oppEra.toFixed(2)})`;
-      push(label, 14 * Math.pow(Math.min(effectiveDelta, 3.0) / 3.0, 0.65) * effMot * w * g1Suppress, 14);
-    }
-  }
-  // Spot starter — emergency arm with ≤2 GS is itself a punt signal.
-  // Exception: 0-GS debut before June may be a legitimate prospect debut, not an emergency arm.
-  const isEarlySeasonBD = g.date && g.date.substring(5, 7) < '06';
-  if (spStarts === 0 && isEarlySeasonBD) {
-    factors.push({ label: `Season debut (${spName || 'SP'}, 0 GS) — not flagged as spot starter (early-season debut)`, val: 0, max: 0, isAceNote: true });
-  } else if (spStarts <= 2 && (spEra == null || spEra > 5.00)) {
-    const debutNote = spStarts === 0 ? ' — season debut' : '';
-    push(`Spot starter (${spName || 'SP'}, ${spStarts} GS this season${debutNote})`, 7 * effMot, 7);
-  }
-  // Absolute ERA threshold — objectively poor arm (6.00+) in meaningful sample.
-  if (spEra != null && spEra >= 6.00 && spStarts >= 3) {
-    const w = Math.min(1, spStarts / 4);
-    if (w >= 0.5) {
-      const absPts = Math.min(6, (spEra - 5.0) * 1.0) * effMot * w;
-      push(`High ERA (${typeof spEra === 'number' ? spEra.toFixed(2) : spEra} — objectively poor arm)`, absPts, 6);
-    }
-  }
-  // Short-starter pattern — pitchers averaging < 4.5 IP/start can't get through the order twice.
-  if (spStarts >= 4 && spIp > 0) {
-    const ipPerStart = spIp / spStarts;
-    if (ipPerStart < 4.5) {
-      push(`Short-starter pattern (${ipPerStart.toFixed(1)} IP/start avg)`, Math.min(3, (4.5 - ipPerStart) * 2) * effMot, 3);
-    }
-  }
-  // Structural bonuses — NOT G1-suppressed; only the season-timing multiplier.
-  if (g.isLastGame && SL >= 3 && !isRubberGame && !trailingSeries) {
-    const isSweepClinch = hasSeriesData && puntSeriesWins >= 2 && oppSeriesWins === 0;
-    const lbl = isSweepClinch
-      ? `Series clinched (leads ${puntSeriesWins}–${oppSeriesWins}) — high punt likelihood`
-      : hasSeriesData
-      ? `Series finale (up ${puntSeriesWins}–${oppSeriesWins})`
-      : 'Series finale';
-    push(lbl, 9 + (SL >= 4 ? 4 : 0), 13);
-  }
-  if (clinched)   push('Division clinched', 22, 22);
-  if (eliminated) push('Mathematically eliminated', 22, 22);
-  if ((clinched || eliminated) && g.isLastGame) push('Clinch/elim + finale', 6, 6);
-  if (g.isDHNightcap) push('DH nightcap', 14, 14);
-  if (isB2B)  push(oppIsB2B ? 'Back-to-back (both teams)' : 'Back-to-back game', (oppIsB2B ? 1.5 : 3.5) * effMot, 3.5);
-  if (isDAN)  push(oppIsDAN ? 'Day after night (both teams)' : 'Day game after night', (oppIsDAN ? 1.0 : 2.5) * effMot, 2.5);
-  if (streak >= 7) push(`${streak}-game no-rest stretch`, Math.min(8, (streak - 6) * 1.0) * effMot, 8);
-  // Road trip length — only relevant when punt side is the away team
-  const roadTrip = g.puntSide === 'away' ? (g.awayRoadTrip || 0) : 0;
-  if (roadTrip >= 5) push(`${roadTrip}-game road trip`, Math.min(6, (roadTrip - 4) * 1.5) * effMot, 6);
-  if (isFat) { const base = isW2E ? 3.0 : 1.5; push(isW2E ? 'West→East travel' : 'East→West travel', (oppIsFat ? base * 0.5 : base) * effMot, isW2E ? 3 : 1.5); }
-
-  if (aceNote) factors.push({ label: aceNote, val: 0, max: 0, isAceNote: true });
-
-  const feedbackBias = Math.round((state.teamFeedbackBias || {})[teamName] || 0);
-  if (feedbackBias > 0) {
-    factors.push({ label: `Review feedback — punt pattern recognized for ${teamName}`, val: feedbackBias, max: 5 });
-  } else if (feedbackBias < 0) {
-    factors.push({ label: `Review feedback — competitive pattern noted for ${teamName} (${feedbackBias} pts)`, val: 0, max: 0, isAceNote: true });
-  }
-
-  return factors;
-}
+// Score breakdowns are no longer reconstructed after the fact — computePuntScore
+// builds them inline as it computes the score (see its header comment), and
+// every scoring path (analyzeGame, retrogradeCalibrationGames) stores that
+// same breakdown directly. This eliminates the class of bug where a
+// separately-reconstructed breakdown could drift out of sync with (or use an
+// entirely different formula than) whatever actually produced the score.
 
 function toggleBreakdown(gid) {
   const panel = document.getElementById(`bp-${gid}`);
