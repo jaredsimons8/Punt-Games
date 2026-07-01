@@ -6417,8 +6417,11 @@ function updateStats(games, dateVal) {
     // (accumulating on each refresh would double/triple-count)
     state.seasonPunts = state.gameLog.filter(e => effectiveFlag(e) === 'punt').length;
     document.getElementById('statSeason').textContent = state.seasonPunts;
-    // Update league punt rate — derived here so it stays in sync with season punts
-    const totalScored = state.gameLog.filter(e => e.flag !== 'postponed').length;
+    // Update league punt rate — derived here so it stays in sync with season punts.
+    // Exclude calibration placeholders (score 0, not an actual verdict) —
+    // same fix as renderCILeaderboard's totalScored, kept consistent since
+    // both write to the same statRate/aboutStatRate elements.
+    const totalScored = state.gameLog.filter(e => e.flag !== 'postponed' && e.flag !== 'calibration').length;
     const leaguePuntRate = totalScored > 0 ? ((state.seasonPunts / totalScored) * 100).toFixed(1) + '%' : '—';
     const rEl = document.getElementById('statRate');
     if (rEl) rEl.textContent = leaguePuntRate;
@@ -6540,8 +6543,14 @@ function effectiveFlag(e) {
 
 function rebuildTeamData() {
   ALL_TEAMS.forEach(t => {
+    // Exclude calibration placeholders (score 0, not an actual verdict) —
+    // entries.length becomes td.games, used as the rate denominator
+    // everywhere (Season Leaders, CI rankings, team cards). Including
+    // unscored calibration games there inflated the denominator and
+    // deflated every displayed punt rate. Punts themselves are unaffected
+    // either way since a calibration entry can never be flag === 'punt'.
     const entries = state.gameLog.filter(e =>
-      (e.away === t.name || e.home === t.name) && e.flag !== 'postponed'
+      (e.away === t.name || e.home === t.name) && e.flag !== 'postponed' && e.flag !== 'calibration'
     );
     const punts = entries.filter(e => effectiveFlag(e) === 'punt' && e.puntTeam === t.name);
 
@@ -8384,7 +8393,7 @@ function setManualVerdict(id, verdict) {
     buildTeamFeedbackBias();
     state.seasonPunts = state.gameLog.filter(e => effectiveFlag(e) === 'punt').length;
     const ss = document.getElementById('statSeason'); if (ss) ss.textContent = state.seasonPunts;
-    const _ts = state.gameLog.filter(e => e.flag !== 'postponed').length;
+    const _ts = state.gameLog.filter(e => e.flag !== 'postponed' && e.flag !== 'calibration').length;
     const _rEl = document.getElementById('statRate');
     if (_rEl) _rEl.textContent = _ts > 0 ? ((state.seasonPunts / _ts) * 100).toFixed(1) + '%' : '—';
     if (typeof renderTeamBreakdown === 'function') renderTeamBreakdown();
@@ -9440,9 +9449,12 @@ function renderCILeaderboard() {
       : (a.rate - b.rate || a.punts - b.punts || a.t.name.localeCompare(b.t.name))
   );
 
-  // Compute league-wide totals for the stat strip
+  // Compute league-wide totals for the stat strip. Exclude calibration
+  // placeholders (score 0, awaiting baseline data) as well as postponed
+  // games — neither is an actual verdict, so counting them as "scored"
+  // both mislabels the stat and dilutes the punt rate denominator.
   const totalPunts = state.gameLog.filter(e => effectiveFlag(e) === 'punt').length;
-  const totalScored = state.gameLog.filter(e => e.flag !== 'postponed').length;
+  const totalScored = state.gameLog.filter(e => e.flag !== 'postponed' && e.flag !== 'calibration').length;
   const leaguePuntRate = totalScored > 0 ? ((totalPunts / totalScored) * 100) : null;
 
   // Update stat strip rate card
@@ -9595,7 +9607,9 @@ function renderAboutTopPunts() {
 function renderAboutMonthTrend() {
   const el = document.getElementById('aboutMonthChart');
   if (!el) return;
-  const allGames = (state.gameLog || []).filter(e => e.flag !== 'postponed');
+  // Exclude calibration placeholders (score 0, not an actual verdict) from
+  // the monthly denominator — same fix as renderCILeaderboard's totalScored.
+  const allGames = (state.gameLog || []).filter(e => e.flag !== 'postponed' && e.flag !== 'calibration');
   const puntGames = allGames.filter(e => effectiveFlag(e) === 'punt');
   const MONTHS = [
     { m: 2, label: 'Mar' }, { m: 3, label: 'Apr' }, { m: 4, label: 'May' },
