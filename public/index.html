@@ -3809,6 +3809,7 @@ async function fetchGames() {
     )];
 
     const isViewingToday = dateVal === todayStr;
+    if (!isViewingToday) await fetchStandingsAsOf(dateVal); // team quality as of the viewed date, not today
     const [normalLineups] = await Promise.all([
       (isViewingToday && teamIds.size === 30) ? getCachedNormalLineups() : fetchNormalLineups([...teamIds], games, dateVal),
       prefetchPitcherStats(uniquePitcherIds), // warm the cache for all pitchers at once
@@ -3879,6 +3880,8 @@ async function analyzeDateSilent(dateVal, normalLineups) {
   const uniquePitcherIds = [...new Set(
     games.flatMap(g => [g.teams.home.probablePitcher?.id, g.teams.away.probablePitcher?.id]).filter(Boolean)
   )];
+  // Team quality/motivation as of this date, not today's — see fetchStandingsAsOf.
+  if (dateVal !== localTodayStr()) await fetchStandingsAsOf(dateVal);
   await prefetchPitcherStats(uniquePitcherIds);
   // Analyze 2 games at a time with 300ms between batches — gentler on the
   // MLB rate limiter than the 4/150ms used during live rendering.
@@ -4135,6 +4138,11 @@ async function rebuildSeasonLog() {
       }
       if (analyzed.length) datesWithGames++;
 
+      // Once a game is scored (data through its own date), that score is
+      // final — never silently rewritten by a later rebuild just because
+      // today's roster/standings have since moved on. The only two ways a
+      // logged game's verdict changes are: the admin's manual override, or
+      // it was never really scored yet (still a 'calibration' placeholder).
       const saveIds = [];
       for (const g of analyzed) {
         if (g.flag === 'postponed') continue;
@@ -4148,22 +4156,16 @@ async function rebuildSeasonLog() {
           continue;
         }
 
-        // Existing game — re-score. logOverrides / logComments are separate
-        // maps keyed by id and are NOT touched, so manual verdicts survive.
-        const newFlag = g.flag, newScore = g.topScore;
-        // Once a game is in the review band, preserve that flag so it stays
-        // in the admin queue. Only the admin's override changes its effective verdict.
-        // This applies to BOTH decided and undecided review games — removing a game
-        // from the queue should be an explicit admin decision, not a side-effect of rescoring.
-        const preservedFlag = entry.flag === 'review' ? 'review' : newFlag;
-        const changed = entry.flag !== preservedFlag || entry.score !== newScore;
-        entry.flag = preservedFlag;
-        entry.score = newScore;
+        if (entry.flag !== 'calibration') continue; // already scored — locked, skip
+
+        // Was a calibration placeholder (never actually scored) — fill it in now.
+        entry.flag = g.flag;
+        entry.score = g.topScore;
         entry.puntSide = g.puntSide;
-        entry.puntTeam = (preservedFlag === 'punt' || preservedFlag === 'review')
+        entry.puntTeam = (g.flag === 'punt' || g.flag === 'review')
           ? (g.puntSide === 'home' ? g.home.name : g.away.name) : '—';
         entry.breakdown = (typeof buildScoreBreakdown === 'function' ? buildScoreBreakdown(g) : []) || [];
-        if (changed) { rescored++; saveIds.push(id); }
+        rescored++; saveIds.push(id);
       }
 
       // Persist this day's changes before moving on.
@@ -5321,10 +5323,47 @@ async function fetchStandings() {
   } catch { /* silently fail, use preseason tiers */ }
 }
 
-// Get live-adjusted team quality / overrides preseason tier if team has played 30+ games
-function getLiveTeamQuality(teamName) {
+// Point-in-time standings for a past date — team quality/motivation is a
+// scoring input just like the lineup baseline, and has the same "must be
+// as of the game's date" requirement: without this, a team's motivation
+// tier for an already-scored game could keep drifting all season as their
+// CURRENT win% changes, even though nothing about that game changed.
+const historicalStandingsCache = {}; // { [dateStr]: { [teamName]: {...} } }
+async function fetchStandingsAsOf(dateStr) {
+  if (historicalStandingsCache[dateStr]) return historicalStandingsCache[dateStr];
+  const result = {};
+  try {
+    const year = new Date().getFullYear();
+    const data = await apiFetch(`${BASE}/standings?leagueId=103,104&season=${year}&standingsTypes=regularSeason&date=${dateStr}&hydrate=team`);
+    (data.records || []).forEach(division => {
+      (division.teamRecords || []).forEach(tr => {
+        const name = tr.team?.name;
+        if (name) {
+          result[name] = {
+            wins: tr.wins,
+            losses: tr.losses,
+            winPct: parseFloat(tr.winningPercentage) || 0.5,
+            gb: parseFloat(tr.gamesBack) || 0,
+            clinched: tr.clinched || false,
+            eliminationNumber: tr.eliminationNumber || null,
+            divisionChamp: tr.divisionChamp || false,
+            wildCardEligible: tr.wildCardEligible || false,
+          };
+        }
+      });
+    });
+  } catch { /* leave empty — getLiveTeamQuality falls back to preseason tier */ }
+  historicalStandingsCache[dateStr] = result;
+  return result;
+}
+
+// Get team quality as of a date / overrides preseason tier if the team had
+// played 30+ games by then. asOfDate uses point-in-time historical standings
+// when available (see fetchStandingsAsOf); omitting it uses today's live cache.
+function getLiveTeamQuality(teamName, asOfDate = null) {
   const base = TEAM_QUALITY[teamName] || { tier:'fringe', avgRotationFip:4.20, puntMotivation:0.5 };
-  const live = standingsCache.data[teamName];
+  const source = (asOfDate && historicalStandingsCache[asOfDate]) ? historicalStandingsCache[asOfDate] : standingsCache.data;
+  const live = source[teamName];
   if (!live || (live.wins + live.losses) < 30) return base; // not enough data yet
 
   // Dynamically adjust tier based on live win percentage.
@@ -5377,7 +5416,7 @@ function getLiveTeamQuality(teamName) {
   if (live.wildCardEligible === false &&
       live.clinched !== true && live.eliminationNumber !== 'E' &&
       live.gb > 10) {
-    const month = new Date().getMonth() + 1; // 1–12
+    const month = asOfDate ? parseInt(asOfDate.substring(5, 7), 10) : (new Date().getMonth() + 1); // 1–12
     if (month >= 7) {
       const gbBoost = Math.min(0.18, (live.gb - 10) * 0.025);
       puntMotivation = Math.min(0.78, puntMotivation + gbBoost);
@@ -5543,7 +5582,7 @@ async function getEffectiveBenchedCount(teamId, teamName, missingPlayers, oppPit
     breakdown.push({ player, type, weight: finalWeight, reason });
   });
 
-  const tq = getLiveTeamQuality(teamName);
+  const tq = getLiveTeamQuality(teamName, asOfDate);
   if (tq.tier === 'rebuilding') {
     effectiveBenched = Math.min(effectiveBenched, 2.0);
   }
@@ -5629,7 +5668,10 @@ function computePuntScore({ effectiveBenched, eraDelta, fipDelta = null, isLastG
   roadTripLength = 0,
   oppIsBackToBack = false, oppIsDayAfterNight = false, oppHasTravelFatigue = false }) {
 
-  const tq = getLiveTeamQuality(teamName);
+  // gameDate here is used as asOfDate for team quality/motivation — without
+  // it, an already-scored past game's motivation tier would keep drifting
+  // as the CURRENT standings change over the season (see fetchStandingsAsOf).
+  const tq = getLiveTeamQuality(teamName, gameDate);
 
   // Hard zero during calibration
   if (isCalibrationPeriod(gameDate, teamName)) return 0;
@@ -8561,6 +8603,9 @@ async function recomputeReviewBreakdown(id, e, gamePk) {
       return;
     }
 
+    // Team quality/motivation as of the game's date, not today's.
+    if (e.date !== localTodayStr()) await fetchStandingsAsOf(e.date);
+
     // Prefer the baseline as it stood on e.date (source: 'history' means the
     // team already had 60+ games of history BY that date). Games from before
     // a team's calibration graduated have no such baseline yet — for those,
@@ -9756,7 +9801,10 @@ function buildScoreBreakdown(g) {
   if (!g || g.inCalibration) return null;
 
   const teamName = g.puntSide === 'home' ? g.home.name : g.away.name;
-  const tq = getLiveTeamQuality(teamName);
+  // Use the game's own date so this display reconstruction matches whatever
+  // team-quality tier actually produced g.score, instead of drifting toward
+  // today's standings for an older game.
+  const tq = getLiveTeamQuality(teamName, g.date);
   const eb = (g.puntSide === 'home' ? g.homeEB?.effectiveBenched : g.awayEB?.effectiveBenched) || 0;
   const spEra    = g.puntSide === 'home' ? g.homeSP?.era    : g.awaySP?.era;
   const oppEra   = g.puntSide === 'home' ? g.awaySP?.era    : g.homeSP?.era;
