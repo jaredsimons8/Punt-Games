@@ -3453,9 +3453,16 @@ function saveGameLogCache() {
 }
 
 // Ensure breakdown is always a JS array regardless of how it was cached.
-function normalizeBreakdown(b) {
+// Recursive: a past saveGameLogEntry bug called JSON.stringify() on an
+// already-string breakdown value on every save, so a row that's been saved
+// and reloaded multiple times can be wrapped in several layers of escaped
+// JSON string. Unwrap until an array falls out (bounded, so a truly
+// malformed value can't loop forever).
+function normalizeBreakdown(b, depth = 0) {
   if (Array.isArray(b)) return b;
-  if (typeof b === 'string' && b) { try { const p = JSON.parse(b); return Array.isArray(p) ? p : []; } catch { return []; } }
+  if (typeof b === 'string' && b && depth < 20) {
+    try { return normalizeBreakdown(JSON.parse(b), depth + 1); } catch { return []; }
+  }
   return [];
 }
 
@@ -3510,7 +3517,7 @@ async function loadUserData() {
         awaySP: row.away_sp || 'TBD', awaySPEra: row.away_sp_era || 99, awaySPFip: row.away_sp_fip || 99,
         homeSP: row.home_sp || 'TBD', homeSPEra: row.home_sp_era || 99, homeSPFip: row.home_sp_fip || 99,
         benched: row.eff_benched || 0, score: row.punt_score || 0, flag: row.flag || 'clean',
-        breakdown: (() => { const b = row.breakdown; if (Array.isArray(b)) return b; if (typeof b === 'string') { try { return JSON.parse(b) || []; } catch { return []; } } return []; })(),
+        breakdown: normalizeBreakdown(row.breakdown),
       }));
       logs.forEach(row => {
         if (row.notes)   state.logComments[row.game_id]  = row.notes;
@@ -3562,7 +3569,14 @@ async function saveGameLogEntry(gameId) {
       result: state.logResults[gameId] || null,
       override: state.logOverrides[gameId] !== undefined ? state.logOverrides[gameId] : null,
       notes: state.logComments[gameId] || '',
-      breakdown: JSON.stringify(e.breakdown || []),
+      // jsonb column — pass the array directly. Do NOT JSON.stringify() this:
+      // the Supabase client already serializes the request body, so a manual
+      // stringify here double-encodes it into a JSON string VALUE stored
+      // inside the jsonb column instead of a JSON array. On the next load,
+      // that string comes back as e.breakdown, and the next save would
+      // stringify it AGAIN — compounding indefinitely into a deeply nested,
+      // repeatedly-escaped string with every save/load cycle.
+      breakdown: normalizeBreakdown(e.breakdown),
       updated_at: new Date().toISOString(),
     }, { onConflict: 'user_id,game_id' });
     setSyncDot('synced');
@@ -8507,9 +8521,7 @@ async function openReviewDetail(id) {
   }
 
   // Scaling factors stored at log time.
-  let factors = e.breakdown;
-  if (typeof factors === 'string') { try { factors = JSON.parse(factors); } catch { factors = []; } }
-  if (!Array.isArray(factors)) factors = [];
+  const factors = normalizeBreakdown(e.breakdown);
   const posFactors = factors.filter(f => f && f.val > 0).sort((a, b) => b.val - a.val);
   const factorRows = posFactors.map(f => {
     const maxForFactor = f.max || f.val || 1;
