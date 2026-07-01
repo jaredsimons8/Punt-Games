@@ -4077,7 +4077,12 @@ async function autoFillMissingGames() {
   }
 }
 
-async function rebuildSeasonLog() {
+// force=true is a deliberate, explicitly-triggered full rescore (e.g. after
+// an algorithm fix) — it ignores the checkpoint and rescores every already-
+// logged game, not just calibration placeholders. This is the ONE exception
+// to "a scored game is locked"; it's never invoked automatically, only by
+// direct request. Admin overrides/comments are untouched either way.
+async function rebuildSeasonLog(force = false) {
   if (!isAdmin()) return;
   if (rebuildInProgress) return;
   if (!currentUser) { showToast('Sign in first', true); return; }
@@ -4086,7 +4091,9 @@ async function rebuildSeasonLog() {
   if (!dates.length) { showToast('No dates to process', true); return; }
 
   // Resume from checkpoint if one exists from a previous interrupted run.
-  const cp = getRebuildCheckpoint();
+  // A forced full rescore ignores the checkpoint — it's a one-time pass over
+  // the whole season, not a gap-filling resume.
+  const cp = force ? null : getRebuildCheckpoint();
   const resumeFrom = cp?.lastCompletedDate || null;
   const datesToProcess = resumeFrom ? dates.filter(d => d > resumeFrom) : [...dates];
   const skippedDates = dates.length - datesToProcess.length;
@@ -4140,9 +4147,12 @@ async function rebuildSeasonLog() {
 
       // Once a game is scored (data through its own date), that score is
       // final — never silently rewritten by a later rebuild just because
-      // today's roster/standings have since moved on. The only two ways a
-      // logged game's verdict changes are: the admin's manual override, or
-      // it was never really scored yet (still a 'calibration' placeholder).
+      // today's roster/standings have since moved on. The only ways a
+      // logged game's verdict changes: the admin's manual override, it was
+      // never really scored yet (still a 'calibration' placeholder), or this
+      // is an explicit force=true full rescore (see function comment above).
+      // logOverrides/logComments are separate maps keyed by id and are never
+      // touched here either way, so manual verdicts always survive.
       const saveIds = [];
       for (const g of analyzed) {
         if (g.flag === 'postponed') continue;
@@ -4156,9 +4166,8 @@ async function rebuildSeasonLog() {
           continue;
         }
 
-        if (entry.flag !== 'calibration') continue; // already scored — locked, skip
+        if (!force && entry.flag !== 'calibration') continue; // already scored — locked, skip
 
-        // Was a calibration placeholder (never actually scored) — fill it in now.
         entry.flag = g.flag;
         entry.score = g.topScore;
         entry.puntSide = g.puntSide;
