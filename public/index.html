@@ -6854,8 +6854,12 @@ function cycleResult(id) {
   rebuildTeamData();
   renderTeamBreakdown();
   renderLeaders();
+  // Two near-duplicate verdict panels can show this control (standalone
+  // Gameflow tab vs. the Reviews-tab detail panel) — refresh whichever is
+  // actually present in the DOM.
   const logEntry = state.gameLog.find(e => e.id === id);
-  if (logEntry) renderVerdictPanel(logEntry);
+  if (logEntry && document.getElementById('gameflowVerdict')) renderVerdictPanel(logEntry);
+  if (document.getElementById('reviewVerdictBlock')) renderReviewVerdictBlock(id);
   debounceSave("result_"+id, () => saveGameLogEntry(id));
 }
 
@@ -8510,6 +8514,21 @@ function renderReviewVerdictBlock(id) {
   }
 
   const mkBtn = (label, v, a, col, bgDim) => `<button onclick="setManualVerdict('${sid}','${v}')" style="flex:1;padding:9px 10px;border-radius:var(--r-md);cursor:pointer;font-family:var(--font-mono);font-size:11px;font-weight:700;border:1px solid ${a ? col : 'var(--border2)'};background:${a ? bgDim : 'transparent'};color:${a ? col : 'var(--text2)'}">${label}</button>`;
+
+  // Same "Result" control as renderVerdictPanel (the standalone Gameflow
+  // tab's verdict block) — this is the review-detail-panel twin of that
+  // function, so it needs the same fix or a confirmed punt reviewed here
+  // never gets its W/L recorded.
+  const logEntry = state.gameLog.find(x => x.id === id);
+  const isPuntNow = ov === true || (ov === undefined && logEntry?.flag === 'punt');
+  const curResult = state.logResults[id] || null;
+  const resultColor = curResult === 'W' ? 'var(--green)' : curResult === 'L' ? 'var(--red2)' : 'var(--text3)';
+  const resultRow = isPuntNow ? `
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+      <span style="font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);font-family:var(--font-mono)">Result</span>
+      <button onclick="cycleResult('${sid}')" title="Click to cycle: unset → W → L → unset" style="padding:5px 14px;border-radius:var(--r-md);cursor:pointer;font-family:var(--font-mono);font-size:11px;font-weight:700;border:1px solid ${curResult ? resultColor : 'var(--border2)'};background:transparent;color:${resultColor}">${curResult || 'unset — click to set'}</button>
+    </div>` : '';
+
   el.innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
       <div style="font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);font-family:var(--font-mono)">Your review</div>
@@ -8520,6 +8539,7 @@ function renderReviewVerdictBlock(id) {
       ${mkBtn('✓ Not a Punt', 'clean', ov === false, 'var(--green)', 'var(--green-dim)')}
       ${mkBtn('↺ Use Algorithm', 'auto', ov === undefined, 'var(--text2)', 'var(--muted)')}
     </div>
+    ${resultRow}
     <textarea oninput="saveVerdictReason('${sid}', this.value)" placeholder="Why is / isn't this a punt? (recorded as tuning feedback)" style="width:100%;min-height:70px;resize:vertical;background:var(--bg);border:1px solid var(--border);border-radius:var(--r-md);padding:10px 12px;color:var(--text);font-family:var(--font-body);font-size:13px;line-height:1.5;box-sizing:border-box">${reason}</textarea>`;
 }
 
