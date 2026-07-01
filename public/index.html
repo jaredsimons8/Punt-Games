@@ -5132,6 +5132,27 @@ async function analyzeGame(game, normalLineups) {
   const preGameWeight = isPreGamePunt ? 1.0 : (status === 'Final' ? 0.65 : 1.0);
   const inGameWeight  = isPreGamePunt ? 0.0 : (status === 'Final' ? 0.35 : 0.0);
 
+  // If in-game evidence pushed the score above what the pre-game factors
+  // alone explain, record that as an explicit breakdown line — otherwise the
+  // stored breakdown (pre-game only) would sum to less than topScore. The
+  // full blow-by-blow in-game signals are already shown in their own UI
+  // section (loaded live from box score data); this is a single summary
+  // line so the "what contributed" breakdown always adds up to the total.
+  const inGameContribution = Math.round(finalScore) - Math.round(topPreGame);
+  const fullBreakdown = inGameContribution > 0
+    ? (() => {
+        const topSignalLabels = (inGameData.signals || [])
+          .filter(s => s && s.weight > 0)
+          .sort((a, b) => b.weight - a.weight)
+          .slice(0, 2)
+          .map(s => s.label);
+        const label = topSignalLabels.length
+          ? `In-game signals (${topSignalLabels.join(', ')})`
+          : 'In-game signals';
+        return [...preGameBreakdown, { label, val: inGameContribution, max: inGameContribution, isInGame: true }];
+      })()
+    : preGameBreakdown;
+
   // ── FLAG ASSIGNMENT ───────────────────────────────────────
   // Postponed/suspended: always 'postponed' / no verdict possible
   // During calibration: always log as 'calibration' / never punt/review
@@ -5157,7 +5178,7 @@ async function analyzeGame(game, normalLineups) {
     homeEB, awayEB,
     homeScore, awayScore,
     topScore: finalScore,
-    breakdown: preGameBreakdown,
+    breakdown: fullBreakdown,
     preGameScore: Math.round(topPreGame),
     inGameScore: Math.round(inGameData.score),
     inGameSignals: inGameData.signals,
@@ -5712,7 +5733,7 @@ function computePuntScore({ effectiveBenched, eraDelta, fipDelta = null, isLastG
   isDHNightcap, clinched, eliminated, gameDate, teamName, spName = 'SP',
   spFip, spEra, spStarts, spIp, seriesLength, isBackToBack, hasTravelFatigue, isWestToEast = true,
   isDayAfterNight, consecutiveStreak, puntSeriesWins = null, oppSeriesWins = null,
-  roadTripLength = 0,
+  roadTripLength = 0, extraScale = 1,
   oppIsBackToBack = false, oppIsDayAfterNight = false, oppHasTravelFatigue = false }) {
 
   // gameDate here is used as asOfDate for team quality/motivation — without
@@ -5917,7 +5938,12 @@ function computePuntScore({ effectiveBenched, eraDelta, fipDelta = null, isLastG
 
   // ── SEASON TIMING ─────────────────────────────────────────
   const timingMult = seasonTimingMultiplier(gameDate, teamName);
-  const scale = timingMult * aceScale;
+  // extraScale folds in any caller-side confidence discount (e.g. retrograde's
+  // calibration-era discount) BEFORE rounding, so every factor and the total
+  // score round exactly once, together — applying a discount after the fact
+  // by rounding each already-rounded factor separately compounds drift
+  // across games with several factors (seen as diffs up to +/-14 in audit).
+  const scale = timingMult * aceScale * extraScale;
 
   // Build the final breakdown and score from the SAME scaled values —
   // this is what guarantees they always sum to match.
@@ -6719,17 +6745,20 @@ async function retrogradeCalibrationGames(teamName) {
         isDayAfterNight, consecutiveStreak,
         puntSeriesWins: null, oppSeriesWins: null,
         roadTripLength,
+        // Calibration-era games get a conservative discount — the baseline
+        // was still forming when these were played, even though it's solid
+        // now. Folded in as extraScale (applied BEFORE computePuntScore
+        // rounds) rather than as a second round(x * 0.70) pass on top of the
+        // already-rounded result — rounding each factor separately after the
+        // fact compounds drift across games with several factors.
+        extraScale: 0.70,
         oppIsBackToBack: oppPlayedYesterday, oppIsDayAfterNight, oppHasTravelFatigue: oppWestToEast || oppEastToWest,
       });
     } finally {
       state.previewIgnoreCalibration = prevPreview;
     }
-    // Calibration-era games get a conservative discount — the baseline was
-    // still forming when these were played, even though it's solid now.
-    const retroScore = Math.min(80, Math.round(retroResult.score * 0.70));
-    const retroBreakdown = retroResult.breakdown
-      .map(f => ({ ...f, val: Math.round(f.val * 0.70) }))
-      .filter(f => f.val > 0 || f.isAceNote);
+    const retroScore = retroResult.score;
+    const retroBreakdown = retroResult.breakdown;
 
     const retroFlag = retroScore >= PUNT_THRESH ? 'punt'
       : retroScore >= REVIEW_THRESH ? 'review'
