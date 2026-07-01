@@ -8162,6 +8162,20 @@ function setManualVerdict(id, verdict) {
     else if (verdict === 'clean') state.logOverrides[id] = false;
     else                          delete state.logOverrides[id];
 
+    // rebuildTeamData attributes a punt to a team via entry.puntTeam, which
+    // buildLogEntry only sets for flag 'punt'/'review' — a 'clean'-flagged
+    // game (the algorithm found no punting side) stores puntTeam '—'. If the
+    // admin overrides one of those TO punt, puntSide is still always present
+    // (computed for every game regardless of flag), so backfill puntTeam
+    // from it — otherwise this override would never show up in any team's
+    // punt count/W-L record despite counting toward the season total.
+    if (verdict === 'punt') {
+      const entry = state.gameLog.find(e => e.id === id);
+      if (entry && entry.puntTeam === '—' && entry.puntSide) {
+        entry.puntTeam = entry.puntSide === 'home' ? entry.home : entry.away;
+      }
+    }
+
     rebuildTeamData();
     buildTeamFeedbackBias();
     state.seasonPunts = state.gameLog.filter(e => effectiveFlag(e) === 'punt').length;
