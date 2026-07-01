@@ -3591,19 +3591,11 @@ async function saveGameLogEntry(gameId) {
 }
 
 
+
 // ── API HELPER ─────────────────────────────────────────────
 // Routes MLB API calls through our Vercel proxy (/api/mlb)
 // to avoid CORS restrictions on hosted deployments.
 // Falls back to direct call if running locally (file://).
-function mlbUrl(path) {
-  const isLocal = window.location.protocol === 'file:' ||
-                  window.location.hostname === 'localhost' ||
-                  window.location.hostname === '127.0.0.1';
-  if (isLocal) return `${BASE}${path}`;
-  // On Vercel: route through proxy
-  return `/api/mlb?path=${encodeURIComponent(path)}`;
-}
-
 async function apiFetch(url, _retries = 3) {
   const isLocal = window.location.protocol === 'file:' ||
                   window.location.hostname === 'localhost' ||
@@ -4737,21 +4729,6 @@ async function fetchPitcherStats(playerId) {
 }
 
 // ── ANALYZE SINGLE GAME ────────────────────────────────────
-// Fetch current season OPS for a batter by player ID
-const batterOpsCache = {};
-async function fetchBatterOPS(playerId) {
-  if (!playerId) return null;
-  if (batterOpsCache[playerId] !== undefined) return batterOpsCache[playerId];
-  try {
-    const year = new Date().getFullYear();
-    const data = await apiFetch(`${BASE}/people/${playerId}/stats?stats=season&season=${year}&group=hitting`);
-    const stat = data?.stats?.[0]?.splits?.[0]?.stat;
-    const ops = stat?.ops != null ? parseFloat(stat.ops) : null;
-    batterOpsCache[playerId] = ops;
-    return ops;
-  } catch { batterOpsCache[playerId] = null; return null; }
-}
-
 // Fetch OPS for a list of player name strings by searching roster
 async function fetchLineupOPS(playerNames, teamId) {
   if (!playerNames?.length || !teamId) return {};
@@ -5216,13 +5193,6 @@ async function analyzeGame(game, normalLineups) {
   };
 }
 
-async function fetchPitcherHand(playerId) {
-  if (!playerId) return 'R'; // default
-  try {
-    const data = await apiFetch(`${BASE}/people/${playerId}`);
-    return data?.people?.[0]?.pitchHand?.code || 'R';
-  } catch { return 'R'; }
-}
 
 function extractLineup(boxscore, side) {
   const team = boxscore?.teams?.[side];
@@ -5320,13 +5290,6 @@ function logPuntDistribution(games) {
   } catch (e) { /* diagnostic only */ }
 }
 if (typeof window !== 'undefined') window.puntDist = () => logPuntDistribution(state.lastAnalyzed);
-
-function getSeasonGameNumber(dateStr) {
-  if (!dateStr) return 81;
-  const d = new Date(dateStr + 'T12:00:00');
-  const diff = Math.floor((d - OPENING_DAY) / (1000 * 60 * 60 * 24));
-  return Math.max(1, Math.min(162, Math.round(diff * 0.85)));
-}
 
 function seasonTimingMultiplier(dateStr, teamName) {
   // Zero during calibration / team hasn't earned detection yet
@@ -6880,11 +6843,19 @@ function getMergedLog() {
 
 
 function cycleResult(id) {
+  if (!isAdmin()) return;
   const cur = state.logResults[id];
   if (!cur)        state.logResults[id] = 'W';
   else if (cur === 'W') state.logResults[id] = 'L';
   else             delete state.logResults[id];
+  // puntW/puntL (team card record, calendar running record) are derived
+  // from logResults inside rebuildTeamData — refresh everything that reads it.
   renderCalibratedLineup();
+  rebuildTeamData();
+  renderTeamBreakdown();
+  renderLeaders();
+  const logEntry = state.gameLog.find(e => e.id === id);
+  if (logEntry) renderVerdictPanel(logEntry);
   debounceSave("result_"+id, () => saveGameLogEntry(id));
 }
 
@@ -7539,200 +7510,6 @@ async function renderCalibratedLineup() {
     </div>`;
 }
 
-// ── SEASON CALENDAR ───────────────────────────────────────
-
-
-
-
-function showCalendarGameDetail(dateStr, teamName) {
-  // Open the Calibrated Lineup section for this date/team
-  const team = ALL_TEAMS.find(t => t.name === teamName);
-  if (!team) return;
-  showPage('lineups');
-  const sel = document.getElementById('calTeamSelect');
-  const dp  = document.getElementById('calDatePicker');
-  if (sel && dp) {
-    sel.value = teamName;          // calTeamSelect options are valued by full name
-    dp.value  = dateStr;
-    renderCalibratedLineup();
-    setTimeout(() => {
-      document.getElementById('calibratedLineupSection')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 120);
-  }
-}
-
-
-function populateDailyTeamDropdown() {
-  const sel = document.getElementById('dailyTeamSelect');
-  if (!sel) return;
-  const current = sel.value;
-  sel.innerHTML = '<option value="">-- Select a team --</option>' +
-    [...ALL_TEAMS].sort((a, b) => a.name.localeCompare(b.name)).map(t =>
-      `<option value="${t.id}" data-name="${t.name}" ${t.name===current?'selected':''}>${t.abbr} / ${t.name}</option>`
-    ).join('');
-
-  const dp = document.getElementById('dailyDatePicker');
-  if (dp && !dp.value) dp.value = localTodayStr();
-}
-
-async function renderDailyLineup() {
-  const sel      = document.getElementById('dailyTeamSelect');
-  const teamId   = sel?.value;
-  const teamName = sel?.options[sel.selectedIndex]?.dataset?.name || '';
-  const dateVal  = document.getElementById('dailyDatePicker')?.value;
-  const body     = document.getElementById('dailyLineupBody');
-  if (!body) return;
-
-  if (!teamId || !dateVal) {
-    body.innerHTML = `<div class="log-empty" style="padding:48px 24px;text-align:center;color:var(--text3);font-size:12px;font-family:var(--font-mono)">Select a team and date above</div>`;
-    return;
-  }
-
-  body.innerHTML = `<div class="log-empty" style="padding:32px;text-align:center;color:var(--text2)"><div class="spinner" style="margin:0 auto 12px"></div>Fetching lineup from MLB...</div>`;
-
-  try {
-    // Fetch schedule for that date filtered to this team
-    const schedule = await apiFetch(`${BASE}/schedule?sportId=1&date=${dateVal}&teamId=${teamId}&hydrate=probablePitcher&gameType=R`);
-    const games = schedule?.dates?.[0]?.games || [];
-
-    if (!games.length) {
-      body.innerHTML = `<div class="log-empty" style="padding:48px 24px;text-align:center;color:var(--text2);font-size:13px"><div style="font-size:32px;margin-bottom:12px">🏟️</div>${abbr(teamName)} had no game on ${dateVal}.</div>`;
-      return;
-    }
-
-    const game     = games[0];
-    const gid      = game.gamePk;
-    const isHome   = game.teams.home.team.id === parseInt(teamId);
-    const opp      = isHome ? game.teams.away.team.name : game.teams.home.team.name;
-    const homePitcher = game.teams.home.probablePitcher;
-    const awayPitcher = game.teams.away.probablePitcher;
-    const ourPitcher  = isHome ? homePitcher : awayPitcher;
-    const oppPitcher  = isHome ? awayPitcher : homePitcher;
-    const seriesGame  = game.seriesGameNumber || '?';
-    const seriesLen   = game.gamesInSeries || '?';
-    const status         = game.status?.abstractGameState;
-    const detailedState  = game.status?.detailedState || '';
-    const codedState     = game.status?.codedGameState || '';
-    const isGamePostponed = detailedState.toLowerCase().includes('postponed') || codedState === 'D';
-    const isGameSuspended = detailedState.toLowerCase().includes('suspended') || codedState === 'U';
-    const isGameDelayed   = detailedState.toLowerCase().includes('delay');
-    const effectiveStatus = (isGamePostponed || isGameSuspended) ? 'Postponed' : status;
-
-    // For past dates, use stored ERA/FIP from lineupHistory (snapshot at game time)
-    // Only fall back to live API stats if nothing is stored
-    const storedEntry = (lineupHistory[teamName] || []).find(e => e.date === dateVal);
-    const storedOpp   = Object.values(lineupHistory).flat().find(e => e.date === dateVal && e.opp === teamName);
-
-    let ourStats, oppStats;
-    if (storedEntry?.spFip || storedEntry?.spEra) {
-      ourStats = { era: storedEntry.spEra, fip: storedEntry.spFip, source: 'stored' };
-      oppStats = await fetchPitcherStats(oppPitcher?.id);
-    } else {
-      [ourStats, oppStats] = await Promise.all([
-        fetchPitcherStats(ourPitcher?.id),
-        fetchPitcherStats(oppPitcher?.id),
-      ]);
-    }
-
-    // Fetch live boxscore if game started or finished (skip if postponed/suspended)
-    let lineup = [];
-    if ((effectiveStatus === 'Live' || effectiveStatus === 'Final') && !isGamePostponed && !isGameSuspended) {
-      try {
-        const box = await apiFetch(`${BASE}/game/${gid}/boxscore`);
-        lineup = extractLineup(box, isHome ? 'home' : 'away');
-        // Update in-memory cache for this session
-        if (lineup.length) {
-          saveLineupBaseline(teamName, dateVal, lineup, ourPitcher?.fullName, ourStats.fip, ourStats.era, opp);
-        }
-      } catch {}
-    }
-
-    // If postponed/suspended, show a clear notice
-    if (isGamePostponed || isGameSuspended) {
-      const pLabel = isGameSuspended ? 'Suspended' : isGameDelayed ? 'Delayed' : 'Postponed';
-      const pDetail = detailedState && detailedState !== pLabel ? ` (${detailedState})` : '';
-      body.innerHTML = `
-        <div style="padding:32px 24px;text-align:center">
-          <div style="font-size:28px;margin-bottom:12px">${isGameDelayed ? '⏸️' : '🌧️'}</div>
-          <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:6px">${pLabel}${pDetail}</div>
-          <div style="font-size:12px;color:var(--text3);font-family:var(--font-mono)">No lineup data available / game did not take place on this date.</div>
-        </div>`;
-      return;
-    }
-
-    // Check stored history as fallback
-    if (!lineup.length) {
-      const stored = (lineupHistory[teamName] || []).find(e => e.date === dateVal);
-      lineup = stored?.lineup || [];
-    }
-
-    const eraFmt = v => (v === null || v === undefined || v === 99 || v >= 90) ? '—' : parseFloat(v).toFixed(2);
-    const isFuture = dateVal > localTodayStr();
-
-    // Fetch OPS for every batter in this lineup
-    const teamForOps = isHome
-      ? game?.teams?.home?.team
-      : game?.teams?.away?.team;
-    const dailyOpsMap = lineup.length && teamForOps?.id
-      ? await fetchLineupOPS(lineup.filter(Boolean), teamForOps.id).catch(() => ({}))
-      : {};
-
-    const lineupHTML = lineup.length
-      ? `<div style="display:grid;grid-template-columns:22px 1fr 60px;font-size:8px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);font-family:var(--font-mono);padding:5px 0;border-bottom:1px solid var(--border);margin-bottom:2px">
-          <span>#</span><span>Player</span><span style="text-align:right">OPS</span></div>
-         <ul class="llc-lineup-list">${lineup.map((p, i) => {
-          const ops = p ? dailyOpsMap[p] : null;
-          const opsClass = ops != null ? (ops >= 0.820 ? 'ops-high' : ops < 0.670 ? 'ops-low' : '') : '';
-          const opsTxt  = ops != null ? ops.toFixed(3) : '\u2014';
-          return `<li class="llc-lineup-item" style="grid-template-columns:22px 1fr 60px">
-            <span class="llc-num">${i+1}</span>
-            <span class="llc-player-name">${p || '\u2014'}</span>
-            <span class="llc-player-ops ${opsClass}">${opsTxt}</span>
-          </li>`;
-        }).join('')}</ul>`
-      : `<div class="llc-no-lineup">${isFuture ? 'Lineup not yet posted / check back closer to game time.' : effectiveStatus === 'Preview' ? 'Game hasn\'t started yet / lineup will appear at first pitch.' : 'Lineup unavailable for this game.'}</div>`;
-
-    body.innerHTML = `
-      <div class="lineup-log-card">
-        <div class="llc-header">
-          <div style="display:flex;align-items:center;gap:14px">
-            <div class="llc-matchup">${isHome ? `${abbr(opp)} @ ${abbr(teamName)}` : `${abbr(teamName)} @ ${abbr(opp)}`}</div>
-            <div class="llc-meta">${dateVal} &nbsp;·&nbsp; ${isHome ? 'Home' : 'Away'} &nbsp;·&nbsp; G${seriesGame}/${seriesLen}</div>
-          </div>
-          <div style="font-size:11px;color:var(--muted);font-family:'JetBrains Mono',monospace">${isGamePostponed ? '🌧️ Postponed' : isGameSuspended ? '⏸️ Suspended' : isGameDelayed ? '⏸️ Delayed' : effectiveStatus || 'Scheduled'}</div>
-        </div>
-        <div class="llc-body">
-          <div class="llc-side">
-            <div class="llc-side-label">${abbr(teamName)} Starting Pitcher</div>
-            <div class="llc-pitcher">
-              <span class="llc-pitcher-icon">⚾</span>
-              <div>
-                <div class="llc-pitcher-name">${ourPitcher?.fullName || 'TBD'}</div>
-                <div class="llc-pitcher-stats">ERA ${eraFmt(ourStats.era)} &nbsp;·&nbsp; FIP ${eraFmt(ourStats.fip)}${ourStats.source === 'prior' ? ` <span style="color:var(--muted);font-size:10px">(${new Date().getFullYear()-1})</span>` : ''}</div>
-              </div>
-            </div>
-            <div class="llc-side-label" style="margin-top:12px">${abbr(teamName)} Batting Order</div>
-            ${lineupHTML}
-          </div>
-          <div class="llc-side">
-            <div class="llc-side-label">${abbr(opp)} Starting Pitcher</div>
-            <div class="llc-pitcher">
-              <span class="llc-pitcher-icon">⚾</span>
-              <div>
-                <div class="llc-pitcher-name">${oppPitcher?.fullName || 'TBD'}</div>
-                <div class="llc-pitcher-stats">ERA ${eraFmt(oppStats.era)} &nbsp;·&nbsp; FIP ${eraFmt(oppStats.fip)}${oppStats.source === 'prior' ? ` <span style="color:var(--muted);font-size:10px">(${new Date().getFullYear()-1})</span>` : ''}</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>`;
-
-  } catch(err) {
-    body.innerHTML = `<div class="log-empty" style="padding:32px;text-align:center;color:var(--red2);font-size:12px">⚠️ Could not fetch lineup: ${err.message}</div>`;
-  }
-}
-
-
 // ── IN-GAME PUNT ANALYSIS ─────────────────────────────────
 // Analyzes live/completed game data for in-game concession signals:
 // • Large run deficit late in the game
@@ -8370,27 +8147,6 @@ function toggleAbout() {
   btn.textContent = isOpen ? '▼ Read More' : '▲ Read Less';
 }
 
-// ── TEAM HISTORY ───────────────────────────────────────────
-
-
-
-
-
-
-function toggleOverride(id) {
-  const cur = state.logOverrides[id];
-  if (cur === undefined) state.logOverrides[id] = true;
-  else if (cur === true)  state.logOverrides[id] = false;
-  else                    delete state.logOverrides[id];
-  renderCalibratedLineup();
-  debounceSave("override_"+id, () => { saveGameLogEntry(id); buildTeamFeedbackBias(); });
-}
-
-function saveComment(id, val) {
-  state.logComments[id] = val;
-  debounceSave("comment_"+id, () => { saveGameLogEntry(id); buildTeamFeedbackBias(); });
-}
-
 // ── Analyst manual verdict (gameflow page) ──────────────────
 // Lets a review-band game be classified as punt / not-a-punt, with a written
 // reason. The verdict overrides the algorithm in every punt count, and the
@@ -8651,6 +8407,14 @@ async function openReviewDetail(id) {
           <span style="color:var(--text3);font-size:12px;font-family:var(--font-mono)">Series context</span>
           <span style="color:var(--text2);font-family:var(--font-mono);font-size:12px;font-weight:600">Game ${e.seriesGame} of ${e.seriesLength}</span>
         </div>` : ''}
+        ${(() => {
+          const h2h = getH2HPuntHistory(e.away, e.home);
+          if (!h2h || h2h.total < 2) return '';
+          return `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);margin-bottom:2px">
+            <span style="color:var(--text3);font-size:12px;font-family:var(--font-mono)">Head-to-head this season</span>
+            <span style="color:var(--text2);font-family:var(--font-mono);font-size:12px;font-weight:600">${abbr(e.away)} ${h2h.awayPunts}p / ${abbr(e.home)} ${h2h.homePunts}p of ${h2h.total}</span>
+          </div>`;
+        })()}
         <div id="reviewBreakdown-${gamePk}">${breakdownContent}</div>
         <div id="reviewInGame-${gamePk}" style="margin-top:${factorRows ? 12 : 0}px"></div>
       </div>
@@ -9251,26 +9015,6 @@ function retryReviewBox() {
   loadReviewBoxScore(gamePk, e);
 }
 
-// Open the full Gameflow page (inning-by-inning chart) for a logged game.
-async function openGameflowForLog(gamePk, date) {
-  if (!gamePk || !date) return;
-  showPage('gameflow');
-  const dp = document.getElementById('gameflowDatePicker');
-  if (dp) dp.value = date;
-  try {
-    await loadGameflowGames();
-    const sel = document.getElementById('gameflowGameSelect');
-    if (sel) {
-      sel.value = String(gamePk);
-      if (String(sel.value) === String(gamePk)) await renderGameflowChart();
-      else showToast('Gameflow for this game could not be loaded for that date.', true);
-    }
-  } catch (e) {
-    console.error('[review→gameflow]', e);
-    showToast('Could not open Gameflow — see console.', true);
-  }
-}
-
 function saveVerdictReason(id, val) {
   if (!id || !isAdmin()) return;
   state.logComments[id] = val;
@@ -9315,6 +9059,19 @@ function renderVerdictPanel(logEntry) {
       background:${isActive ? (activeColor === 'var(--red2)' ? 'var(--red-dim)' : activeColor === 'var(--green)' ? 'var(--green-dim)' : 'var(--muted)') : 'transparent'};
       color:${isActive ? activeColor : 'var(--text2)'}">${label}</button>`;
 
+  // Confirmed-punt games can have their game result (W/L for the punting
+  // team) recorded — drives the calendar's running record and team-card
+  // punt W-L stats. cycleResult() was previously unreachable from any UI
+  // control; this restores it.
+  const isPuntNow = ov === true || (ov === undefined && logEntry.flag === 'punt');
+  const curResult = state.logResults[id] || null;
+  const resultColor = curResult === 'W' ? 'var(--green)' : curResult === 'L' ? 'var(--red2)' : 'var(--text3)';
+  const resultRow = isPuntNow ? `
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+        <span style="font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);font-family:var(--font-mono)">Result</span>
+        <button onclick="cycleResult('${sid}')" title="Click to cycle: unset → W → L → unset" style="padding:5px 14px;border-radius:var(--r-md);cursor:pointer;font-family:var(--font-mono);font-size:11px;font-weight:700;border:1px solid ${curResult ? resultColor : 'var(--border2)'};background:transparent;color:${resultColor}">${curResult || 'unset — click to set'}</button>
+      </div>` : '';
+
   el.innerHTML = `
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:18px 20px">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:12px">
@@ -9326,6 +9083,7 @@ function renderVerdictPanel(logEntry) {
         ${btn('✓ Not a Punt', 'clean', ov === false, 'var(--green)')}
         ${btn('↺ Use Algorithm', 'auto', ov === undefined, 'var(--text3)')}
       </div>
+      ${resultRow}
       <label style="display:block;font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);font-family:var(--font-mono);margin-bottom:6px">Why? (recorded as tuning feedback)</label>
       <textarea
         oninput="saveVerdictReason('${sid}', this.value)"
@@ -9998,32 +9756,6 @@ function renderWatchList(games) {
 // same breakdown directly. This eliminates the class of bug where a
 // separately-reconstructed breakdown could drift out of sync with (or use an
 // entirely different formula than) whatever actually produced the score.
-
-function toggleBreakdown(gid) {
-  const panel = document.getElementById(`bp-${gid}`);
-  if (!panel) return;
-  panel.classList.toggle('open');
-}
-
-// ══════════════════════════════════════════════════════════
-// SPARKLINES / team punch history as SVG sparkline
-// ══════════════════════════════════════════════════════════
-
-function buildSparkline(history, width = 120, height = 28) {
-  if (!history || history.length < 2) return '';
-  const scores = history.slice(-20).map(h => h.score || 0);
-  const max = Math.max(...scores, 1);
-  const pts = scores.map((s, i) => {
-    const x = (i / (scores.length - 1)) * (width - 4) + 2;
-    const y = height - 4 - ((s / max) * (height - 8));
-    return `${x},${y}`;
-  }).join(' ');
-  const color = scores[scores.length - 1] >= PUNT_THRESH ? 'var(--red2)' : scores[scores.length - 1] >= REVIEW_THRESH ? 'var(--gold)' : 'var(--text3)';
-  return `<svg viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
-    <polyline points="${pts}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.8"/>
-    <circle cx="${pts.split(' ').pop().split(',')[0]}" cy="${pts.split(' ').pop().split(',')[1]}" r="2.5" fill="${color}"/>
-  </svg>`;
-}
 
 // ══════════════════════════════════════════════════════════
 // HEAD-TO-HEAD PUNT HISTORY
@@ -10820,10 +10552,6 @@ async function renderGameflowChart(silent = false, inlineOpts = null) {
     console.error('renderGameflowChart error:', e);
   }
 }
-
-// Legacy stub kept for any old references
-function renderGameflow() { renderGameflowChart(); }
-
 
 // ══════════════════════════════════════════════════════════
 // SCROLL TO TOP / show button after scrolling 400px
