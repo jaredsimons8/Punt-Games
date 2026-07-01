@@ -8212,8 +8212,11 @@ function renderCalendar() {
     const isToday = dateStr === todayStr;
     const isFuture = dateStr > todayStr;
 
+    // Use effectiveFlag so a manual override (e.g. admin marked a game "Not
+    // a Punt") is reflected in the cell color — games.flag alone is the raw
+    // algorithm verdict and ignores state.logOverrides.
     const bestFlag = games.length
-      ? [...games].sort((a, b) => (flagPriority[a.flag]||9) - (flagPriority[b.flag]||9))[0].flag
+      ? [...games].map(effectiveFlag).sort((a, b) => (flagPriority[a]||9) - (flagPriority[b]||9))[0]
       : null;
 
     const flagClass = bestFlag === 'punt' ? 'has-punt'
@@ -8253,9 +8256,12 @@ function renderCalendar() {
             </div>`;
           }
         } else {
-          // Past game / check cache first, show immediately if available
-          const isPunt = g.flag === 'punt';
-          const isReview = g.flag === 'review';
+          // Past game / check cache first, show immediately if available.
+          // effectiveFlag so the badge reflects a manual override, not just
+          // the raw algorithm verdict.
+          const gFlag = effectiveFlag(g);
+          const isPunt = gFlag === 'punt';
+          const isReview = gFlag === 'review';
           const isRetro = g.isRetrograde === true;
           const puntLabel = isPunt
             ? `<span style="font-size:9px;font-weight:700;color:var(--red2);letter-spacing:0.5px">PUNT${isRetro ? '<span style="font-size:7px;opacity:0.6;margin-left:1px">~</span>' : ''}</span>`
