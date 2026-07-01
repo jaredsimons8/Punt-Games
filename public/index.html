@@ -10425,11 +10425,21 @@ async function renderGameflowChart(silent = false, inlineOpts = null) {
     }
     puntSide = puntSide || 'home';
 
-    // Old Supabase entries lack preGameScore; fall back to score (the final score,
-    // which equals preGameScore when there are no in-game signals).
-    const preGameScore = logEntry?.preGameScore ?? logEntry?.score ?? 0;
+    // preGameScore/inGameSignals are live-only fields on a freshly analyzed
+    // game — neither is persisted to Supabase, so a reloaded entry has
+    // neither. Falling back to the total score as "preGameScore" was wrong
+    // whenever in-game evidence actually contributed (it isn't the pre-game
+    // score at all, and "no in-game signals" would then be shown even when
+    // there were some). The stored breakdown DOES persist an explicit
+    // "In-game signals" line (see analyzeGame) whenever in-game evidence
+    // contributed — derive the true pre-game/in-game split from that when
+    // the live-only fields aren't available.
+    const totalScore = logEntry?.topScore ?? logEntry?.score ?? 0;
+    const storedBreakdownArr = normalizeBreakdown(logEntry?.breakdown);
+    const storedInGameLine = storedBreakdownArr.find(f => f && f.isInGame);
+    const preGameScore = logEntry?.preGameScore ?? (storedInGameLine ? totalScore - storedInGameLine.val : totalScore);
     const inGameSignals = logEntry?.inGameSignals || [];
-    const totalScore = logEntry?.topScore ?? logEntry?.score ?? preGameScore;
+    const hasKnownInGameContribution = inGameSignals.length > 0 || !!storedInGameLine;
 
     // ── Step 4: build inning-by-inning punt score timeline ──
     // Pre-game score is the baseline at inning 0.
@@ -10785,21 +10795,24 @@ async function renderGameflowChart(silent = false, inlineOpts = null) {
         (p.signals || []).map(s => ({ ...s, inning: p.inning, ptsLabel: `+${s.weight}` }))
       );
 
-      const preGameBreakdown = logEntry?.breakdown || [];
-
-      const hasChartData = allSigs.length || preGameBreakdown.length || preGameScore > 0;
+      const hasChartData = allSigs.length || storedBreakdownArr.length || preGameScore > 0;
       sigLog.innerHTML = hasChartData ? `
         <div style="font-size:9px;text-transform:uppercase;letter-spacing:2px;color:var(--text3);font-family:var(--font-mono);margin-bottom:8px">Score Breakdown</div>
         <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r-md);overflow:hidden">
           ${preGameScore > 0 ? `<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 14px;border-bottom:1px solid var(--border)">
             <span style="font-size:12px;color:var(--text2)">Pre-game assessment</span>
-            <span style="font-family:var(--font-mono);font-size:11px;color:var(--text3)">${preGameScore} pts${allSigs.length === 0 ? ' — no in-game signals (close game)' : ''}</span>
+            <span style="font-family:var(--font-mono);font-size:11px;color:var(--text3)">${preGameScore} pts${hasKnownInGameContribution ? '' : ' — no in-game signals (close game)'}</span>
           </div>` : ''}
           ${allSigs.map(s => `
           <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 14px;border-bottom:1px solid var(--border)">
             <span style="font-size:12px;color:var(--text2)">Inning ${s.inning}: ${s.label}</span>
             <span style="font-family:var(--font-mono);font-size:11px;color:var(--red2);font-weight:700">${s.ptsLabel}</span>
           </div>`).join('')}
+          ${(!allSigs.length && storedInGameLine) ? `
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 14px;border-bottom:1px solid var(--border)">
+            <span style="font-size:12px;color:var(--text2)">${storedInGameLine.label}</span>
+            <span style="font-family:var(--font-mono);font-size:11px;color:var(--red2);font-weight:700">+${storedInGameLine.val}</span>
+          </div>` : ''}
           <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 14px;background:var(--bg3)">
             <span style="font-size:12px;color:var(--text);font-weight:600">Final Score</span>
             <span style="font-family:var(--font-mono);font-size:13px;color:${totalScore >= PUNT_THRESH ? 'var(--red2)' : totalScore >= REVIEW_THRESH ? 'var(--gold)' : 'var(--text2)'};font-weight:700">${totalScore} / 80</span>
