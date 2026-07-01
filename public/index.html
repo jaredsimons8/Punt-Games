@@ -1150,25 +1150,6 @@
   }
   .tpi-tooltip:hover .tip { visibility:visible; opacity:1; }
 
-  /* ── MOBILE BOTTOM NAV ── */
-  @media (max-width:600px) {
-    .mobile-nav {
-      display:flex; position:fixed; bottom:0; left:0; right:0; z-index:500;
-      background:var(--bg2); border-top:1px solid var(--border);
-      padding:8px 0 calc(8px + env(safe-area-inset-bottom));
-    }
-    .mobile-nav-item {
-      flex:1; display:flex; flex-direction:column; align-items:center; gap:3px;
-      font-size:9px; font-family:var(--font-mono); color:var(--text3);
-      cursor:pointer; padding:4px 0; transition:color 0.15s;
-      touch-action:manipulation; -webkit-tap-highlight-color:transparent;
-    }
-    .mobile-nav-item.active { color:var(--red2); }
-    .mobile-nav-item svg { width:20px; height:20px; }
-    .main-wrap { padding-bottom:70px; }
-  }
-  @media (min-width:601px) { .mobile-nav { display:none; } }
-
   /* ── TOP NAV TABS ── */
   .top-nav { display:flex; align-items:center; gap:0; background:rgba(8,12,19,0.97); border-bottom:1px solid rgba(40,90,200,0.20); box-shadow:0 1px 0 rgba(30,70,180,0.10); padding:0 32px; overflow-x:auto; scrollbar-width:none; -ms-overflow-style:none; position:sticky; top:0; z-index:100; backdrop-filter:blur(24px); -webkit-backdrop-filter:blur(24px); }
   .top-nav::-webkit-scrollbar { display:none; }
@@ -1891,9 +1872,6 @@
   </header>
 
   <!-- (Favorites panel removed) -->
-
-  <!-- MOBILE BOTTOM NAV (hidden, replaced by top nav) -->
-  <nav class="mobile-nav" id="mobileNav" style="display:none"></nav>
 
   <!-- TOP NAV TABS -->
   <nav class="top-nav" id="topNav">
@@ -10144,12 +10122,6 @@ function showPage(page) {
     const rd = document.getElementById('reviewDetail'); if (rd) rd.innerHTML = '';
   }
   if (page === 'about') { renderAboutMonthTrend(); renderAboutTopPunts(); }
-}
-
-function mobileNavTo(section) {
-  // Map old mobile nav calls to new page system
-  const pageMap = { games: 'today', leaders: 'today', teams: 'teams', roster: 'roster' };
-  showPage(pageMap[section] || section);
 }
 
 function navigatePuntGame(dateStr) {
