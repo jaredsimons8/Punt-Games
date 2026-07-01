@@ -6792,16 +6792,19 @@ async function retrogradeCalibrationGames(teamName) {
     };
 
     if (existingIdx >= 0) {
-      // Upgrade if retrograde is more informative: either still a calibration
-      // placeholder, or a real score with no breakdown to back it up. The
-      // latter comes from legacy entries scored before the breakdown field
-      // existed (or before a hard June-1 floor existed) — a nonzero score
-      // with an empty breakdown is never valid, regardless of what flag it
-      // currently carries. Entries that already have a real, populated
-      // breakdown are left alone (nothing to fix, avoids redundant writes).
+      // Upgrade if retrograde is more informative: still a calibration
+      // placeholder, OR the existing breakdown doesn't actually sum to the
+      // existing score (covers both "no breakdown at all" — legacy entries
+      // from before the breakdown field existed — and "wrong breakdown" —
+      // entries scored by an earlier, buggy version of this function, e.g.
+      // the double-rounding bug where each factor was rounded separately
+      // after an extra confidence-discount pass). A >=2 tolerance allows for
+      // ordinary single-factor rounding; anything more means it's actually
+      // wrong. Entries that already check out are left alone (avoids
+      // redundant writes).
       const existing = state.gameLog[existingIdx];
-      const existingBdSum = (existing.breakdown || []).filter(f => f && f.val > 0).reduce((s, f) => s + f.val, 0);
-      const needsUpgrade = existing.flag === 'calibration' || (existing.score > 0 && existingBdSum === 0);
+      const existingBdSum = normalizeBreakdown(existing.breakdown).filter(f => f && f.val > 0).reduce((s, f) => s + f.val, 0);
+      const needsUpgrade = existing.flag === 'calibration' || Math.abs((existing.score || 0) - existingBdSum) >= 2;
       if (needsUpgrade) {
         // Preserve the existing ID — do NOT let entry.id overwrite it
         state.gameLog[existingIdx] = { ...existing, ...entry, id: existing.id };
