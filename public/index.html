@@ -6749,10 +6749,19 @@ async function retrogradeCalibrationGames(teamName) {
     };
 
     if (existingIdx >= 0) {
-      // Only upgrade if retrograde is more informative (was calibration, now scored)
-      if (state.gameLog[existingIdx].flag === 'calibration') {
+      // Upgrade if retrograde is more informative: either still a calibration
+      // placeholder, or a real score with no breakdown to back it up. The
+      // latter comes from legacy entries scored before the breakdown field
+      // existed (or before a hard June-1 floor existed) — a nonzero score
+      // with an empty breakdown is never valid, regardless of what flag it
+      // currently carries. Entries that already have a real, populated
+      // breakdown are left alone (nothing to fix, avoids redundant writes).
+      const existing = state.gameLog[existingIdx];
+      const existingBdSum = (existing.breakdown || []).filter(f => f && f.val > 0).reduce((s, f) => s + f.val, 0);
+      const needsUpgrade = existing.flag === 'calibration' || (existing.score > 0 && existingBdSum === 0);
+      if (needsUpgrade) {
         // Preserve the existing ID — do NOT let entry.id overwrite it
-        state.gameLog[existingIdx] = { ...state.gameLog[existingIdx], ...entry, id: state.gameLog[existingIdx].id };
+        state.gameLog[existingIdx] = { ...existing, ...entry, id: existing.id };
         saveGameLogEntry(state.gameLog[existingIdx].id).catch(() => {});
         retroCount++;
       }
