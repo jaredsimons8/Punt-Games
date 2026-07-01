@@ -2659,29 +2659,29 @@
         </div>
 
         <div style="margin-top:16px;background:rgba(212,43,43,0.06);border:1px solid rgba(212,43,43,0.2);border-radius:10px;padding:14px 18px;font-size:12px;color:var(--text2);line-height:1.8">
-          <strong style="color:var(--red2)">🔒 Pre-Game Lock + Independent In-Game Track</strong><br>
-          Pre-game and in-game are scored on separate 0–80 scales and evaluated independently.<br><br>
-          <strong style="color:var(--text)">Pre-game punt (≥ 46):</strong> Locked. A game confirmed before first pitch stays a punt regardless of in-game outcome. In-game signals add a small bonus but cannot reduce the classification.<br><br>
-          <strong style="color:var(--text)">In-game punt:</strong> A clean or review pre-game can still become a punt from in-game behavior alone. The badge reads <span style="color:#f59e0b;font-family:var(--font-mono)">PUNT · IN-GAME</span> to distinguish it.<br><br>
-          <strong style="color:var(--text)">Blended (neither confirmed):</strong> Pre-game dominates early, shifting toward in-game as innings accumulate. Final games weight in-game at 35%.
-          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px;font-size:11px">
-            <div style="text-align:center;background:rgba(255,255,255,0.02);border-radius:6px;padding:8px">
-              <div style="color:var(--gold);font-weight:700;font-size:13px">Scheduled</div>
-              <div style="margin-top:4px">100% Pre-Game<br><span style="color:var(--muted)">No in-game data</span></div>
-            </div>
-            <div style="text-align:center;background:rgba(255,255,255,0.02);border-radius:6px;padding:8px">
-              <div style="color:var(--gold);font-weight:700;font-size:13px">Live (1–3)</div>
-              <div style="margin-top:4px">92% Pre / 8% In<br><span style="color:var(--muted)">Early innings</span></div>
-            </div>
-            <div style="text-align:center;background:rgba(255,255,255,0.02);border-radius:6px;padding:8px">
-              <div style="color:var(--gold);font-weight:700;font-size:13px">Live (4–6)</div>
-              <div style="margin-top:4px">82% Pre / 18% In<br><span style="color:var(--muted)">Mid innings</span></div>
-            </div>
-            <div style="text-align:center;background:rgba(255,255,255,0.02);border-radius:6px;padding:8px">
-              <div style="color:var(--gold);font-weight:700;font-size:13px">Final</div>
-              <div style="margin-top:4px">65% Pre / 35% In<br><span style="color:var(--muted)">Full picture</span></div>
-            </div>
+          <strong style="color:var(--red2)">🔒 Pre-Game Lock + Additive In-Game Track</strong><br>
+          Pre-game and in-game are scored on separate 0–80 scales. In-game evidence is always <strong style="color:var(--text)">additive</strong> on top of the pre-game score — it can raise the final score but never lowers it.<br><br>
+          <strong style="color:var(--text)">Pre-game punt (≥ 46):</strong> Locked. A game confirmed before first pitch stays a punt regardless of in-game outcome; in-game evidence can still add up to 30% of its score on top.<br><br>
+          <strong style="color:var(--text)">In-game punt:</strong> A clean or review pre-game can still become a punt if in-game evidence alone reaches 46+. The badge reads <span style="color:#f59e0b;font-family:var(--font-mono)">PUNT · IN-GAME</span> to distinguish it.<br><br>
+          <strong style="color:var(--text)">Neither confirmed:</strong> the in-game score is added at a weight that scales with both how strong the in-game evidence is and how far into the game it is — weak, early evidence adds only a few percent; strong evidence (in-game score already ≥46) late in a Final game adds up to 75%.
+          <div style="display:grid;grid-template-columns:100px repeat(4,1fr);gap:8px;margin-top:12px;font-size:11px;align-items:center">
+            <div></div>
+            <div style="text-align:center;color:var(--text3);font-family:var(--font-mono)">Innings 1–3</div>
+            <div style="text-align:center;color:var(--text3);font-family:var(--font-mono)">4–6</div>
+            <div style="text-align:center;color:var(--text3);font-family:var(--font-mono)">7–9</div>
+            <div style="text-align:center;color:var(--text3);font-family:var(--font-mono)">Final</div>
+            <div style="color:var(--text2)">Weak/moderate</div>
+            <div style="text-align:center;background:rgba(255,255,255,0.02);border-radius:6px;padding:6px">6%</div>
+            <div style="text-align:center;background:rgba(255,255,255,0.02);border-radius:6px;padding:6px">18%</div>
+            <div style="text-align:center;background:rgba(255,255,255,0.02);border-radius:6px;padding:6px">30%</div>
+            <div style="text-align:center;background:rgba(255,255,255,0.02);border-radius:6px;padding:6px">40%</div>
+            <div style="color:var(--text2)">Strong (≥46)</div>
+            <div style="text-align:center;background:rgba(232,184,75,0.08);border-radius:6px;padding:6px;color:var(--gold)">25%</div>
+            <div style="text-align:center;background:rgba(232,184,75,0.08);border-radius:6px;padding:6px;color:var(--gold)">45%</div>
+            <div style="text-align:center;background:rgba(232,184,75,0.08);border-radius:6px;padding:6px;color:var(--gold)">65%</div>
+            <div style="text-align:center;background:rgba(232,184,75,0.08);border-radius:6px;padding:6px;color:var(--gold)">75%</div>
           </div>
+          <div style="margin-top:8px;font-size:10px;color:var(--text3)">% = the in-game score's weight when added to the pre-game score. Scheduled games with no in-game data yet use 100% pre-game.</div>
         </div>
 
         <div style="margin-top:12px;background:rgba(29,100,180,0.07);border:1px solid rgba(29,100,180,0.25);border-radius:10px;padding:14px 18px;font-size:12px;color:var(--text2);line-height:1.8">
@@ -4689,6 +4689,35 @@ async function fetchLineupOPS(playerNames, teamId) {
 }
 
 
+// Series wins for the home team BEFORE this game, computed from actual
+// results of the earlier games in the current series (consecutive days,
+// same two teams). Returns null if unknown (fetch failure, or game 1).
+//
+// NOTE: game.teams.{home,away}.seriesNumber looks like a series-record
+// field but is NOT — it's "the Nth series of the season for this team,"
+// identical for both clubs whenever they're playing each other (they're
+// simultaneously in the same series). Using it as a win/loss tally made
+// the series-finale bonus below silently misfire as "rubber game" (no
+// bonus) on essentially every game, since home/away values always matched.
+async function fetchHomeSeriesWinsSoFar(homeTeamId, gameDate, seriesGame) {
+  if (seriesGame <= 1) return null;
+  try {
+    const start = new Date(gameDate + 'T12:00:00');
+    start.setDate(start.getDate() - (seriesGame - 1));
+    const startStr = start.toISOString().split('T')[0];
+    const end = new Date(gameDate + 'T12:00:00');
+    end.setDate(end.getDate() - 1);
+    const endStr = end.toISOString().split('T')[0];
+
+    const data = await apiFetch(`${BASE}/schedule?sportId=1&teamId=${homeTeamId}&startDate=${startStr}&endDate=${endStr}&gameType=R`);
+    const games = (data?.dates || []).flatMap(d => d.games || []);
+    const finals = games.filter(g => g.status?.abstractGameState === 'Final');
+    if (finals.length < seriesGame - 1) return null; // missing a day — don't guess
+    const wins = finals.filter(g => g.teams?.home?.team?.id === homeTeamId ? g.teams.home.isWinner : g.teams.away.isWinner).length;
+    return wins;
+  } catch { return null; }
+}
+
 async function analyzeGame(game, normalLineups) {
   const gid = game.gamePk;
   const homeTeam = game.teams.home.team;
@@ -4735,9 +4764,11 @@ async function analyzeGame(game, normalLineups) {
   const seriesLength = game.gamesInSeries || 3;
   const isLastGame = seriesGame === seriesLength;
   const isFirstGame = seriesGame === 1;
-  // series wins for each team BEFORE this game is played (MLB API field)
-  const homeSeries = typeof game.teams?.home?.seriesNumber === 'number' ? game.teams.home.seriesNumber : null;
-  const awaySeries = typeof game.teams?.away?.seriesNumber === 'number' ? game.teams.away.seriesNumber : null;
+  // Series wins for each team BEFORE this game, from actual results of the
+  // earlier games in the series (used for the finale bonus in scoring below,
+  // and for the "leads X–Y" badge in the UI). No-op for game 1 of a series.
+  const homeSeries = await fetchHomeSeriesWinsSoFar(homeTeam.id, game.gameDate?.split('T')[0] || '', seriesGame);
+  const awaySeries = homeSeries != null ? (seriesGame - 1 - homeSeries) : null;
 
   // Doubleheader detection / game 2 of a doubleheader is a strong punt signal
   // The MLB API returns doubleHeader: 'Y'/'N' and gameNumber: 1 or 2
@@ -6461,8 +6492,10 @@ async function retrogradeCalibrationGames(teamName) {
       }
 
       if (isFirstGame && seriesLength >= 3) score *= 0.65;
-      if (isLastGame && seriesLength >= 3) score += 9;
-      if (isLastGame && seriesLength >= 4) score += 4;
+      // No finale bonus here: unlike the live scoring path, retrograde passes
+      // don't have series win/loss data available, and applying the bonus
+      // unconditionally (as this used to) would wrongly credit it on rubber
+      // games and series the team was trailing — worse than omitting it.
 
       // Use a fixed timing multiplier for retrograde / calibration-era games
       // get a conservative weight since the baseline was still forming.
@@ -7468,10 +7501,19 @@ async function fetchInGamePuntSignals(gid, puntSide, gameStatus) {
 
     const allPlays = playByPlay?.allPlays || [];
 
+    // Every play carries about.isTopInning: true = away batting / home pitching,
+    // false = home batting / away pitching. Use it to attribute pitching and
+    // offensive events to the correct team — without this, a play-by-play scan
+    // across the whole game credits (or blames) whichever team was pre-determined
+    // as puntSide for substitutions that may have actually been made by the
+    // OPPONENT, silently misattributing real concession behavior.
+    const pitcherIsPuntSide = (isTop) => (puntSide === 'home' ? isTop === true : isTop === false);
+    const batterIsPuntSide  = (isTop) => !pitcherIsPuntSide(isTop);
+
     // Position player pitching / the single clearest concession signal in baseball
     const posPlayerPitching = allPlays.some(play => {
       const pos = play?.matchup?.pitcher?.primaryPosition?.abbreviation;
-      return pos && pos !== 'P' && pos !== 'TWP';
+      return pos && pos !== 'P' && pos !== 'TWP' && pitcherIsPuntSide(play?.about?.isTopInning);
     });
     if (posPlayerPitching) {
       inGameScore += 45; // near-certain concession / almost nothing else causes this
@@ -7480,7 +7522,7 @@ async function fetchInGamePuntSignals(gid, puntSide, gameStatus) {
 
     // Excessive early pitching changes / manager burning bullpen early = not trying
     const earlyPitcherChanges = allPlays.filter(p =>
-      p?.about?.inning <= 4 && p?.result?.eventType === 'pitching_substitution'
+      p?.about?.inning <= 4 && p?.result?.eventType === 'pitching_substitution' && pitcherIsPuntSide(p?.about?.isTopInning)
     ).length;
     if (earlyPitcherChanges >= 3) {
       const pts = Math.min(22, earlyPitcherChanges * 5);
@@ -7490,7 +7532,7 @@ async function fetchInGamePuntSignals(gid, puntSide, gameStatus) {
 
     // Multiple offensive subs before 7th in a blowout / resting starters
     const earlyOffSubs = allPlays.filter(p =>
-      p?.result?.eventType === 'offensive_substitution' && p?.about?.inning <= 6
+      p?.result?.eventType === 'offensive_substitution' && p?.about?.inning <= 6 && batterIsPuntSide(p?.about?.isTopInning)
     ).length;
     if (earlyOffSubs >= 2 && runDiff <= -4) {
       const pts = Math.min(18, earlyOffSubs * 5);
