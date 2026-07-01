@@ -2019,6 +2019,7 @@
       <span style="color:var(--text3)">DATA THROUGH</span>
       <span id="aboutDataFreshDate" style="color:var(--text2);font-weight:600">—</span>
       <span id="aboutDataFreshWarn" style="display:none;color:var(--gold);font-weight:700;margin-left:8px">⚠ Collector may be stalled</span>
+      <button onclick="exportLogCSV()" style="margin-left:auto;background:transparent;border:1px solid var(--border2);border-radius:6px;padding:5px 12px;color:var(--text2);font-family:var(--font-mono);font-size:10px;cursor:pointer;letter-spacing:0.5px" onmouseover="this.style.borderColor='var(--green)';this.style.color='var(--green)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'">⇩ Export CSV</button>
     </div>
   </div>
 
@@ -9361,22 +9362,6 @@ function exportLogCSV() {
   a.click();
   showToast('CSV exported!');
 }
-
-function clearLog() {
-  if (!confirm('Clear all logged games? This cannot be undone.')) return;
-  state.gameLog = [];
-  state.logComments = {};
-  state.logOverrides = {};
-  state.teamFeedbackBias = {};
-  rebuildTeamData();
-  renderTeamBreakdown();
-  renderLeaders();
-  renderCalibratedLineup();
-  showToast('Log cleared.');
-}
-
-
-
 
 
 // ── ALL 30 TEAMS ───────────────────────────────────────────
