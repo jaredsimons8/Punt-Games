@@ -4168,6 +4168,15 @@ async function rebuildSeasonLog(force = false) {
 
         if (!force && entry.flag !== 'calibration') continue; // already scored — locked, skip
 
+        // A pre-June/calibration-era game whose current flag is a REAL score
+        // (not 'calibration') was already retrograded via retrogradeCalibrationGames'
+        // hindsight pass, which correctly bypasses the June-1 hard floor.
+        // analyzeGame/isCalibrationPeriod does NOT bypass that floor, so a
+        // force rescore would otherwise downgrade it back to a calibration
+        // placeholder, wiping out the retrograded score. Data only ever
+        // improves from calibration -> real, never the reverse.
+        if (force && g.flag === 'calibration' && entry.flag !== 'calibration') continue;
+
         entry.flag = g.flag;
         entry.score = g.topScore;
         entry.puntSide = g.puntSide;
