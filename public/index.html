@@ -256,7 +256,14 @@
 
   .pc2-how { padding: 10px 16px 4px; }
   .pc2-how-label { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text2); margin-bottom: 8px; font-weight: 600; }
-  .pc2-reason { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
+  .pc2-reason {
+    display: flex; align-items: baseline; justify-content: space-between; gap: 10px;
+    padding: 4px 8px; margin: 0 -8px; border-bottom: 1px solid rgba(255,255,255,0.04);
+    background: linear-gradient(to right, rgba(255,255,255,0.045) var(--w, 0%), transparent var(--w, 0%));
+    border-radius: 4px;
+  }
+  .is-punt .pc2-reason { background: linear-gradient(to right, rgba(224,92,42,0.10) var(--w, 0%), transparent var(--w, 0%)); }
+  .is-review .pc2-reason { background: linear-gradient(to right, rgba(232,184,75,0.09) var(--w, 0%), transparent var(--w, 0%)); }
   .pc2-reason:last-child { border-bottom: none; }
   .pc2-reason-label { font-family: var(--font-body); font-size: 13px; color: var(--text); }
   .pc2-pts { font-family: var(--font-mono); font-size: 12px; font-weight: 700; color: var(--red2); flex-shrink: 0; }
@@ -6261,10 +6268,13 @@ function renderCard(g, idx) {
   const posFactors = factors.filter(f => !f.isMult && !f.isAceNote && f.val > 0).sort((a, b) => b.val - a.val).slice(0, 4);
   let reasonsHTML = '';
   if (posFactors.length) {
+    // Bar width relative to the largest shown factor — turns the plain
+    // list into an at-a-glance mini bar chart of what drove the score.
+    const maxFactorVal = posFactors[0].val || 1;
     reasonsHTML = `
       <div class="pc2-how">
         <div class="pc2-how-label">${(isPunt || isReview) ? 'How it happened' : 'Contributing factors'}</div>
-        ${posFactors.map(f => `<div class="pc2-reason"><span class="pc2-reason-label">${f.label}</span><span class="pc2-pts">+${f.val}</span></div>`).join('')}
+        ${posFactors.map(f => `<div class="pc2-reason" style="--w:${Math.round((f.val / maxFactorVal) * 100)}%"><span class="pc2-reason-label">${f.label}</span><span class="pc2-pts">+${f.val}</span></div>`).join('')}
         ${aceNoteFactor ? `<div class="pc2-reason"><span class="pc2-reason-label" style="color:var(--text3)">${aceNoteFactor.label}</span><span class="pc2-pts" style="color:var(--text3)">▼</span></div>` : ''}
       </div>`;
   } else if (aceNoteFactor) {
