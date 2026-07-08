@@ -608,9 +608,9 @@
     display:inline-flex; align-items:center; justify-content:center; width:19px; height:19px;
     border-radius:50%; font-size:9.5px; font-weight:800; font-family:var(--font-mono);
   }
-  .ci-rank-badge.gold   { background:rgba(232,184,75,0.16); color:#F0C860; box-shadow:0 0 0 1px rgba(232,184,75,0.4); }
-  .ci-rank-badge.silver { background:rgba(200,208,220,0.14); color:#C9D2DE; box-shadow:0 0 0 1px rgba(200,208,220,0.35); }
-  .ci-rank-badge.bronze { background:rgba(205,140,90,0.14); color:#D89A6C; box-shadow:0 0 0 1px rgba(205,140,90,0.35); }
+  .ci-rank-badge.gold   { background:rgba(232,184,75,0.28); color:#F5CE72; box-shadow:0 0 0 1px rgba(232,184,75,0.55); }
+  .ci-rank-badge.silver { background:rgba(210,218,230,0.26); color:#E2E8F2; box-shadow:0 0 0 1px rgba(210,218,230,0.5); }
+  .ci-rank-badge.bronze { background:rgba(210,145,95,0.28); color:#E8A876; box-shadow:0 0 0 1px rgba(210,145,95,0.55); }
   .ci-team { display:flex; align-items:center; gap:7px; min-width:0; }
   .ci-logo { width:20px; height:20px; object-fit:contain; flex-shrink:0; }
   .ci-logo-fb { width:20px; height:20px; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:8px; font-weight:800; color:var(--text3); }
@@ -9748,7 +9748,7 @@ function renderPuntChart() {
   if (avgPunts > 0 && avgPunts < niceMax) {
     const avgY = baseY - (avgPunts / niceMax) * plotH;
     svg += `<line class="pc-avg-line" x1="${mL}" y1="${avgY.toFixed(1)}" x2="${W-mR}" y2="${avgY.toFixed(1)}"/>`;
-    svg += `<text class="pc-avg-label" x="${W-mR}" y="${(avgY-4).toFixed(1)}" text-anchor="end">LEAGUE AVG ${avgPunts.toFixed(1)}</text>`;
+    svg += `<text class="pc-avg-label" x="${mL+4}" y="${(avgY-4).toFixed(1)}" text-anchor="start">LEAGUE AVG ${avgPunts.toFixed(1)}</text>`;
   }
 
   svg += `<line x1="${mL}" y1="${baseY}" x2="${W-mR}" y2="${baseY}" style="stroke:var(--border2);stroke-width:1"/>`;
