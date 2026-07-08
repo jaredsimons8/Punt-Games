@@ -592,17 +592,25 @@
   .tc-no-punts { font-size: 10px; color: var(--text3); font-family: var(--font-mono); font-style: italic; }
 
   /* ── COMPETITIVE INTEGRITY LEADERBOARD ── */
-  .ci-leaderboard { background:var(--surface); border:1px solid var(--border); border-radius:var(--r-lg); overflow:hidden; margin-bottom:32px; }
-  .ci-header { display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; padding:12px 18px; border-bottom:1px solid var(--border); background:rgba(255,255,255,0.02); }
-  .ci-header-title { font-family:var(--font-mono); font-size:9.5px; text-transform:uppercase; letter-spacing:2px; color:var(--text3); font-weight:700; }
+  .ci-leaderboard { background:var(--surface); border:1px solid var(--border); border-radius:var(--r-lg); overflow:hidden; margin-bottom:32px; box-shadow:0 1px 0 rgba(255,255,255,0.02) inset; }
+  .ci-header { display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; padding:13px 18px; border-bottom:1px solid var(--border); background:linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.01)); }
+  .ci-header-title { font-family:var(--font-mono); font-size:9.5px; text-transform:uppercase; letter-spacing:2px; color:var(--text2); font-weight:700; }
   .ci-header-meta { font-family:var(--font-mono); font-size:10px; color:var(--text3); }
-  .ci-cols { display:grid; grid-template-columns:30px 1fr 50px 64px 140px; gap:0; padding:7px 18px; border-bottom:1px solid var(--border2); }
+  .ci-cols { display:grid; grid-template-columns:34px 1fr 50px 64px 140px; gap:0; padding:8px 18px; border-bottom:1px solid var(--border2); background:rgba(0,0,0,0.12); }
   .ci-cols span { font-size:8.5px; text-transform:uppercase; letter-spacing:1.5px; color:var(--text3); font-family:var(--font-mono); font-weight:700; }
-  .ci-row { display:grid; grid-template-columns:30px 1fr 50px 64px 140px; gap:0; padding:9px 18px; border-bottom:1px solid rgba(255,255,255,0.04); align-items:center; transition:background 0.12s; cursor:pointer; }
+  .ci-row { display:grid; grid-template-columns:34px 1fr 50px 64px 140px; gap:0; padding:8px 18px; border-bottom:1px solid rgba(255,255,255,0.035); align-items:center; transition:background 0.12s; cursor:pointer; }
+  .ci-row:nth-child(even) { background:rgba(255,255,255,0.012); }
   .ci-row:last-child { border-bottom:none; }
-  .ci-row:hover { background:rgba(255,255,255,0.035); }
+  .ci-row:hover { background:rgba(255,255,255,0.04); }
   .ci-row.ci-offender { border-left:2px solid rgba(224,92,42,0.55); }
   .ci-rank { font-size:10px; font-family:var(--font-mono); color:var(--text3); font-weight:700; }
+  .ci-rank-badge {
+    display:inline-flex; align-items:center; justify-content:center; width:19px; height:19px;
+    border-radius:50%; font-size:9.5px; font-weight:800; font-family:var(--font-mono);
+  }
+  .ci-rank-badge.gold   { background:rgba(232,184,75,0.16); color:#F0C860; box-shadow:0 0 0 1px rgba(232,184,75,0.4); }
+  .ci-rank-badge.silver { background:rgba(200,208,220,0.14); color:#C9D2DE; box-shadow:0 0 0 1px rgba(200,208,220,0.35); }
+  .ci-rank-badge.bronze { background:rgba(205,140,90,0.14); color:#D89A6C; box-shadow:0 0 0 1px rgba(205,140,90,0.35); }
   .ci-team { display:flex; align-items:center; gap:7px; min-width:0; }
   .ci-logo { width:20px; height:20px; object-fit:contain; flex-shrink:0; }
   .ci-logo-fb { width:20px; height:20px; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:8px; font-weight:800; color:var(--text3); }
@@ -615,8 +623,8 @@
   .ci-score.green { color:var(--green); }
   .ci-score.gold { color:var(--gold); }
   .ci-score.red { color:var(--red2); }
-  .ci-bar-wrap { height:5px; background:var(--bg3); border-radius:3px; overflow:hidden; }
-  .ci-bar-fill { height:100%; border-radius:3px; }
+  .ci-bar-wrap { height:4px; background:var(--bg3); border-radius:3px; overflow:hidden; }
+  .ci-bar-fill { height:100%; border-radius:3px; transition:width 0.4s ease; }
 
   /* ── TEAM PUNTS (punt-game-first layout) ── */
   .tp-list { display: flex; flex-direction: column; gap: 10px; }
@@ -693,12 +701,14 @@
   .punt-chart svg { width: 100%; height: auto; display: block; overflow: visible; }
   .pc-bar { transition: opacity 0.15s; }
   .pc-bar:hover { opacity: 0.78; }
-  .pc-grid { stroke: var(--border); stroke-width: 1; }
+  .pc-grid { stroke: var(--border); stroke-width: 1; stroke-dasharray: 3 4; }
   .pc-axis-label { fill: var(--text3); font-family: var(--font-mono); font-size: 9px; }
   .pc-team-label { fill: var(--text2); font-family: var(--font-mono); font-size: 8.5px; }
   .pc-val-label { fill: var(--text); font-family: var(--font-display); font-size: 9px; font-weight: 700; }
   .pc-div-label { fill: var(--text3); font-family: var(--font-mono); font-size: 8px; text-transform: uppercase; letter-spacing: 1px; }
   .pc-div-sep { stroke: var(--border2); stroke-width: 1; stroke-dasharray: 2 3; }
+  .pc-avg-line { stroke: var(--gold); stroke-width: 1; stroke-dasharray: 5 3; opacity: 0.55; }
+  .pc-avg-label { fill: var(--gold); font-family: var(--font-mono); font-size: 7.5px; font-weight: 700; letter-spacing: 0.5px; opacity: 0.85; }
 
   /* ── Calibrated-vs-day lineup comparison ── */
   .lcmp-summary { font-family: var(--font-mono); font-size: 10px; font-weight: 700; padding: 4px 10px; border-radius: 999px; white-space: nowrap; }
@@ -9409,8 +9419,12 @@ function renderCILeaderboard() {
         const ci = (1 - r.rate) * 100;
         const nameJs = r.t.name.replace(/'/g, "\\'");
         const isExpanded = ciExpandedTeam === r.t.name;
+        const rankDisplay = i === 0 ? '<span class="ci-rank-badge gold">1</span>'
+          : i === 1 ? '<span class="ci-rank-badge silver">2</span>'
+          : i === 2 ? '<span class="ci-rank-badge bronze">3</span>'
+          : `${i + 1}`;
         const row = `<div class="ci-row${r.punts >= 8 ? ' ci-offender' : ''}" id="ci-row-${r.t.abbr}" onclick="toggleTeamPuntTiles('${nameJs}')">
-          <span class="ci-rank">${i + 1}</span>
+          <span class="ci-rank">${rankDisplay}</span>
           <span class="ci-team">${logoEl}<span><span class="ci-name">${r.t.name}</span><br><span class="ci-div">${r.t.abbr} · ${r.t.division}</span></span></span>
           <span class="ci-punts ${puntClass(r.punts)}">${r.punts}<span style="font-size:9px;color:var(--text3);font-weight:400"> / ${r.games}</span></span>
           <span class="ci-score ${ciColor(r.rate)}">${ci.toFixed(1)}%</span>
@@ -9680,7 +9694,18 @@ function renderPuntChart() {
   const slotW = innerW / totalU;
   const barW = slotW * 0.68;
 
-  let svg = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Total punts by team, grouped by division">`;
+  // League average (all 30 teams, zeros included) as a reference line —
+  // gives the chart actual analytical context instead of just raw bars.
+  const allTeams = groups.flatMap(g => g.teams);
+  const avgPunts = allTeams.length ? allTeams.reduce((s, t) => s + t.punts, 0) / allTeams.length : 0;
+
+  let svg = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Total punts by team, grouped by division">
+    <defs>
+      <linearGradient id="pcSheen" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#fff" stop-opacity="0.22"/>
+        <stop offset="100%" stop-color="#fff" stop-opacity="0"/>
+      </linearGradient>
+    </defs>`;
 
   const ticks = 4;
   for (let i = 0; i <= ticks; i++) {
@@ -9702,7 +9727,8 @@ function renderPuntChart() {
       const clickAttr = clickable ? ` style="cursor:pointer" onclick="toggleTeamPuntTiles('${nameJs}')"` : '';
       if (t.punts > 0) {
         const barColor = TEAM_COLORS[t.name] || 'var(--red)';
-        svg += `<rect class="pc-bar"${clickAttr} x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${barW.toFixed(1)}" height="${h.toFixed(1)}" rx="1.5" fill="${barColor}"><title>${t.name}: ${t.punts} punt${t.punts===1?'':'s'} · click to view its punt games</title></rect>`;
+        svg += `<rect class="pc-bar"${clickAttr} x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${barW.toFixed(1)}" height="${h.toFixed(1)}" rx="2" fill="${barColor}"><title>${t.name}: ${t.punts} punt${t.punts===1?'':'s'} · click to view its punt games</title></rect>`;
+        svg += `<rect${clickAttr} x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${barW.toFixed(1)}" height="${h.toFixed(1)}" rx="2" fill="url(#pcSheen)" pointer-events="none"/>`;
         svg += `<text class="pc-val-label"${clickAttr} x="${(x+barW/2).toFixed(1)}" y="${(y-3).toFixed(1)}" text-anchor="middle">${t.punts}</text>`;
       }
       svg += `<text class="pc-team-label"${clickAttr} x="${(x+barW/2).toFixed(1)}" y="${(baseY+11).toFixed(1)}" text-anchor="middle">${t.abbr}</text>`;
@@ -9717,6 +9743,13 @@ function renderPuntChart() {
       u += groupGapU;
     }
   });
+
+  // League average reference line
+  if (avgPunts > 0 && avgPunts < niceMax) {
+    const avgY = baseY - (avgPunts / niceMax) * plotH;
+    svg += `<line class="pc-avg-line" x1="${mL}" y1="${avgY.toFixed(1)}" x2="${W-mR}" y2="${avgY.toFixed(1)}"/>`;
+    svg += `<text class="pc-avg-label" x="${W-mR}" y="${(avgY-4).toFixed(1)}" text-anchor="end">LEAGUE AVG ${avgPunts.toFixed(1)}</text>`;
+  }
 
   svg += `<line x1="${mL}" y1="${baseY}" x2="${W-mR}" y2="${baseY}" style="stroke:var(--border2);stroke-width:1"/>`;
   svg += `</svg>`;
