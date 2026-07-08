@@ -6492,17 +6492,19 @@ function renderScoreboardStrip(games) {
     const homeLogo = getTeamLogo(g.home.name);
     const awayLogoHTML = awayLogo ? `<img src="${awayLogo}" alt="${abbr(g.away.name)}" loading="lazy">` : `<span class="sbs-logo-fb">${abbr(g.away.name)}</span>`;
     const homeLogoHTML = homeLogo ? `<img src="${homeLogo}" alt="${abbr(g.home.name)}" loading="lazy">` : `<span class="sbs-logo-fb">${abbr(g.home.name)}</span>`;
+    const isLive = g.gameStatus === 'Live';
+    const isFinal = g.gameStatus === 'Final';
     const bd = g.boxData;
-    const hasScore = (g.isLive || g.isFinal) && bd;
+    const hasScore = (isLive || isFinal) && bd;
     const awayRuns = hasScore ? bd.awayRuns : null;
     const homeRuns = hasScore ? bd.homeRuns : null;
     const awayWon = hasScore && awayRuns > homeRuns;
     const homeWon = hasScore && homeRuns > awayRuns;
-    const status = g.isFinal ? 'FINAL' : g.isLive ? `${g.inGameHalf === 'Top' ? '▲' : '▼'} ${g.inGameInning}` : (formatGameTime(g.gameTime) || 'Scheduled');
+    const status = isFinal ? 'FINAL' : isLive ? `${g.inGameHalf === 'Top' ? '▲' : '▼'} ${g.inGameInning}` : (formatGameTime(g.gameTime) || 'Scheduled');
     const flagDot = g.flag === 'punt' ? '<span class="sbs-dot punt" title="Punt detected"></span>'
       : g.flag === 'review' ? '<span class="sbs-dot review" title="Worth reviewing"></span>' : '';
     return `
-      <div class="sbs-card${g.isLive ? ' sbs-live' : ''}" onclick="document.getElementById('gamesGrid')?.scrollIntoView({behavior:'smooth',block:'start'})" title="${g.away.name} @ ${g.home.name}">
+      <div class="sbs-card${isLive ? ' sbs-live' : ''}" onclick="document.getElementById('gamesGrid')?.scrollIntoView({behavior:'smooth',block:'start'})" title="${g.away.name} @ ${g.home.name}">
         <div class="sbs-status">${status}${flagDot}</div>
         <div class="sbs-row${awayWon ? ' sbs-won' : ''}">${awayLogoHTML}<span class="sbs-abbr">${abbr(g.away.name)}</span><span class="sbs-runs">${awayRuns ?? ''}</span></div>
         <div class="sbs-row${homeWon ? ' sbs-won' : ''}">${homeLogoHTML}<span class="sbs-abbr">${abbr(g.home.name)}</span><span class="sbs-runs">${homeRuns ?? ''}</span></div>
