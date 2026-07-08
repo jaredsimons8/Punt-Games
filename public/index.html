@@ -2066,7 +2066,7 @@
   </div>
 
   <!-- SCROLL TO TOP -->
-  <button class="scroll-top-btn" id="scrollTopBtn" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Back to top">↑</button>
+  <button class="scroll-top-btn" id="scrollTopBtn" onclick="smoothScrollTo(0)" title="Back to top">↑</button>
 
   </div><!-- /page-today -->
 
@@ -6481,18 +6481,16 @@ function renderScoreRing(score, preGame, inGame, puntSource) {
 }
 
 // Both scrollIntoView({behavior:'smooth'}) and window.scrollTo({behavior:
-// 'smooth'}) were silently no-ops when verified directly (instant scrollTo
-// with the same target worked every time) — narrowed down to the
-// 'smooth' behavior option itself failing, not the element lookup. Rather
-// than ship a click handler that might silently do nothing for some
-// users too, this hand-rolls the animation with rAF so it doesn't depend
-// on that browser API path at all.
-function scrollToGamesGrid() {
-  const el = document.getElementById('gamesGrid');
-  if (!el) return;
+// 'smooth'}) were verified (via direct calls, not just click handlers) to
+// silently no-op — the exact same targets scroll instantly every time
+// with the default behavior. Root cause unconfirmed, but 'smooth' itself
+// is what fails, not element lookup or the API used to reach it. This
+// hand-rolls the animation with rAF instead, so every smooth-scroll call
+// site in the app (this one plus 4 pre-existing ones found while fixing
+// this) can stop depending on that browser API path entirely.
+function smoothScrollTo(targetY, offset = 0) {
   const startY = window.scrollY;
-  const targetY = el.getBoundingClientRect().top + startY - 84;
-  const dist = targetY - startY;
+  const dist = (targetY + offset) - startY;
   const duration = 500;
   const startTime = performance.now();
   function step(now) {
@@ -6502,6 +6500,12 @@ function scrollToGamesGrid() {
     if (t < 1) requestAnimationFrame(step);
   }
   requestAnimationFrame(step);
+}
+
+function scrollToGamesGrid() {
+  const el = document.getElementById('gamesGrid');
+  if (!el) return;
+  smoothScrollTo(el.getBoundingClientRect().top + window.scrollY, -84);
 }
 
 // MLB.com-style at-a-glance scoreboard ticker — team logos + live/final
@@ -8621,7 +8625,7 @@ async function openReviewDetail(id) {
       if (stable >= 2 || !document.getElementById('reviewDetail')?.children.length) {
         clearInterval(poll);
         if (detEl.children.length) {
-          window.scrollTo({ top: detEl.getBoundingClientRect().top + window.scrollY - 80, behavior: 'smooth' });
+          smoothScrollTo(detEl.getBoundingClientRect().top + window.scrollY, -80);
         }
       }
     }, 150);
@@ -8668,7 +8672,7 @@ function closeReviewDetail() {
   const el = document.getElementById('reviewDetail');
   if (el) el.innerHTML = '';
   const rq = document.getElementById('reviewQueue');
-  if (rq) window.scrollTo({ top: rq.getBoundingClientRect().top + window.scrollY - 80, behavior: 'smooth' });
+  if (rq) smoothScrollTo(rq.getBoundingClientRect().top + window.scrollY, -80);
 }
 
 function renderReviewVerdictBlock(id) {
@@ -9381,7 +9385,11 @@ function toggleTeamPuntTiles(teamName) {
   renderCILeaderboard();
   if (ciExpandedTeam) {
     setTimeout(() => {
-      document.getElementById('ci-row-' + abbr(teamName))?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      const row = document.getElementById('ci-row-' + abbr(teamName));
+      if (!row) return;
+      const rect = row.getBoundingClientRect();
+      const centerOffset = rect.top + window.scrollY - (window.innerHeight / 2 - rect.height / 2);
+      smoothScrollTo(centerOffset);
     }, 30);
   }
 }
@@ -10143,7 +10151,7 @@ function showPage(page) {
   if (activeTab) activeTab.classList.add('active');
 
   // Scroll to top of page on nav
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+  smoothScrollTo(0);
 
   // Side effects per page
   if (page === 'roster') renderInjuryAlerts();
