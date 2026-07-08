@@ -18,35 +18,35 @@
 <style>
   /* ── DESIGN SYSTEM ────────────────────────────────────────── */
   :root {
-    --bg:       #080C13;
-    --bg2:      #0B1019;
-    --bg3:      #0F1520;
-    --surface:  #131C2B;
-    --surface2: #1A2538;
-    --border:   #1E2D42;
-    --border2:  #2C4060;
-    --red:      #E05C2A;
-    --red2:     #F07040;
-    --red-dim:  rgba(224,92,42,0.13);
-    --gold:     #E8B84B;
-    --gold2:    #F0CB72;
-    --gold-dim: rgba(232,184,75,0.13);
-    --green:    #34D399;
-    --green-dim:rgba(52,211,153,0.10);
-    --blue:     #5B9CF6;
-    --text:     #E4E8EE;
-    --text2:    #7A8DA4;
-    --text3:    #3D506A;
-    --muted:    #1A2535;
-    --card:     #131C2B;
-    --orange:   #E8B84B;
+    --bg:       #F4F6F9;
+    --bg2:      #FFFFFF;
+    --bg3:      #EDF0F5;
+    --surface:  #FFFFFF;
+    --surface2: #F7F9FC;
+    --border:   #DCE1E9;
+    --border2:  #C4CCD8;
+    --red:      #D9491F;
+    --red2:     #C23A16;
+    --red-dim:  rgba(217,73,31,0.10);
+    --gold:     #B8860B;
+    --gold2:    #9C7209;
+    --gold-dim: rgba(184,134,11,0.10);
+    --green:    #178A5F;
+    --green-dim:rgba(23,138,95,0.09);
+    --blue:     #2563C7;
+    --text:     #0B1220;
+    --text2:    #4A5A70;
+    --text3:    #7C8A9C;
+    --muted:    #EDF0F5;
+    --card:     #FFFFFF;
+    --orange:   #B8860B;
     --font-display: 'Space Grotesk', sans-serif;
     --font-body:    'Barlow', sans-serif;
     --font-mono:    'JetBrains Mono', monospace;
     --r-sm: 5px; --r-md: 11px; --r-lg: 16px; --r-xl: 22px;
-    --shadow-sm: 0 1px 4px rgba(0,0,0,0.9), 0 1px 2px rgba(0,0,0,0.5);
-    --shadow-md: 0 6px 28px rgba(0,0,0,0.8), 0 2px 8px rgba(0,0,0,0.5);
-    --shadow-lg: 0 16px 56px rgba(0,0,0,0.9), 0 4px 16px rgba(0,0,0,0.5);
+    --shadow-sm: 0 1px 3px rgba(15,25,40,0.08), 0 1px 2px rgba(15,25,40,0.06);
+    --shadow-md: 0 6px 20px rgba(15,25,40,0.10), 0 2px 8px rgba(15,25,40,0.06);
+    --shadow-lg: 0 16px 40px rgba(15,25,40,0.14), 0 4px 16px rgba(15,25,40,0.08);
   }
 
   /* ── RESET ── */
@@ -67,20 +67,18 @@
   }
 
   /* ── BACKGROUND ── */
+  /* Flat, near-white background (Savant/FanGraphs both use flat or
+     near-flat backgrounds) — the previous dark-theme ambient glow made no
+     sense once the base surface flipped to white. */
   body::before {
     content: '';
     position: fixed; inset: 0; z-index: 0; pointer-events: none;
-    background:
-      radial-gradient(ellipse 75% 55% at 5% -5%, rgba(30,80,200,0.22) 0%, transparent 65%),
-      radial-gradient(ellipse 55% 45% at 108% 108%, rgba(224,92,42,0.14) 0%, transparent 62%),
-      radial-gradient(ellipse 45% 30% at -5% 100%, rgba(20,55,150,0.16) 0%, transparent 60%),
-      radial-gradient(ellipse 40% 28% at 85% 12%, rgba(18,50,140,0.12) 0%, transparent 55%),
-      radial-gradient(ellipse 30% 18% at 50% 102%, rgba(30,60,160,0.08) 0%, transparent 55%);
+    background: linear-gradient(180deg, #F7F9FC 0%, #F4F6F9 100%);
   }
   body::after {
     content: '';
     position: fixed; inset: 0; z-index: 0; pointer-events: none;
-    background-image: radial-gradient(circle, rgba(100,150,255,0.022) 1px, transparent 1px);
+    background-image: radial-gradient(circle, rgba(15,25,40,0.03) 1px, transparent 1px);
     background-size: 30px 30px;
     mask-image: radial-gradient(ellipse 90% 90% at 50% 40%, rgba(0,0,0,0.55) 0%, transparent 100%);
     -webkit-mask-image: radial-gradient(ellipse 90% 90% at 50% 40%, rgba(0,0,0,0.55) 0%, transparent 100%);
@@ -93,11 +91,11 @@
   header {
     display: flex; align-items: center; justify-content: space-between;
     padding: 14px 0;
-    border-bottom: 1px solid rgba(40,90,200,0.20);
-    box-shadow: 0 1px 0 rgba(30,70,180,0.10);
+    border-bottom: 1px solid var(--border);
+    box-shadow: 0 1px 0 rgba(15,25,40,0.03);
     margin-bottom: 40px;
     position: sticky; top: 0; z-index: 100;
-    background: rgba(8,12,19,0.97);
+    background: rgba(255,255,255,0.92);
     backdrop-filter: blur(24px);
     -webkit-backdrop-filter: blur(24px);
     margin-left: -32px; margin-right: -32px;
@@ -125,7 +123,7 @@
   #dateNextBtn:disabled { opacity: 0.3; cursor: not-allowed; pointer-events: none; }
   .fetch-btn {
     background: linear-gradient(135deg, #E8643A 0%, #D94F20 100%);
-    border: none; border-top: 1px solid rgba(255,255,255,0.12);
+    border: none; border-top: 1px solid rgba(15,25,40,0.12);
     color: #fff; padding: 9px 22px; border-radius: var(--r-md);
     font-family: var(--font-body); font-weight: 700; font-size: 13px;
     cursor: pointer; transition: all 0.18s; letter-spacing: 0.2px;
@@ -221,14 +219,14 @@
   }
   .game-card.is-review:hover { border-color: rgba(232,184,75,0.70); box-shadow: 0 10px 40px rgba(232,184,75,0.14), 0 2px 8px rgba(0,0,0,0.5), inset 0 1px 0 rgba(232,184,75,0.22); }
   .game-card.is-calibration { border-color: rgba(59,130,246,0.2); }
-  .game-card.is-postponed { border-color: rgba(255,255,255,0.06); opacity: 0.65; }
+  .game-card.is-postponed { border-color: rgba(15,25,40,0.06); opacity: 0.65; }
 
   /* ── Succinct verdict-first card (pc2) ── */
   .pc2 { padding: 0; cursor: pointer; }
   .pc2-head {
     display: flex; align-items: center; justify-content: space-between; gap: 10px;
     padding: 13px 16px; border-bottom: 1px solid var(--border);
-    background: linear-gradient(to bottom, rgba(255,255,255,0.025), transparent);
+    background: linear-gradient(to bottom, rgba(15,25,40,0.025), transparent);
   }
   .pc2-matchup { display: flex; align-items: center; gap: 8px; min-width: 0; }
   .pc2-matchup .team-logo, .pc2-matchup .team-logo-fallback { width: 34px; height: 34px; }
@@ -249,7 +247,7 @@
   .pc2-cal-den { font-family: var(--font-mono); font-size: 11px; color: var(--text3); font-weight: 400; margin-left: 3px; }
   .pc2-result { font-family: var(--font-mono); font-size: 10px; font-weight: 700; padding: 3px 9px; border-radius: 999px; letter-spacing: 0.5px; }
   .pc2-result.won  { color: var(--green); background: rgba(74,222,128,0.10); border: 1px solid rgba(74,222,128,0.30); }
-  .pc2-result.lost { color: var(--text2); background: rgba(255,255,255,0.04); border: 1px solid var(--border2); }
+  .pc2-result.lost { color: var(--text2); background: rgba(15,25,40,0.04); border: 1px solid var(--border2); }
 
   .pc2-narrative { padding: 8px 16px 4px; font-family: var(--font-body); font-size: 14px; line-height: 1.5; color: var(--text); }
   .pc2-narrative.pc2-muted { color: var(--text3); font-size: 13px; }
@@ -258,8 +256,8 @@
   .pc2-how-label { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text2); margin-bottom: 8px; font-weight: 600; }
   .pc2-reason {
     display: flex; align-items: baseline; justify-content: space-between; gap: 10px;
-    padding: 4px 8px; margin: 0 -8px; border-bottom: 1px solid rgba(255,255,255,0.04);
-    background: linear-gradient(to right, rgba(255,255,255,0.045) var(--w, 0%), transparent var(--w, 0%));
+    padding: 4px 8px; margin: 0 -8px; border-bottom: 1px solid rgba(15,25,40,0.04);
+    background: linear-gradient(to right, rgba(15,25,40,0.045) var(--w, 0%), transparent var(--w, 0%));
     border-radius: 4px;
   }
   .is-punt .pc2-reason { background: linear-gradient(to right, rgba(224,92,42,0.10) var(--w, 0%), transparent var(--w, 0%)); }
@@ -282,7 +280,7 @@
   .rq-title { font-family: var(--font-display); font-size: 13px; font-weight: 800; color: var(--text); display: flex; align-items: center; gap: 9px; letter-spacing: -0.2px; }
   .rq-count { font-family: var(--font-mono); font-size: 9.5px; font-weight: 700; color: var(--gold); background: rgba(232,184,75,0.14); border: 1px solid rgba(232,184,75,0.35); border-radius: 999px; padding: 2px 9px; white-space: nowrap; }
   .rq-row { display: grid; grid-template-columns: 1fr minmax(150px, 1.1fr) auto; gap: 12px; align-items: center; padding: 12px 18px; border-bottom: 1px solid var(--border); transition: background 0.1s; }
-  .rq-row:hover { background: rgba(255,255,255,0.02); }
+  .rq-row:hover { background: rgba(15,25,40,0.02); }
   .rq-row:last-child { border-bottom: none; }
   .rq-game { min-width: 0; }
   .rq-matchup { font-family: var(--font-display); font-size: 14px; font-weight: 700; color: var(--text); }
@@ -300,7 +298,7 @@
   .card-top {
     display: flex; align-items: center; justify-content: space-between;
     padding: 12px 14px 12px; border-bottom: 1px solid var(--border);
-    background: linear-gradient(to bottom, rgba(255,255,255,0.015), transparent);
+    background: linear-gradient(to bottom, rgba(15,25,40,0.015), transparent);
   }
   .matchup { display: flex; align-items: center; gap: 10px; }
   .team-logo-wrap {
@@ -337,9 +335,9 @@
   }
   .punt-badge.flag   { background: rgba(224,92,42,0.18); color: var(--red2); border-color: rgba(224,92,42,0.45); box-shadow: 0 0 8px rgba(224,92,42,0.12); }
   .punt-badge.review { background: rgba(232,184,75,0.15); color: var(--gold); border-color: rgba(232,184,75,0.45); box-shadow: 0 0 8px rgba(232,184,75,0.10); }
-  .punt-badge.clean  { background: rgba(255,255,255,0.04); color: var(--text3); border-color: var(--border); }
+  .punt-badge.clean  { background: rgba(15,25,40,0.04); color: var(--text3); border-color: var(--border); }
   .punt-badge.calibration { background: rgba(59,130,246,0.1); color: #7AA8F0; border-color: rgba(59,130,246,0.25); }
-  .punt-badge.postponed { background: rgba(255,255,255,0.04); color: var(--text3); border-color: rgba(255,255,255,0.08); }
+  .punt-badge.postponed { background: rgba(15,25,40,0.04); color: var(--text3); border-color: rgba(15,25,40,0.08); }
 
   .card-body {
     display: flex; gap: 0; padding: 12px 14px; border-bottom: 1px solid var(--border);
@@ -394,7 +392,7 @@
   .pw-header {
     padding: 14px 16px; border-bottom: 1px solid var(--border);
     display: flex; align-items: center; justify-content: space-between;
-    background: linear-gradient(to bottom, rgba(255,255,255,0.02), transparent);
+    background: linear-gradient(to bottom, rgba(15,25,40,0.02), transparent);
   }
   .pw-title { font-family: var(--font-mono); font-size: 9.5px; font-weight: 700; letter-spacing: 2.5px; text-transform: uppercase; color: var(--text3); }
   .pw-body { padding: 0; }
@@ -497,7 +495,7 @@
   .log-sheet th { background: var(--bg2); color: var(--text3); padding: 10px 16px; text-align: left; font-size: 8.5px; text-transform: uppercase; letter-spacing: 2px; border-bottom: 1px solid var(--border); font-weight: 700; white-space: nowrap; }
   .log-sheet td { padding: 10px 16px; border-bottom: 1px solid var(--border); color: var(--text2); vertical-align: middle; white-space: nowrap; font-size: 11.5px; }
   .log-sheet tr:last-child td { border-bottom: none; }
-  .log-sheet tr:hover td { background: rgba(255,255,255,0.015); }
+  .log-sheet tr:hover td { background: rgba(15,25,40,0.015); }
   .log-empty { padding: 48px 24px; text-align: center; color: var(--text3); font-size: 13px; }
 
   /* ── ROSTER ── */
@@ -509,7 +507,7 @@
   .roster-tab.active { background: var(--surface); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,0.3); }
   .roster-tab.active.il-tab { color: var(--red2); }
   .roster-tab .tab-count { font-size: 9px; background: var(--muted); color: var(--text3); padding: 1px 5px; border-radius: 8px; font-weight: 700; }
-  .roster-tab.active .tab-count { background: rgba(255,255,255,0.08); }
+  .roster-tab.active .tab-count { background: rgba(15,25,40,0.08); }
   .roster-tab.active.il-tab .tab-count { background: rgba(224,92,42,0.15); color: var(--red2); }
   .roster-team-select {
     background: var(--surface); border: 1px solid var(--border2); color: var(--text);
@@ -599,16 +597,16 @@
   .tc-no-punts { font-size: 10px; color: var(--text3); font-family: var(--font-mono); font-style: italic; }
 
   /* ── COMPETITIVE INTEGRITY LEADERBOARD ── */
-  .ci-leaderboard { background:var(--surface); border:1px solid var(--border); border-radius:var(--r-lg); overflow:hidden; margin-bottom:32px; box-shadow:0 1px 0 rgba(255,255,255,0.02) inset; }
-  .ci-header { display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; padding:13px 18px; border-bottom:1px solid var(--border); background:linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.01)); }
+  .ci-leaderboard { background:var(--surface); border:1px solid var(--border); border-radius:var(--r-lg); overflow:hidden; margin-bottom:32px; box-shadow:0 1px 0 rgba(15,25,40,0.02) inset; }
+  .ci-header { display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; padding:13px 18px; border-bottom:1px solid var(--border); background:linear-gradient(180deg,rgba(15,25,40,0.03),rgba(15,25,40,0.01)); }
   .ci-header-title { font-family:var(--font-mono); font-size:9.5px; text-transform:uppercase; letter-spacing:2px; color:var(--text2); font-weight:700; }
   .ci-header-meta { font-family:var(--font-mono); font-size:10px; color:var(--text3); }
   .ci-cols { display:grid; grid-template-columns:34px 1fr 50px 64px 140px; gap:0; padding:8px 18px; border-bottom:1px solid var(--border2); background:rgba(0,0,0,0.12); }
   .ci-cols span { font-size:8.5px; text-transform:uppercase; letter-spacing:1.5px; color:var(--text3); font-family:var(--font-mono); font-weight:700; }
-  .ci-row { display:grid; grid-template-columns:34px 1fr 50px 64px 140px; gap:0; padding:8px 18px; border-bottom:1px solid rgba(255,255,255,0.035); align-items:center; transition:background 0.12s; cursor:pointer; }
-  .ci-row:nth-child(even) { background:rgba(255,255,255,0.012); }
+  .ci-row { display:grid; grid-template-columns:34px 1fr 50px 64px 140px; gap:0; padding:8px 18px; border-bottom:1px solid rgba(15,25,40,0.035); align-items:center; transition:background 0.12s; cursor:pointer; }
+  .ci-row:nth-child(even) { background:rgba(15,25,40,0.012); }
   .ci-row:last-child { border-bottom:none; }
-  .ci-row:hover { background:rgba(255,255,255,0.04); }
+  .ci-row:hover { background:rgba(15,25,40,0.04); }
   .ci-row.ci-offender { border-left:2px solid rgba(224,92,42,0.55); }
   .ci-rank { font-size:10px; font-family:var(--font-mono); color:var(--text3); font-weight:700; }
   .ci-rank-badge {
@@ -678,7 +676,7 @@
     background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-md);
     transition: border-color 0.15s, background 0.15s;
   }
-  .tp-clean-tile:hover { border-color: var(--border2); background: rgba(255,255,255,0.02); }
+  .tp-clean-tile:hover { border-color: var(--border2); background: rgba(15,25,40,0.02); }
   .tp-clean-logo { width: 22px; height: 22px; object-fit: contain; flex-shrink: 0; opacity: 0.85; }
   .tp-clean-meta { min-width: 0; }
   .tp-clean-abbr { font-family: var(--font-display); font-size: 12px; font-weight: 800; color: var(--text2); }
@@ -725,7 +723,7 @@
   .lcmp-grid { padding: 10px 14px 4px; }
   .lcmp-head { display: grid; grid-template-columns: 26px 1fr 1fr 26px; gap: 8px; font-family: var(--font-mono); font-size: 9px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text3); padding: 4px 6px; border-bottom: 1px solid var(--border); }
   .lcmp-row { display: grid; grid-template-columns: 26px 1fr 1fr 26px; gap: 8px; align-items: center; padding: 6px; border-radius: var(--r-md); margin-top: 3px; }
-  .lcmp-row.premium { background: rgba(255,255,255,0.018); }
+  .lcmp-row.premium { background: rgba(15,25,40,0.018); }
   .lcmp-row.sig-punt { background: rgba(224,92,42,0.09); box-shadow: inset 2px 0 0 var(--red2); }
   .lcmp-row.sig-swap { background: rgba(232,184,75,0.05); }
   .lcmp-slot { font-family: var(--font-display); font-size: 12px; font-weight: 800; color: var(--text3); text-align: center; }
@@ -1055,13 +1053,13 @@
   .score-breakdown-btn {
     position:absolute; bottom:6px; right:6px;
     width:18px; height:18px; border-radius:50%;
-    background:rgba(255,255,255,0.06); border:1px solid var(--border);
+    background:rgba(15,25,40,0.06); border:1px solid var(--border);
     color:var(--text3); font-size:9px; cursor:pointer;
     display:flex; align-items:center; justify-content:center;
     transition:all 0.15s; font-family:var(--font-mono); font-weight:700;
     z-index:2;
   }
-  .score-breakdown-btn:hover { background:rgba(255,255,255,0.12); color:var(--text2); border-color:var(--border2); }
+  .score-breakdown-btn:hover { background:rgba(15,25,40,0.12); color:var(--text2); border-color:var(--border2); }
   .breakdown-panel {
     position:absolute; bottom:36px; right:6px; width:240px;
     background:var(--bg2); border:1px solid var(--border2);
@@ -1169,7 +1167,7 @@
   .sparkline svg { display:block; width:100%; }
 
   /* ── HEAD TO HEAD ── */
-  .h2h-strip { margin-top:4px; padding:6px 10px; background:rgba(255,255,255,0.02); border:1px solid var(--border); border-radius:5px; font-size:9px; font-family:var(--font-mono); color:var(--text3); display:flex; align-items:center; gap:6px; }
+  .h2h-strip { margin-top:4px; padding:6px 10px; background:rgba(15,25,40,0.02); border:1px solid var(--border); border-radius:5px; font-size:9px; font-family:var(--font-mono); color:var(--text3); display:flex; align-items:center; gap:6px; }
   .h2h-strip strong { color:var(--text2); font-weight:600; }
 
   /* ── ENHANCED STAT STRIP / 4th card ── */
@@ -1240,7 +1238,7 @@
     display:inline-flex; align-items:center; gap:5px;
     font-size:10px; font-family:var(--font-mono); font-weight:600;
     padding:5px 10px; border-radius:5px; cursor:pointer;
-    background:rgba(255,255,255,0.05); border:1px solid var(--border);
+    background:rgba(15,25,40,0.05); border:1px solid var(--border);
     color:var(--text3); transition:all 0.15s;
   }
   .share-btn:hover { border-color:var(--border2); color:var(--text2); }
@@ -1323,7 +1321,7 @@
   .stat-card.gold::before { background: var(--gold); }
   .stat-card.green::before { background: var(--green); }
   .stat-card:not(.red):not(.gold):not(.green)::before { background: var(--blue); }
-  .stat-card:hover { background: rgba(255,255,255,0.028) !important; }
+  .stat-card:hover { background: rgba(15,25,40,0.028) !important; }
   .stat-card .label {
     font-size: 9.5px !important; letter-spacing: 3.5px !important; font-weight: 800 !important;
     margin-bottom: 16px !important; font-family: var(--font-mono) !important;
@@ -1515,7 +1513,7 @@
   /* ── SCORE BAR ── */
   .pc2-scorebar {
     height: 3px;
-    background: rgba(255,255,255,0.05);
+    background: rgba(15,25,40,0.05);
     overflow: hidden;
     position: relative;
     flex-shrink: 0;
@@ -1709,17 +1707,17 @@
      ══════════════════════════════════════════════════════ */
 
   /* ── NAV TABS: clean underline, no blue tinge ── */
-  .top-nav { border-bottom-color: rgba(30,45,66,0.9) !important; }
+  .top-nav { border-bottom-color: var(--border) !important; }
   .top-nav-tab {
     padding: 0 16px !important; height: 52px !important;
     font-size: 13px !important; font-weight: 500 !important;
-    letter-spacing: 0 !important; color: #586878 !important;
+    letter-spacing: 0 !important; color: var(--text3) !important;
     border-bottom-width: 2px !important;
     transition: color 0.12s, border-color 0.12s !important;
   }
-  .top-nav-tab:hover { color: #99A8BC !important; background: transparent !important; }
+  .top-nav-tab:hover { color: var(--text2) !important; background: transparent !important; }
   .top-nav-tab.active {
-    color: #E4E8EE !important; border-bottom-color: #E05C2A !important;
+    color: var(--text) !important; border-bottom-color: var(--red) !important;
     font-weight: 600 !important; background: transparent !important;
   }
   .top-nav-tab .nav-badge { font-size: 8.5px !important; padding: 1px 5px !important; }
@@ -1734,7 +1732,7 @@
     font-weight: 700 !important; color: var(--text) !important;
     font-family: var(--font-display) !important; text-transform: none !important;
   }
-  .section-hdr .divider { background: rgba(30,45,66,0.55) !important; }
+  .section-hdr .divider { background: var(--border) !important; }
 
   /* ── STAT STRIP: bold hero numbers (was 34px "refined" — same cascade
      conflict as section headers above) ── */
@@ -1760,7 +1758,7 @@
   .pc2-at { font-size: 10px !important; margin: 0 3px !important; }
   .pc2-verdict {
     padding: 0 16px 12px !important;
-    border-bottom: 1px solid rgba(255,255,255,0.045) !important; gap: 8px !important;
+    border-bottom: 1px solid rgba(15,25,40,0.045) !important; gap: 8px !important;
   }
   .pc2-verdict .punt-badge { font-size: 10px !important; padding: 4px 10px !important; }
   .pc2-score-num { font-size: 42px !important; letter-spacing: -2.5px !important; }
@@ -1778,14 +1776,14 @@
     color: var(--text3) !important; font-weight: 500 !important; margin-bottom: 6px !important;
     text-transform: none !important; font-family: var(--font-body) !important;
   }
-  .pc2-reason { padding: 4px 0 !important; border-bottom: 1px solid rgba(255,255,255,0.03) !important; }
+  .pc2-reason { padding: 4px 0 !important; border-bottom: 1px solid rgba(15,25,40,0.03) !important; }
   .pc2-reason-label { font-size: 12.5px !important; color: var(--text2) !important; }
   .pc2-pts { font-size: 11px !important; font-weight: 700 !important; }
 
   /* Pitcher footer */
   .pc2-pitchers {
     padding: 8px 16px 11px !important;
-    border-top: 1px solid rgba(255,255,255,0.04) !important; margin-top: 4px !important; gap: 3px !important;
+    border-top: 1px solid rgba(15,25,40,0.04) !important; margin-top: 4px !important; gap: 3px !important;
   }
   .pc2-sp { font-size: 11.5px !important; }
   .pc2-sp-team { font-size: 8.5px !important; width: 28px !important; }
@@ -1794,12 +1792,12 @@
   /* Clean badge: less visually dominant */
   .punt-badge.clean {
     background: transparent !important;
-    border-color: rgba(255,255,255,0.08) !important; color: #3D506A !important;
+    border-color: var(--border) !important; color: var(--text3) !important;
   }
 
   /* ── TEAM PUNTS LIST ── */
   .tp-row { padding: 12px 16px !important; gap: 14px !important; border-radius: 12px !important; }
-  .tp-row:hover { background: rgba(255,255,255,0.012) !important; }
+  .tp-row:hover { background: rgba(15,25,40,0.012) !important; }
   .tp-name { font-size: 13.5px !important; letter-spacing: -0.2px !important; }
   .tp-stats { font-size: 10px !important; margin-top: 2px !important; }
   .tp-game { padding: 6px 8px !important; min-width: 56px !important; border-radius: 8px !important; }
@@ -2037,39 +2035,39 @@
     <div style="font-family:var(--font-display);font-size:26px;font-weight:800;letter-spacing:-0.5px;color:var(--text);line-height:1.2;margin-bottom:10px">Measuring Competitive Integrity<br>Across All 30 MLB Clubs</div>
     <p style="font-size:12px;color:var(--text2);line-height:1.8;max-width:680px;margin:0 0 20px 0">Every game in the 2026 season is scored 0–80 for competitive intent using lineup composition, pitching deployment, series context, and in-game behavior. The result is the first systematic, game-by-game record of non-competitive effort in Major League Baseball.</p>
     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;margin-bottom:20px">
-      <div style="background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:10px;padding:16px 20px;text-align:center">
+      <div style="background:rgba(15,25,40,0.04);border:1px solid var(--border);border-radius:10px;padding:16px 20px;text-align:center">
         <div style="font-family:var(--font-mono);font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);margin-bottom:8px">Punt Games (2026)</div>
         <div style="font-family:var(--font-display);font-size:36px;font-weight:800;color:var(--red2);line-height:1" id="aboutStatPunts">—</div>
       </div>
-      <div style="background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:10px;padding:16px 20px;text-align:center">
+      <div style="background:rgba(15,25,40,0.04);border:1px solid var(--border);border-radius:10px;padding:16px 20px;text-align:center">
         <div style="font-family:var(--font-mono);font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);margin-bottom:8px">League Punt Rate</div>
         <div style="font-family:var(--font-display);font-size:36px;font-weight:800;color:var(--gold);line-height:1" id="aboutStatRate">—</div>
       </div>
-      <div style="background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:10px;padding:16px 20px;text-align:center">
+      <div style="background:rgba(15,25,40,0.04);border:1px solid var(--border);border-radius:10px;padding:16px 20px;text-align:center">
         <div style="font-family:var(--font-mono);font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);margin-bottom:8px">Games Scored</div>
         <div style="font-family:var(--font-display);font-size:36px;font-weight:800;color:var(--blue);line-height:1" id="aboutStatScored">—</div>
       </div>
-      <div style="background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:10px;padding:16px 20px;text-align:center;cursor:pointer" id="aboutStatTopCard" onclick="aboutStatTopCard_click()" title="View this team's games">
+      <div style="background:rgba(15,25,40,0.04);border:1px solid var(--border);border-radius:10px;padding:16px 20px;text-align:center;cursor:pointer" id="aboutStatTopCard" onclick="aboutStatTopCard_click()" title="View this team's games">
         <div style="font-family:var(--font-mono);font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);margin-bottom:8px">Most Active Punter</div>
         <div style="font-family:var(--font-display);font-size:22px;font-weight:800;color:var(--red2);line-height:1.1" id="aboutStatTopTeam">—</div>
         <div style="font-family:var(--font-mono);font-size:10px;color:var(--text3);margin-top:4px" id="aboutStatTopCount"></div>
       </div>
     </div>
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:0">
-      <div style="padding:16px 18px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:8px">
+      <div style="padding:16px 18px;background:rgba(15,25,40,0.03);border:1px solid var(--border);border-radius:8px">
         <div style="font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--red2);font-family:var(--font-mono);font-weight:700;margin-bottom:8px">Competitive Integrity</div>
         <p style="font-size:12px;color:var(--text2);line-height:1.7;margin:0">Punt games represent deliberate non-effort by one club, denying opponents a fair contest and fans the product they paid for. The Index creates an objective record where none previously existed.</p>
       </div>
-      <div style="padding:16px 18px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:8px">
+      <div style="padding:16px 18px;background:rgba(15,25,40,0.03);border:1px solid var(--border);border-radius:8px">
         <div style="font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--gold);font-family:var(--font-mono);font-weight:700;margin-bottom:8px">Fan Experience</div>
         <p style="font-size:12px;color:var(--text2);line-height:1.7;margin:0">A fan buying a ticket to a punt game is watching a product inferior to what the same team fields on other nights — without disclosure. The Punt Index gives fans the information in real time, before first pitch.</p>
       </div>
-      <div style="padding:16px 18px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:8px">
+      <div style="padding:16px 18px;background:rgba(15,25,40,0.03);border:1px solid var(--border);border-radius:8px">
         <div style="font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--green);font-family:var(--font-mono);font-weight:700;margin-bottom:8px">Data Accountability</div>
         <p style="font-size:12px;color:var(--text2);line-height:1.7;margin:0">Built entirely on the official MLB Stats API — the same data infrastructure used by every front office in baseball. Every verdict is reproducible, auditable, and grounded in public record.</p>
       </div>
     </div>
-    <div id="aboutDataFreshRow" style="display:none;margin-top:12px;padding:8px 16px;border-radius:8px;font-size:11px;font-family:var(--font-mono);align-items:center;gap:10px;background:rgba(255,255,255,0.02);border:1px solid var(--border)">
+    <div id="aboutDataFreshRow" style="display:none;margin-top:12px;padding:8px 16px;border-radius:8px;font-size:11px;font-family:var(--font-mono);align-items:center;gap:10px;background:rgba(15,25,40,0.02);border:1px solid var(--border)">
       <span style="color:var(--text3)">DATA THROUGH</span>
       <span id="aboutDataFreshDate" style="color:var(--text2);font-weight:600">—</span>
       <span id="aboutDataFreshWarn" style="display:none;color:var(--gold);font-weight:700;margin-left:8px">⚠ Collector may be stalled</span>
@@ -2155,7 +2153,7 @@
       <div style="flex:1;height:1px;background:var(--border)"></div>
       <div style="font-family:var(--font-mono);font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1.5px">Punt Games by Month · 2026</div>
     </div>
-    <div id="aboutMonthChart" style="background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:10px;padding:20px 24px">
+    <div id="aboutMonthChart" style="background:rgba(15,25,40,0.02);border:1px solid var(--border);border-radius:10px;padding:20px 24px">
       <div style="font-size:11px;color:var(--text3);font-family:var(--font-mono)">Loading...</div>
     </div>
   </div>
@@ -2580,7 +2578,7 @@
         </div>
 
         <!-- OVERVIEW -->
-        <div style="margin-top:18px;font-size:12px;color:var(--text2);line-height:1.8;padding:14px 18px;background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:10px">
+        <div style="margin-top:18px;font-size:12px;color:var(--text2);line-height:1.8;padding:14px 18px;background:rgba(15,25,40,0.02);border:1px solid var(--border);border-radius:10px">
           A punt game is a <strong style="color:var(--text)">verdict, not a pre-game fact</strong>. The score reflects everything / what a manager put on the field, how they managed the game, and what the full arc of events suggests about their intent. Every game is scored on a <strong style="color:var(--text)">0–80 scale</strong> across two independent tracks: a <strong style="color:var(--text)">pre-game score</strong> (lineup + pitching context) and an <strong style="color:var(--text)">in-game score</strong> (behavioral signals during play). A pre-game punt is <strong style="color:var(--text)">locked</strong> and cannot be reversed. A clean pre-game game can still become a punt if in-game behavior / blowout concession, position player pitching, mass substitutions / independently crosses the threshold.
         </div>
 
@@ -2590,7 +2588,7 @@
             <span style="color:var(--green);font-weight:800;font-size:14px">+N</span>
             <span style="color:var(--text2)">adds to punt score</span>
           </div>
-          <div style="display:flex;align-items:center;gap:7px;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:6px;padding:6px 12px">
+          <div style="display:flex;align-items:center;gap:7px;background:rgba(15,25,40,0.04);border:1px solid var(--border);border-radius:6px;padding:6px 12px">
             <span style="color:var(--text3);font-weight:800;font-size:14px">×N</span>
             <span style="color:var(--text2)">multiplies existing score</span>
           </div>
@@ -2738,10 +2736,10 @@
             <div style="text-align:center;color:var(--text3);font-family:var(--font-mono)">7–9</div>
             <div style="text-align:center;color:var(--text3);font-family:var(--font-mono)">Final</div>
             <div style="color:var(--text2)">Weak/moderate</div>
-            <div style="text-align:center;background:rgba(255,255,255,0.02);border-radius:6px;padding:6px">6%</div>
-            <div style="text-align:center;background:rgba(255,255,255,0.02);border-radius:6px;padding:6px">18%</div>
-            <div style="text-align:center;background:rgba(255,255,255,0.02);border-radius:6px;padding:6px">30%</div>
-            <div style="text-align:center;background:rgba(255,255,255,0.02);border-radius:6px;padding:6px">40%</div>
+            <div style="text-align:center;background:rgba(15,25,40,0.02);border-radius:6px;padding:6px">6%</div>
+            <div style="text-align:center;background:rgba(15,25,40,0.02);border-radius:6px;padding:6px">18%</div>
+            <div style="text-align:center;background:rgba(15,25,40,0.02);border-radius:6px;padding:6px">30%</div>
+            <div style="text-align:center;background:rgba(15,25,40,0.02);border-radius:6px;padding:6px">40%</div>
             <div style="color:var(--text2)">Strong (≥46)</div>
             <div style="text-align:center;background:rgba(232,184,75,0.08);border-radius:6px;padding:6px;color:var(--gold)">25%</div>
             <div style="text-align:center;background:rgba(232,184,75,0.08);border-radius:6px;padding:6px;color:var(--gold)">45%</div>
@@ -2764,7 +2762,7 @@
               <div style="font-size:9px;text-transform:uppercase;letter-spacing:1px;color:#6a8aaa;margin-top:4px">Under 60 Games</div>
               <div style="font-size:10px;color:var(--text2);margin-top:4px">Calibration<br>Building baselines</div>
             </div>
-            <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(240,165,0,0.2);border-radius:8px;padding:10px 12px;text-align:center">
+            <div style="background:rgba(15,25,40,0.04);border:1px solid rgba(240,165,0,0.2);border-radius:8px;padding:10px 12px;text-align:center">
               <div style="font-family:'Space Grotesk',sans-serif;font-size:22px;color:var(--gold)">×0.70</div>
               <div style="font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--gold);margin-top:4px">60 Games (min. June)</div>
               <div style="font-size:10px;color:var(--text2);margin-top:4px">Detection unlocks<br>Baselines ready</div>
@@ -2789,7 +2787,7 @@
           <div style="background:rgba(230,126,34,0.12);border:1px solid rgba(230,126,34,0.3);border-radius:8px;padding:10px 18px;font-size:12px">
             <span style="color:var(--orange);font-weight:600">🔍 MANUAL REVIEW</span> &nbsp;Score 28–45
           </div>
-          <div style="background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:8px;padding:10px 18px;font-size:12px;color:var(--text2)">
+          <div style="background:rgba(15,25,40,0.04);border:1px solid var(--border);border-radius:8px;padding:10px 18px;font-size:12px;color:var(--text2)">
             ✓ CLEAN &nbsp;Score &lt; 28
           </div>
         </div>
@@ -6158,8 +6156,8 @@ function renderCard(g, idx) {
     'injured-dtd':        'background:rgba(150,100,50,0.2);color:#c8894a;border-color:#8a5a2a',
     'platoon-expected':   'background:rgba(29,185,84,0.12);color:#1db954;border-color:rgba(29,185,84,0.3)',
     'platoon-suspicious': 'background:rgba(212,43,43,0.18);color:#ff3c3c;border-color:rgba(212,43,43,0.4)',
-    'platoon-secondary':  'background:rgba(255,255,255,0.05);color:#666;border-color:#333',
-    'bench':              'background:rgba(255,255,255,0.04);color:#555;border-color:#333',
+    'platoon-secondary':  'background:rgba(15,25,40,0.05);color:#666;border-color:#333',
+    'bench':              'background:rgba(15,25,40,0.04);color:#555;border-color:#333',
     'normal':             'background:rgba(212,43,43,0.15);color:#ff3c3c;border-color:rgba(212,43,43,0.25)',
   };
   const typeIcon = { 'injured-il':'🩹','injured-dtd':'⚠️','platoon-expected':'↔','platoon-suspicious':'⚑','platoon-secondary':'—','bench':'—','normal':'●' };
@@ -6191,7 +6189,7 @@ function renderCard(g, idx) {
           : 'Postponed';
     const detail = g.detailedState && g.detailedState !== label ? ` / ${g.detailedState}` : '';
     postponedBar = `
-      <div style="border-top:1px solid var(--border);padding:9px 14px;display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.02)">
+      <div style="border-top:1px solid var(--border);padding:9px 14px;display:flex;align-items:center;gap:8px;background:rgba(15,25,40,0.02)">
         <span style="font-size:14px">${icon}</span>
         <span style="font-size:10px;font-weight:700;color:var(--text2);letter-spacing:1px;font-family:'JetBrains Mono',monospace;text-transform:uppercase">${label}${detail}</span>
         <span style="font-size:9px;color:var(--text3);font-family:'JetBrains Mono',monospace;margin-left:auto">Pre-game score preserved</span>
@@ -6426,7 +6424,7 @@ function renderScoreRing(score, preGame, inGame, puntSource) {
   return `
     <div class="score-ring">
       <svg viewBox="0 0 50 50" width="50" height="50" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="25" cy="25" r="${r}" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="2.5"/>
+        <circle cx="25" cy="25" r="${r}" fill="none" stroke="rgba(15,25,40,0.05)" stroke-width="2.5"/>
         ${hasInGame ? `<circle cx="25" cy="25" r="${r}" fill="none" stroke="${color}" stroke-width="2.5" stroke-dasharray="${preGameDash} ${circ}" stroke-linecap="round" opacity="0.3"/>` : ''}
         <circle cx="25" cy="25" r="${r}" fill="none" stroke="${color}" stroke-width="2.5"
           stroke-dasharray="${dash} ${circ}" stroke-linecap="round"/>
@@ -7527,7 +7525,7 @@ async function renderCalibratedLineup() {
     </div>
 
     <!-- What this shows -->
-    <div style="background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:10px;padding:12px 16px;margin-bottom:16px;font-size:12px;color:var(--text2);line-height:1.7">
+    <div style="background:rgba(15,25,40,0.02);border:1px solid var(--border);border-radius:10px;padding:12px 16px;margin-bottom:16px;font-size:12px;color:var(--text2);line-height:1.7">
       <strong style="color:var(--text)">Calibrated baseline vs the day's lineup.</strong>
       The left column is ${abbr(teamName)}'s typical batting order through <strong style="color:var(--text)">${throughDate}</strong> (recency-weighted, ${gamesThrough.length} games). The right is the lineup actually fielded on <strong style="color:var(--text)">${dayEntry?.date || throughDate}</strong>. This comparison is for reference only and does not affect the punt score — a regular starter simply batting in a different slot is not rested or benched, only players missing from the lineup entirely count toward the score.
     </div>
@@ -8132,7 +8130,7 @@ function renderCalendar() {
       });
       if (games.length > 3) inner += `<div class="cal-game" style="color:var(--muted);font-size:9px">+${games.length - 3} more</div>`;
     } else if (isPast) {
-      inner += `<div class="cal-game" style="color:rgba(255,255,255,0.12);font-size:9px">off</div>`;
+      inner += `<div class="cal-game" style="color:rgba(15,25,40,0.12);font-size:9px">off</div>`;
     }
 
     cell.innerHTML = inner;
@@ -8999,7 +8997,7 @@ async function loadReviewBoxScore(gamePk, e) {
         const slotObj = slots[i];
         const cal     = calLineup[i] || null;
         if (!slotObj) {
-          rows.push(`<tr style="border-top:1px solid rgba(255,255,255,0.04)"><td style="padding:5px 10px"></td><td></td></tr>`);
+          rows.push(`<tr style="border-top:1px solid rgba(15,25,40,0.04)"><td style="padding:5px 10px"></td><td></td></tr>`);
           continue;
         }
         const { slot, starter, subs } = slotObj;
@@ -9016,13 +9014,13 @@ async function loadReviewBoxScore(gamePk, e) {
             calHtml = `<span style="color:var(--text3);font-size:10px;margin-right:4px">✓</span><span style="color:var(--text3);${mono}">${cal.name}</span><span style="color:var(--text3);font-size:10px;margin-left:4px">${cal.pct != null ? cal.pct+'%' : ''}</span>`;
           } else if (!wasRecentlyActive) {
             // Not seen in 14 prior games — likely on IL or inactive; flag but don't gold-highlight
-            calHtml = `<span style="color:var(--text3);opacity:0.6;${mono}">${cal.name}</span><span style="font-size:9px;margin-left:5px;color:var(--text3);background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);border-radius:3px;padding:1px 4px;font-family:var(--font-mono)" title="Not seen in the prior 14 games — likely injured or on IL">IL?</span>`;
+            calHtml = `<span style="color:var(--text3);opacity:0.6;${mono}">${cal.name}</span><span style="font-size:9px;margin-left:5px;color:var(--text3);background:rgba(15,25,40,0.05);border:1px solid rgba(15,25,40,0.12);border-radius:3px;padding:1px 4px;font-family:var(--font-mono)" title="Not seen in the prior 14 games — likely injured or on IL">IL?</span>`;
           } else {
             calHtml = `<span style="color:var(--gold);${mono}">${cal.name}</span><span style="color:var(--text3);font-size:10px;margin-left:4px">${cal.pct != null ? cal.pct+'%' : ''}</span>`;
           }
         }
 
-        rows.push(`<tr style="border-top:1px solid rgba(255,255,255,0.05)">
+        rows.push(`<tr style="border-top:1px solid rgba(15,25,40,0.05)">
           <td style="padding:5px 10px;${mono};color:${nameColor};white-space:nowrap;vertical-align:top">
             ${slotNum}<strong style="font-weight:600">${starter.name}</strong>
             <span style="color:var(--text3);font-size:10px;margin-left:5px">${starter.pos}</span>
@@ -9056,7 +9054,7 @@ async function loadReviewBoxScore(gamePk, e) {
         <div style="font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);font-family:var(--font-mono);margin-bottom:8px">Starting Lineups</div>
         <div style="display:grid;grid-template-columns:1fr 1px 1fr;gap:0;border:1px solid var(--border);border-radius:var(--r-md);overflow:hidden">
           <div>
-            <div style="padding:8px 10px 4px;border-bottom:1px solid var(--border);background:rgba(255,255,255,0.03)">
+            <div style="padding:8px 10px 4px;border-bottom:1px solid var(--border);background:rgba(15,25,40,0.03)">
               ${teamHdrCell(abbr(e.away), awayIsPunt)}
             </div>
             <table style="border-collapse:collapse;width:100%">
@@ -9066,7 +9064,7 @@ async function loadReviewBoxScore(gamePk, e) {
           </div>
           <div style="background:var(--border)"></div>
           <div>
-            <div style="padding:8px 10px 4px;border-bottom:1px solid var(--border);background:rgba(255,255,255,0.03)">
+            <div style="padding:8px 10px 4px;border-bottom:1px solid var(--border);background:rgba(15,25,40,0.03)">
               ${teamHdrCell(abbr(e.home), homeIsPunt)}
             </div>
             <table style="border-collapse:collapse;width:100%">
@@ -9471,7 +9469,7 @@ function renderCILeaderboard() {
               </div>`;
             }).join('')
           : `<div style="font-size:11px;color:var(--text3);font-family:var(--font-mono)">No punt games logged for this team.</div>`;
-        return row + `<div onclick="event.stopPropagation()" style="padding:12px 18px 16px;background:rgba(255,255,255,0.02);border-bottom:1px solid rgba(255,255,255,0.04);display:flex;flex-wrap:wrap;gap:8px">${tiles}</div>`;
+        return row + `<div onclick="event.stopPropagation()" style="padding:12px 18px 16px;background:rgba(15,25,40,0.02);border-bottom:1px solid rgba(15,25,40,0.04);display:flex;flex-wrap:wrap;gap:8px">${tiles}</div>`;
       }).join('')}
     </div>`;
 }
@@ -9503,7 +9501,7 @@ function renderAboutTopPunts() {
       ? `<img src="${logoUrl}" style="width:22px;height:22px;object-fit:contain;vertical-align:middle;margin-right:6px" onerror="this.style.display='none'">`
       : '';
     const dateForNav = e.date || '';
-    return `<div style="display:grid;grid-template-columns:24px 56px 1fr auto;gap:12px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--border2);${i === 0 ? 'border-left:3px solid var(--red2);background:rgba(224,92,42,0.04);' : ''}cursor:pointer;transition:background 0.12s" onclick="navigatePuntGame('${dateForNav}')" onmouseenter="this.style.background='rgba(255,255,255,0.03)'" onmouseleave="this.style.background='${i===0?'rgba(224,92,42,0.04)':'transparent'}'">
+    return `<div style="display:grid;grid-template-columns:24px 56px 1fr auto;gap:12px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--border2);${i === 0 ? 'border-left:3px solid var(--red2);background:rgba(224,92,42,0.04);' : ''}cursor:pointer;transition:background 0.12s" onclick="navigatePuntGame('${dateForNav}')" onmouseenter="this.style.background='rgba(15,25,40,0.03)'" onmouseleave="this.style.background='${i===0?'rgba(224,92,42,0.04)':'transparent'}'">
       <span style="font-family:var(--font-mono);font-size:10px;color:var(--text3);font-weight:700">#${i + 1}</span>
       <span style="font-family:var(--font-display);font-size:22px;font-weight:900;color:${scoreColor(e.score)};line-height:1">${e.score}<span style="font-size:10px;color:var(--text3);font-weight:400">/80</span></span>
       <span>
@@ -9520,7 +9518,7 @@ function renderAboutTopPunts() {
       </span>
     </div>`;
   }).join('');
-  el.style.cssText = 'background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:10px;overflow:hidden';
+  el.style.cssText = 'background:rgba(15,25,40,0.02);border:1px solid var(--border);border-radius:10px;overflow:hidden';
 }
 
 function renderAboutMonthTrend() {
@@ -10545,7 +10543,7 @@ async function renderGameflowChart(silent = false, inlineOpts = null) {
     ctx.fillRect(PAD.left, PAD.top, cW, toY(PUNT_THRESH) - PAD.top);
 
     // ── Y-axis line ──
-    ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+    ctx.strokeStyle = 'rgba(15,25,40,0.12)';
     ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(PAD.left, PAD.top); ctx.lineTo(PAD.left, PAD.top + cH); ctx.stroke();
 
@@ -10563,7 +10561,7 @@ async function renderGameflowChart(silent = false, inlineOpts = null) {
     [0, REVIEW_THRESH, PUNT_THRESH, 60, 80].forEach(v => {
       const y = toY(v);
       const isThresh = v === PUNT_THRESH || v === REVIEW_THRESH;
-      const color = v === PUNT_THRESH ? 'rgba(224,92,42,0.5)' : v === REVIEW_THRESH ? 'rgba(232,184,75,0.4)' : 'rgba(255,255,255,0.07)';
+      const color = v === PUNT_THRESH ? 'rgba(224,92,42,0.5)' : v === REVIEW_THRESH ? 'rgba(232,184,75,0.4)' : 'rgba(15,25,40,0.07)';
       ctx.strokeStyle = color;
       ctx.lineWidth = isThresh ? 1.5 : 1;
       ctx.setLineDash(isThresh ? [5, 3] : []);
@@ -10590,7 +10588,7 @@ async function renderGameflowChart(silent = false, inlineOpts = null) {
     ctx.fillText('REVIEW', W - PAD.right + 4, toY(REVIEW_THRESH) + 3);
 
     // ── X-axis line ──
-    ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+    ctx.strokeStyle = 'rgba(15,25,40,0.12)';
     ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(PAD.left, PAD.top + cH); ctx.lineTo(W - PAD.right, PAD.top + cH); ctx.stroke();
 
@@ -10600,7 +10598,7 @@ async function renderGameflowChart(silent = false, inlineOpts = null) {
     ctx.lineTo(toX(n - 1), PAD.top + cH);
     ctx.lineTo(toX(0), PAD.top + cH);
     ctx.closePath();
-    ctx.fillStyle = 'rgba(255,255,255,0.05)';
+    ctx.fillStyle = 'rgba(15,25,40,0.05)';
     ctx.fill();
 
     // ── Score line — bright white so it's always distinct from orange/gold thresholds ──
@@ -10651,10 +10649,10 @@ async function renderGameflowChart(silent = false, inlineOpts = null) {
       // Dot
       ctx.beginPath();
       ctx.arc(x, y, hasSignal ? 5 : 3, 0, Math.PI * 2);
-      ctx.fillStyle = isPunt ? 'var(--red2)' : isReview ? 'var(--gold)' : 'rgba(224,92,42,0.5)';
+      ctx.fillStyle = isPunt ? '#C23A16' : isReview ? '#B8860B' : '#178A5F';
       ctx.fill();
       if (hasSignal) {
-        ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+        ctx.strokeStyle = 'rgba(15,25,40,0.3)';
         ctx.lineWidth = 1.5;
         ctx.stroke();
       }
@@ -10701,7 +10699,7 @@ async function renderGameflowChart(silent = false, inlineOpts = null) {
     ctx.textAlign = 'center';
     points.forEach((p, i) => {
       const x = toX(i);
-      ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+      ctx.strokeStyle = 'rgba(15,25,40,0.15)';
       ctx.lineWidth = 1;
       ctx.beginPath(); ctx.moveTo(x, PAD.top + cH); ctx.lineTo(x, PAD.top + cH + 4); ctx.stroke();
       ctx.fillStyle = 'rgba(255,255,255,0.40)';
