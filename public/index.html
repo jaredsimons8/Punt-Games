@@ -1306,10 +1306,11 @@
     top: 0; left: 0; right: 0; height: 2px !important;
     opacity: 1 !important; border-radius: 0 !important;
   }
-  .stat-card.red::before  { background: var(--red); }
-  .stat-card.gold::before { background: var(--gold); }
-  .stat-card.green::before { background: var(--green); }
-  .stat-card:not(.red):not(.gold):not(.green)::before { background: var(--blue); }
+  .stat-card.red::before  { background: var(--red); box-shadow: 0 0 8px rgba(224,92,42,0.6); }
+  .stat-card.gold::before { background: var(--gold); box-shadow: 0 0 8px rgba(232,184,75,0.6); }
+  .stat-card.green::before { background: var(--green); box-shadow: 0 0 8px rgba(52,211,153,0.6); }
+  .stat-card:not(.red):not(.gold):not(.green)::before { background: var(--blue); box-shadow: 0 0 8px rgba(91,156,246,0.6); }
+  .stat-card:hover { background: rgba(255,255,255,0.022) !important; }
   .stat-card .label {
     font-size: 9px !important; letter-spacing: 3px !important;
     margin-bottom: 14px !important; font-family: var(--font-mono) !important;
@@ -2229,7 +2230,7 @@
 
   <!-- STAT STRIP -->
   <div class="stat-strip" style="margin-top:32px">
-    <div class="stat-card red" style="border-left:3px solid var(--red)">
+    <div class="stat-card red">
       <div class="label">Punts Today</div>
       <div class="value" id="statPunt">—</div>
       <div class="sub">Score ≥ 46 (of 80)</div>
@@ -2244,7 +2245,7 @@
       <div class="value" id="statSeason">—</div>
       <div class="sub" id="statSeasonLabel">All teams, 2026</div>
     </div>
-    <div class="stat-card" style="border-left:3px solid var(--blue)">
+    <div class="stat-card">
       <div class="label">League Punt Rate</div>
       <div class="value" id="statRate" style="color:var(--blue)">—</div>
       <div class="sub" id="statRateSub">of all scored games</div>
