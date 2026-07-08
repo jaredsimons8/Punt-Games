@@ -9226,7 +9226,18 @@ function toggleTeamPuntTiles(teamName) {
 // Clicking a punt tile in the expanded team list opens that specific game
 // in the Gameflow tab (inning-by-inning chart), not the review queue.
 async function openGameflowForTile(gameId, dateStr) {
-  const gamePk = String(gameId || '').split('_').pop();
+  let gamePk = String(gameId || '').split('_').pop();
+  // Retrograded entries created fresh (not upgraded from an existing log
+  // row) use a synthetic id like "retro_2026-04-12_CLE_ATL" with no real
+  // gamePk embedded — same issue openReviewDetail already handles via
+  // resolveGamePkForEntry. Fall back to resolving it from the schedule.
+  if (!gamePk || isNaN(gamePk)) {
+    const entry = state.gameLog.find(x => x.id === gameId);
+    if (entry) {
+      showToast('Resolving game…');
+      gamePk = await resolveGamePkForEntry(entry).catch(() => null);
+    }
+  }
   if (!gamePk || isNaN(gamePk) || !dateStr) { showToast('Could not locate this game.', true); return; }
   showPage('gameflow');
   const dp = document.getElementById('gameflowDatePicker');
