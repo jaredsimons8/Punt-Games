@@ -6416,7 +6416,7 @@ function renderScoreRing(score, preGame, inGame, puntSource) {
   const pct = displayScore / 80; // 80-point scale
   const r = 20; const circ = 2 * Math.PI * r;
   const dash = Math.min(pct, 1) * circ;
-  const color = displayScore >= PUNT_THRESH ? '#F0703C' : displayScore >= REVIEW_THRESH ? '#E8B84B' : '#3A3A35';
+  const color = displayScore >= PUNT_THRESH ? '#C23A16' : displayScore >= REVIEW_THRESH ? '#B8860B' : '#9CA8B8';
   const cls = displayScore >= PUNT_THRESH ? 'high' : displayScore >= REVIEW_THRESH ? 'mid' : '';
   // Show pre-game arc as dimmer backdrop when in-game data also contributed
   const hasInGame = inGame > 0 && puntSource === 'ingame';
@@ -8416,7 +8416,7 @@ async function openReviewDetail(id) {
   const factorRows = posFactors.map(f => {
     const maxForFactor = f.max || f.val || 1;
     const pct = Math.min(100, (f.val / maxForFactor) * 100).toFixed(1);
-    const barColor = f.val >= 15 ? 'var(--red2)' : f.val >= 8 ? 'var(--gold)' : 'rgba(255,255,255,0.35)';
+    const barColor = f.val >= 15 ? 'var(--red2)' : f.val >= 8 ? 'var(--gold)' : 'rgba(124,138,156,0.6)';
     return `<div style="padding:7px 0;border-bottom:1px solid var(--border)">
       <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px">
         <span style="color:var(--text2);font-size:12px">${f.label}</span>
@@ -10495,7 +10495,7 @@ async function renderGameflowChart(silent = false, inlineOpts = null) {
       <div style="width:100%">
         <div style="display:flex;align-items:center;gap:16px;margin-bottom:16px;flex-wrap:wrap">
           <div style="display:flex;align-items:center;gap:6px">
-            <div style="width:12px;height:3px;background:rgba(255,255,255,0.85);border-radius:2px"></div>
+            <div style="width:12px;height:3px;background:rgba(15,25,40,0.85);border-radius:2px"></div>
             <span style="font-size:11px;color:var(--text3);font-family:var(--font-mono)">Punt Score (0–80)</span>
           </div>
           <div style="display:flex;align-items:center;gap:6px">
@@ -10551,7 +10551,7 @@ async function renderGameflowChart(silent = false, inlineOpts = null) {
     ctx.save();
     ctx.translate(13, PAD.top + cH / 2);
     ctx.rotate(-Math.PI / 2);
-    ctx.fillStyle = 'rgba(255,255,255,0.30)';
+    ctx.fillStyle = 'rgba(15,25,40,0.35)';
     ctx.font = '9px JetBrains Mono,monospace';
     ctx.textAlign = 'center';
     ctx.fillText('PUNT SCORE', 0, 0);
@@ -10568,11 +10568,11 @@ async function renderGameflowChart(silent = false, inlineOpts = null) {
       ctx.beginPath(); ctx.moveTo(PAD.left, y); ctx.lineTo(W - PAD.right, y); ctx.stroke();
       ctx.setLineDash([]);
       // Tick mark
-      ctx.strokeStyle = 'rgba(255,255,255,0.20)';
+      ctx.strokeStyle = 'rgba(15,25,40,0.25)';
       ctx.lineWidth = 1;
       ctx.beginPath(); ctx.moveTo(PAD.left - 4, y); ctx.lineTo(PAD.left, y); ctx.stroke();
       // Tick label
-      const labelColor = v === PUNT_THRESH ? 'rgba(224,92,42,0.8)' : v === REVIEW_THRESH ? 'rgba(232,184,75,0.8)' : 'rgba(255,255,255,0.35)';
+      const labelColor = v === PUNT_THRESH ? 'rgba(194,58,22,0.9)' : v === REVIEW_THRESH ? 'rgba(184,134,11,0.9)' : 'rgba(15,25,40,0.4)';
       ctx.fillStyle = labelColor;
       ctx.font = v === PUNT_THRESH || v === REVIEW_THRESH ? 'bold 9px JetBrains Mono,monospace' : '9px JetBrains Mono,monospace';
       ctx.textAlign = 'right';
@@ -10582,9 +10582,9 @@ async function renderGameflowChart(silent = false, inlineOpts = null) {
     // Threshold labels on right side
     ctx.textAlign = 'left';
     ctx.font = '8px JetBrains Mono,monospace';
-    ctx.fillStyle = 'rgba(224,92,42,0.7)';
+    ctx.fillStyle = 'rgba(194,58,22,0.85)';
     ctx.fillText('PUNT', W - PAD.right + 4, toY(PUNT_THRESH) + 3);
-    ctx.fillStyle = 'rgba(232,184,75,0.6)';
+    ctx.fillStyle = 'rgba(184,134,11,0.85)';
     ctx.fillText('REVIEW', W - PAD.right + 4, toY(REVIEW_THRESH) + 3);
 
     // ── X-axis line ──
@@ -10601,10 +10601,11 @@ async function renderGameflowChart(silent = false, inlineOpts = null) {
     ctx.fillStyle = 'rgba(15,25,40,0.05)';
     ctx.fill();
 
-    // ── Score line — bright white so it's always distinct from orange/gold thresholds ──
+    // ── Score line — dark navy so it's always distinct from the light
+    // green/gold/red background zones and the orange/gold thresholds ──
     ctx.beginPath();
     points.forEach((p, i) => { i === 0 ? ctx.moveTo(toX(i), toY(p.score)) : ctx.lineTo(toX(i), toY(p.score)); });
-    ctx.strokeStyle = 'rgba(255,255,255,0.90)';
+    ctx.strokeStyle = 'rgba(11,18,32,0.92)';
     ctx.lineWidth = 2.5;
     ctx.lineJoin = 'round';
     ctx.stroke();
@@ -10617,7 +10618,7 @@ async function renderGameflowChart(silent = false, inlineOpts = null) {
       const scoreLabel = String(Math.round(last.score));
       ctx.font = 'bold 9px JetBrains Mono,monospace';
       ctx.textAlign = 'left';
-      ctx.fillStyle = 'rgba(255,255,255,0.80)';
+      ctx.fillStyle = 'rgba(11,18,32,0.85)';
       ctx.fillText(scoreLabel, lx + 4, ly + 3);
     }
 
@@ -10694,7 +10695,7 @@ async function renderGameflowChart(silent = false, inlineOpts = null) {
     });
 
     // ── X-axis tick labels ──
-    ctx.fillStyle = 'rgba(255,255,255,0.40)';
+    ctx.fillStyle = 'rgba(15,25,40,0.45)';
     ctx.font = '9px JetBrains Mono,monospace';
     ctx.textAlign = 'center';
     points.forEach((p, i) => {
@@ -10702,12 +10703,12 @@ async function renderGameflowChart(silent = false, inlineOpts = null) {
       ctx.strokeStyle = 'rgba(15,25,40,0.15)';
       ctx.lineWidth = 1;
       ctx.beginPath(); ctx.moveTo(x, PAD.top + cH); ctx.lineTo(x, PAD.top + cH + 4); ctx.stroke();
-      ctx.fillStyle = 'rgba(255,255,255,0.40)';
+      ctx.fillStyle = 'rgba(15,25,40,0.45)';
       ctx.fillText(p.isPreGame ? 'PRE' : p.inning, x, PAD.top + cH + 15);
     });
 
     // ── X-axis title ──
-    ctx.fillStyle = 'rgba(255,255,255,0.30)';
+    ctx.fillStyle = 'rgba(15,25,40,0.35)';
     ctx.font = '9px JetBrains Mono,monospace';
     ctx.textAlign = 'center';
     ctx.fillText('INNING', PAD.left + cW / 2, H - 6);
