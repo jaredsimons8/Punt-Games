@@ -601,9 +601,9 @@
   .ci-header { display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; padding:13px 18px; border-bottom:1px solid var(--border); background:linear-gradient(180deg,rgba(15,25,40,0.03),rgba(15,25,40,0.01)); }
   .ci-header-title { font-family:var(--font-mono); font-size:9.5px; text-transform:uppercase; letter-spacing:2px; color:var(--text2); font-weight:700; }
   .ci-header-meta { font-family:var(--font-mono); font-size:10px; color:var(--text3); }
-  .ci-cols { display:grid; grid-template-columns:34px 1fr 50px 64px 140px; gap:0; padding:8px 18px; border-bottom:1px solid var(--border2); background:rgba(0,0,0,0.12); }
+  .ci-cols { display:grid; grid-template-columns:34px 1fr 50px 200px; gap:0; padding:8px 18px; border-bottom:1px solid var(--border2); background:rgba(0,0,0,0.12); }
   .ci-cols span { font-size:8.5px; text-transform:uppercase; letter-spacing:1.5px; color:var(--text3); font-family:var(--font-mono); font-weight:700; }
-  .ci-row { display:grid; grid-template-columns:34px 1fr 50px 64px 140px; gap:0; padding:8px 18px; border-bottom:1px solid rgba(15,25,40,0.035); align-items:center; transition:background 0.12s; cursor:pointer; }
+  .ci-row { display:grid; grid-template-columns:34px 1fr 50px 200px; gap:0; padding:14px 18px; border-bottom:1px solid rgba(15,25,40,0.035); align-items:center; transition:background 0.12s; cursor:pointer; }
   .ci-row:nth-child(even) { background:rgba(15,25,40,0.012); }
   .ci-row:last-child { border-bottom:none; }
   .ci-row:hover { background:rgba(15,25,40,0.04); }
@@ -628,8 +628,23 @@
   .ci-score.green { color:var(--green); }
   .ci-score.gold { color:var(--gold); }
   .ci-score.red { color:var(--red2); }
-  .ci-bar-wrap { height:4px; background:var(--bg3); border-radius:3px; overflow:hidden; }
-  .ci-bar-fill { height:100%; border-radius:3px; transition:width 0.4s ease; }
+
+  /* Savant-style percentile bar: track + guide lines + a circular badge
+     riding on top of the fill at the score's position, instead of a
+     plain thin progress bar. */
+  .ci-scale { display:flex; align-items:center; justify-content:space-between; padding:6px 18px 8px; border-bottom:1px solid var(--border2); background:rgba(15,25,40,0.015); }
+  .ci-scale span { font-size:8px; font-weight:800; text-transform:uppercase; letter-spacing:1.5px; font-family:var(--font-mono); }
+  .ci-bar-wrap { position:relative; height:18px; background:var(--bg3); border-radius:9px; overflow:visible; }
+  .ci-bar-track { position:absolute; inset:0; border-radius:9px; overflow:hidden; }
+  .ci-bar-fill { height:100%; border-radius:9px; transition:width 0.4s ease; opacity:0.22; }
+  .ci-bar-guide { position:absolute; top:0; bottom:0; width:1px; background:rgba(15,25,40,0.12); border-left:1px dashed rgba(15,25,40,0.18); }
+  .ci-bar-badge {
+    position:absolute; top:50%; width:26px; height:26px; margin-top:-13px; margin-left:-13px;
+    border-radius:50%; display:flex; align-items:center; justify-content:center;
+    font-family:var(--font-mono); font-size:9.5px; font-weight:800; color:#fff;
+    box-shadow:0 1px 3px rgba(15,25,40,0.35), 0 0 0 2px var(--surface);
+    transition:left 0.4s ease;
+  }
 
   /* ── TEAM PUNTS (punt-game-first layout) ── */
   .tp-list { display: flex; flex-direction: column; gap: 10px; }
@@ -9429,12 +9444,16 @@ function renderCILeaderboard() {
           <button onclick="setCiSort('punts')" style="font-family:var(--font-mono);font-size:9px;padding:3px 9px;border-radius:4px;border:1px solid ${ciSortMode==='punts'?'var(--red2)':'var(--border2)'};background:${ciSortMode==='punts'?'rgba(224,92,42,0.15)':'transparent'};color:${ciSortMode==='punts'?'var(--red2)':'var(--text3)'};cursor:pointer;letter-spacing:1px;text-transform:uppercase">Punts</button>
         </span>
       </div>
+      <div class="ci-scale">
+        <span style="color:var(--red2)">✕ Punt-Heavy</span>
+        <span style="color:var(--gold)">◑ Review Zone</span>
+        <span style="color:var(--green)">✓ Clean</span>
+      </div>
       <div class="ci-cols">
         <span>#</span>
         <span>Team</span>
         <span style="text-align:center">Punts</span>
-        <span style="text-align:right;padding-right:12px">CI Score</span>
-        <span></span>
+        <span style="padding-left:2px">CI Score (0–100%)</span>
       </div>
       ${headerRows.map((r, i) => {
         const logoUrl = getTeamLogo(r.t.name);
@@ -9452,8 +9471,14 @@ function renderCILeaderboard() {
           <span class="ci-rank">${rankDisplay}</span>
           <span class="ci-team">${logoEl}<span><span class="ci-name">${r.t.name}</span><br><span class="ci-div">${r.t.abbr} · ${r.t.division}</span></span></span>
           <span class="ci-punts ${puntClass(r.punts)}">${r.punts}<span style="font-size:9px;color:var(--text3);font-weight:400"> / ${r.games}</span></span>
-          <span class="ci-score ${ciColor(r.rate)}">${ci.toFixed(1)}%</span>
-          <span><div class="ci-bar-wrap"><div class="ci-bar-fill" style="width:${ci.toFixed(1)}%;background:${barColor(r.rate)}"></div></div></span>
+          <span>
+            <div class="ci-bar-wrap">
+              <div class="ci-bar-track"><div class="ci-bar-fill" style="width:${ci.toFixed(1)}%;background:${barColor(r.rate)}"></div></div>
+              <div class="ci-bar-guide" style="left:82%"></div>
+              <div class="ci-bar-guide" style="left:92%"></div>
+              <div class="ci-bar-badge" style="left:${Math.min(96, Math.max(4, ci)).toFixed(1)}%;background:${barColor(r.rate)}">${Math.round(ci)}</div>
+            </div>
+          </span>
         </div>`;
         if (!isExpanded) return row;
         const history = (state.teamData[r.t.name]?.history || []).slice().reverse();
