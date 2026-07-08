@@ -6480,15 +6480,28 @@ function renderScoreRing(score, preGame, inGame, puntSource) {
   `;
 }
 
-// scrollIntoView({behavior:'smooth'}) was silently a no-op here (root
-// cause unclear — plain window.scrollTo works fine on the same page),
-// so the scoreboard strip's "click to jump to game cards" used this
-// confirmed-working scrollTo instead.
+// Both scrollIntoView({behavior:'smooth'}) and window.scrollTo({behavior:
+// 'smooth'}) were silently no-ops when verified directly (instant scrollTo
+// with the same target worked every time) — narrowed down to the
+// 'smooth' behavior option itself failing, not the element lookup. Rather
+// than ship a click handler that might silently do nothing for some
+// users too, this hand-rolls the animation with rAF so it doesn't depend
+// on that browser API path at all.
 function scrollToGamesGrid() {
   const el = document.getElementById('gamesGrid');
   if (!el) return;
-  const top = el.getBoundingClientRect().top + window.scrollY - 84;
-  window.scrollTo({ top, behavior: 'smooth' });
+  const startY = window.scrollY;
+  const targetY = el.getBoundingClientRect().top + startY - 84;
+  const dist = targetY - startY;
+  const duration = 500;
+  const startTime = performance.now();
+  function step(now) {
+    const t = Math.min(1, (now - startTime) / duration);
+    const eased = 1 - Math.pow(1 - t, 3); // ease-out cubic
+    window.scrollTo(0, startY + dist * eased);
+    if (t < 1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
 }
 
 // MLB.com-style at-a-glance scoreboard ticker — team logos + live/final
