@@ -2296,7 +2296,7 @@
 
   <!-- STAT STRIP -->
   <div class="stat-strip" style="margin-top:32px">
-    <div class="stat-card red">
+    <div class="stat-card red" onclick="goToTodaysPunts()" style="cursor:pointer" title="Jump to today's punt games">
       <div class="label">Punts Today</div>
       <div class="value" id="statPunt">—</div>
       <div class="sub">Score ≥ 46 (of 80)</div>
@@ -6506,6 +6506,18 @@ function scrollToGamesGrid() {
   const el = document.getElementById('gamesGrid');
   if (!el) return;
   smoothScrollTo(el.getBoundingClientRect().top + window.scrollY, -84);
+}
+
+// "Punts Today" stat card -> jump straight to today's flagged games
+// (the Punt Watch strip) instead of just landing on the Today tab.
+function goToTodaysPunts() {
+  showPage('today');
+  setTimeout(() => {
+    const pw = document.getElementById('puntWatchBody');
+    const target = (pw && pw.children.length) ? pw : document.getElementById('gamesGrid');
+    if (!target) return;
+    smoothScrollTo(target.getBoundingClientRect().top + window.scrollY, -84);
+  }, 60);
 }
 
 // MLB.com-style at-a-glance scoreboard ticker — team logos + live/final
@@ -10840,13 +10852,28 @@ async function renderGameflowChart(silent = false, inlineOpts = null) {
         (p.signals || []).map(s => ({ ...s, inning: p.inning, ptsLabel: `+${s.weight}` }))
       );
 
+      // Itemize the pre-game factors (same underlying breakdown array the
+      // Today-tab game cards already itemize via .pc2-reason) instead of
+      // collapsing them into one opaque "Pre-game assessment: N pts" line
+      // — that line told you nothing about WHY a game scored what it did.
+      const preGameFactors = storedBreakdownArr.filter(f => f && !f.isInGame && !f.isMult && !f.isAceNote && f.val > 0).sort((a, b) => b.val - a.val);
+      const aceNoteFactor = storedBreakdownArr.find(f => f && f.isAceNote && !f.isInGame);
+
       const hasChartData = allSigs.length || storedBreakdownArr.length || preGameScore > 0;
       sigLog.innerHTML = hasChartData ? `
         <div style="font-size:9px;text-transform:uppercase;letter-spacing:2px;color:var(--text3);font-family:var(--font-mono);margin-bottom:8px">Score Breakdown</div>
         <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r-md);overflow:hidden">
-          ${preGameScore > 0 ? `<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 14px;border-bottom:1px solid var(--border)">
+          ${preGameFactors.length ? preGameFactors.map(f => `
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 14px;border-bottom:1px solid var(--border)">
+            <span style="font-size:12px;color:var(--text2)">${f.label}</span>
+            <span style="font-family:var(--font-mono);font-size:11px;color:var(--text3);font-weight:700">+${f.val}</span>
+          </div>`).join('') : (preGameScore > 0 ? `<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 14px;border-bottom:1px solid var(--border)">
             <span style="font-size:12px;color:var(--text2)">Pre-game assessment</span>
             <span style="font-family:var(--font-mono);font-size:11px;color:var(--text3)">${preGameScore} pts${hasKnownInGameContribution ? '' : ' — no in-game signals (close game)'}</span>
+          </div>` : '')}
+          ${aceNoteFactor ? `<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 14px;border-bottom:1px solid var(--border)">
+            <span style="font-size:12px;color:var(--text3)">${aceNoteFactor.label}</span>
+            <span style="font-family:var(--font-mono);font-size:11px;color:var(--text3)">▼</span>
           </div>` : ''}
           ${allSigs.map(s => `
           <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 14px;border-bottom:1px solid var(--border)">
