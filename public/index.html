@@ -190,7 +190,7 @@
   .stat-card.red .value { color: var(--red2); }
   .stat-card.gold .value { color: var(--gold); }
   .stat-card.green .value { color: var(--green); }
-  .stat-card.blue .value { color: #60A5FA; }
+  .stat-card.blue .value { color: #2563C7; }
 
   /* ── TWO COLUMN ── */
   .two-col { display: grid; grid-template-columns: 1fr min(320px,100%); gap: 20px; align-items: start; }
@@ -243,7 +243,7 @@
   .is-punt .pc2-score-num { color: var(--red2); }
   .is-review .pc2-score-num { color: var(--gold); }
   .pc2-score-den { font-family: var(--font-mono); font-size: 13px; color: var(--text3); }
-  .pc2-cal { margin-left: auto; font-family: var(--font-display); font-size: 24px; font-weight: 800; color: #7da6ff; letter-spacing: -0.5px; }
+  .pc2-cal { margin-left: auto; font-family: var(--font-display); font-size: 24px; font-weight: 800; color: #2563C7; letter-spacing: -0.5px; }
   .pc2-cal-den { font-family: var(--font-mono); font-size: 11px; color: var(--text3); font-weight: 400; margin-left: 3px; }
   .pc2-result { font-family: var(--font-mono); font-size: 10px; font-weight: 700; padding: 3px 9px; border-radius: 999px; letter-spacing: 0.5px; }
   .pc2-result.won  { color: var(--green); background: rgba(74,222,128,0.10); border: 1px solid rgba(74,222,128,0.30); }
@@ -336,7 +336,7 @@
   .punt-badge.flag   { background: rgba(224,92,42,0.18); color: var(--red2); border-color: rgba(224,92,42,0.45); box-shadow: 0 0 8px rgba(224,92,42,0.12); }
   .punt-badge.review { background: rgba(232,184,75,0.15); color: var(--gold); border-color: rgba(232,184,75,0.45); box-shadow: 0 0 8px rgba(232,184,75,0.10); }
   .punt-badge.clean  { background: rgba(15,25,40,0.04); color: var(--text3); border-color: var(--border); }
-  .punt-badge.calibration { background: rgba(59,130,246,0.1); color: #7AA8F0; border-color: rgba(59,130,246,0.25); }
+  .punt-badge.calibration { background: rgba(37,99,199,0.1); color: #2563C7; border-color: rgba(59,130,246,0.25); }
   .punt-badge.postponed { background: rgba(15,25,40,0.04); color: var(--text3); border-color: rgba(15,25,40,0.08); }
 
   .card-body {
@@ -366,10 +366,10 @@
   .absence-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 6px; }
   .absence-chip {
     font-size: 10px; padding: 2px 8px; border-radius: 4px;
-    background: rgba(224,92,42,0.1); color: #F0A085;
+    background: rgba(217,73,31,0.1); color: #B03D19;
     border: 1px solid rgba(224,92,42,0.2); font-family: var(--font-mono); letter-spacing: 0.3px;
   }
-  .absence-chip.ok { background: rgba(74,222,128,0.1); color: #4ADE80; border-color: rgba(74,222,128,0.2); }
+  .absence-chip.ok { background: rgba(23,138,95,0.1); color: #178A5F; border-color: rgba(74,222,128,0.2); }
 
   /* ── SCORE RING ── */
   .score-ring {
@@ -613,9 +613,9 @@
     display:inline-flex; align-items:center; justify-content:center; width:19px; height:19px;
     border-radius:50%; font-size:9.5px; font-weight:800; font-family:var(--font-mono);
   }
-  .ci-rank-badge.gold   { background:rgba(232,184,75,0.28); color:#F5CE72; box-shadow:0 0 0 1px rgba(232,184,75,0.55); }
-  .ci-rank-badge.silver { background:rgba(210,218,230,0.26); color:#E2E8F2; box-shadow:0 0 0 1px rgba(210,218,230,0.5); }
-  .ci-rank-badge.bronze { background:rgba(210,145,95,0.28); color:#E8A876; box-shadow:0 0 0 1px rgba(210,145,95,0.55); }
+  .ci-rank-badge.gold   { background:rgba(184,134,11,0.16); color:#8A6508; box-shadow:0 0 0 1px rgba(184,134,11,0.4); }
+  .ci-rank-badge.silver { background:rgba(90,107,128,0.14); color:#4A5A70; box-shadow:0 0 0 1px rgba(90,107,128,0.35); }
+  .ci-rank-badge.bronze { background:rgba(160,90,46,0.16); color:#8A4E28; box-shadow:0 0 0 1px rgba(160,90,46,0.4); }
   .ci-team { display:flex; align-items:center; gap:7px; min-width:0; }
   .ci-logo { width:20px; height:20px; object-fit:contain; flex-shrink:0; }
   .ci-logo-fb { width:20px; height:20px; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:8px; font-weight:800; color:var(--text3); }
@@ -901,7 +901,7 @@
   .llc-player-name { color: var(--text); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .llc-player-ops { font-family: var(--font-mono); font-size: 11px; color: var(--text3); text-align: right; }
   .llc-player-ops.ops-high { color: var(--green); }
-  .llc-player-ops.ops-low  { color: #F0A085; }
+  .llc-player-ops.ops-low  { color: #B03D19; }
   .llc-player-pct { font-family: var(--font-mono); font-size: 10px; color: var(--text3); text-align: center; }
   .llc-no-lineup { font-size: 12px; color: var(--text3); font-style: italic; padding: 16px 0; }
   .llc-pitcher-icon { font-size: 16px; flex-shrink: 0; }
@@ -1031,7 +1031,7 @@
   .rp-bats { font-family: var(--font-mono); font-size: 10px; color: var(--text3); text-align: center; }
   .rp-ops  { font-family: var(--font-mono); font-size: 11px; color: var(--text2); text-align: right; }
   .rp-ops.high { color: var(--green); }
-  .rp-ops.low  { color: #F0A085; }
+  .rp-ops.low  { color: #B03D19; }
   .roster-il-row { opacity: 0.82; background: rgba(224,92,42,0.04); border-left: 2px solid rgba(224,92,42,0.3); padding-left: 8px; }
   .rp-il-badge { font-family: var(--font-mono); font-size: 9px; font-weight: 700; color: var(--red2); text-align: right; text-transform: uppercase; letter-spacing: 0.5px; background: rgba(224,92,42,0.12); border: 1px solid rgba(224,92,42,0.25); border-radius: 4px; padding: 2px 6px; white-space: nowrap; }
   /* ── INJURY ALERT BANNER ── */
@@ -1102,8 +1102,8 @@
   .leader-row:hover { background:var(--bg3); }
   .leader-rank { font-family:var(--font-display); font-size:14px; font-weight:800; color:var(--text3); width:20px; text-align:center; flex-shrink:0; }
   .leader-rank.gold { color:var(--gold); }
-  .leader-rank.silver { color:#9CA3AF; }
-  .leader-rank.bronze { color:#B45309; }
+  .leader-rank.silver { color:#6B7684; }
+  .leader-rank.bronze { color:#9C5A0A; }
   .leader-logo { width:24px; height:24px; object-fit:contain; flex-shrink:0; }
   .leader-logo-fallback { width:24px; height:24px; flex-shrink:0; display:flex; align-items:center; justify-content:center; background:var(--bg3); border:1px solid var(--border); border-radius:50%; font-size:8px; font-weight:700; font-family:var(--font-mono); color:var(--text3); }
   .leader-name { flex:1; min-width:0; }
@@ -2541,27 +2541,27 @@
         </div>
                 <div style="display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center">
           <span style="font-size:12px;color:var(--text2)">April–May (calibration)</span>
-          <span style="font-size:11px;color:#7aabdf;font-family:var(--font-mono)">0.60×</span>
+          <span style="font-size:11px;color:#2563C7;font-family:var(--font-mono)">0.60×</span>
         </div>
         <div style="display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center">
           <span style="font-size:12px;color:var(--text2)">June</span>
-          <span style="font-size:11px;color:#7aabdf;font-family:var(--font-mono)">0.70×</span>
+          <span style="font-size:11px;color:#2563C7;font-family:var(--font-mono)">0.70×</span>
         </div>
         <div style="display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center">
           <span style="font-size:12px;color:var(--text2)">July</span>
-          <span style="font-size:11px;color:#7aabdf;font-family:var(--font-mono)">0.82×</span>
+          <span style="font-size:11px;color:#2563C7;font-family:var(--font-mono)">0.82×</span>
         </div>
         <div style="display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center">
           <span style="font-size:12px;color:var(--text2)">Aug 1–15</span>
-          <span style="font-size:11px;color:#7aabdf;font-family:var(--font-mono)">0.90×</span>
+          <span style="font-size:11px;color:#2563C7;font-family:var(--font-mono)">0.90×</span>
         </div>
         <div style="display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center">
           <span style="font-size:12px;color:var(--text2)">Aug 15–Sep 1</span>
-          <span style="font-size:11px;color:#7aabdf;font-family:var(--font-mono)">0.96×</span>
+          <span style="font-size:11px;color:#2563C7;font-family:var(--font-mono)">0.96×</span>
         </div>
         <div style="display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center">
           <span style="font-size:12px;color:var(--text2)">September</span>
-          <span style="font-size:11px;color:#7aabdf;font-family:var(--font-mono)">1.00×</span>
+          <span style="font-size:11px;color:#2563C7;font-family:var(--font-mono)">1.00×</span>
         </div>
         <div style="padding:10px 16px">
           <span style="font-size:11px;color:var(--text3)">Scores are multiplied by the timing factor — September games are scored at full weight because pennant races make every game matter. Early-season games are discounted since standings context hasn't established itself.</span>
@@ -2574,7 +2574,7 @@
           <h2>Punt Score Algorithm</h2>
           <div class="pill gold">2026 Season-Aware</div>
           <div class="divider"></div>
-          <span style="font-size:12px;color:#7aabdf">📊 Detection activates per team after 60 stored games · Hard floor: June 1</span>
+          <span style="font-size:12px;color:#2563C7">📊 Detection activates per team after 60 stored games · Hard floor: June 1</span>
         </div>
 
         <!-- OVERVIEW -->
@@ -2727,7 +2727,7 @@
           <strong style="color:var(--red2)">🔒 Pre-Game Lock + Additive In-Game Track</strong><br>
           Pre-game and in-game are scored on separate 0–80 scales. In-game evidence is always <strong style="color:var(--text)">additive</strong> on top of the pre-game score — it can raise the final score but never lowers it.<br><br>
           <strong style="color:var(--text)">Pre-game punt (≥ 46):</strong> Locked. A game confirmed before first pitch stays a punt regardless of in-game outcome; in-game evidence can still add up to 30% of its score on top.<br><br>
-          <strong style="color:var(--text)">In-game punt:</strong> A clean or review pre-game can still become a punt if in-game evidence alone reaches 46+. The badge reads <span style="color:#f59e0b;font-family:var(--font-mono)">PUNT · IN-GAME</span> to distinguish it.<br><br>
+          <strong style="color:var(--text)">In-game punt:</strong> A clean or review pre-game can still become a punt if in-game evidence alone reaches 46+. The badge reads <span style="color:#B8860B;font-family:var(--font-mono)">PUNT · IN-GAME</span> to distinguish it.<br><br>
           <strong style="color:var(--text)">Neither confirmed:</strong> the in-game score is added at a weight that scales with both how strong the in-game evidence is and how far into the game it is — weak, early evidence adds only a few percent; strong evidence (in-game score already ≥46) late in a Final game adds up to 75%.
           <div style="display:grid;grid-template-columns:100px repeat(4,1fr);gap:8px;margin-top:12px;font-size:11px;align-items:center">
             <div></div>
@@ -2750,7 +2750,7 @@
         </div>
 
         <div style="margin-top:12px;background:rgba(29,100,180,0.07);border:1px solid rgba(29,100,180,0.25);border-radius:10px;padding:14px 18px;font-size:12px;color:var(--text2);line-height:1.8">
-          <strong style="color:#7aabdf">🔄 Living Baseline / Adapts to Roster Changes</strong><br>
+          <strong style="color:#2563C7">🔄 Living Baseline / Adapts to Roster Changes</strong><br>
           The algorithm compares each day's starting lineup (who's in it, not what order they bat in) against a <strong style="color:var(--text)">recency-weighted composite baseline</strong> built from 60+ stored games. The last 20 games carry full weight, the 20 before that carry half, anything older carries quarter weight. Traded players fade out in ~3 weeks. Injured players returning earn their way back in as they accumulate appearances. The baseline always reflects who the team actually is right now / not who they were in April.
         </div>
 
@@ -2758,8 +2758,8 @@
           <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:var(--text2);margin-bottom:10px">⏱ Season Detection Timeline</div>
           <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
             <div style="background:rgba(29,100,180,0.1);border:1px solid rgba(29,100,180,0.3);border-radius:8px;padding:10px 12px;text-align:center">
-              <div style="font-family:'Space Grotesk',sans-serif;font-size:22px;color:#6a8aaa">OFF</div>
-              <div style="font-size:9px;text-transform:uppercase;letter-spacing:1px;color:#6a8aaa;margin-top:4px">Under 60 Games</div>
+              <div style="font-family:'Space Grotesk',sans-serif;font-size:22px;color:#4A5A70">OFF</div>
+              <div style="font-size:9px;text-transform:uppercase;letter-spacing:1px;color:#4A5A70;margin-top:4px">Under 60 Games</div>
               <div style="font-size:10px;color:var(--text2);margin-top:4px">Calibration<br>Building baselines</div>
             </div>
             <div style="background:rgba(15,25,40,0.04);border:1px solid rgba(240,165,0,0.2);border-radius:8px;padding:10px 12px;text-align:center">
@@ -6030,7 +6030,7 @@ function renderGames(games) {
       .map(t => {
         const stored = teamGamesStored(t);
         const pct = Math.min(100, Math.round((stored / CALIBRATION_GAME_THRESHOLD) * 100));
-        return `<span style="font-size:11px;color:var(--text2)">${abbr(t)}: <strong style="color:${stored >= CALIBRATION_GAME_THRESHOLD ? 'var(--green)' : '#7aabdf'}">${stored}/60</strong></span>`;
+        return `<span style="font-size:11px;color:var(--text2)">${abbr(t)}: <strong style="color:${stored >= CALIBRATION_GAME_THRESHOLD ? 'var(--green)' : '#2563C7'}">${stored}/60</strong></span>`;
       }).join(' &nbsp;·&nbsp; ');
 
     calBanner = `
@@ -6268,7 +6268,7 @@ function renderCard(g, idx) {
   const puntSourceLabel = g.puntSource === 'pregame' && g.flag === 'punt'
     ? `<div style="font-size:8px;color:var(--red2);text-align:center;margin-top:3px;font-family:'JetBrains Mono',monospace;letter-spacing:0.5px">PRE-GAME</div>`
     : g.puntSource === 'ingame' && g.flag === 'punt'
-      ? `<div style="font-size:8px;color:#f59e0b;text-align:center;margin-top:3px;font-family:'JetBrains Mono',monospace;letter-spacing:0.5px">IN-GAME</div>`
+      ? `<div style="font-size:8px;color:#B8860B;text-align:center;margin-top:3px;font-family:'JetBrains Mono',monospace;letter-spacing:0.5px">IN-GAME</div>`
       : hasInGame
         ? `<div style="font-size:9px;color:var(--text3);text-align:center;margin-top:3px;font-family:'JetBrains Mono',monospace">${g.preGameScore}<span style="opacity:0.5"> pre</span></div>`
         : '';
@@ -7518,7 +7518,7 @@ async function renderCalibratedLineup() {
     <!-- Calibration progress bar -->
     <div style="background:${isCalibrated ? 'rgba(29,185,84,0.07)' : 'rgba(29,100,180,0.08)'};border:1px solid ${isCalibrated ? 'rgba(29,185,84,0.25)' : 'rgba(29,100,180,0.25)'};border-radius:10px;padding:14px 18px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
       <div style="font-size:12px;color:var(--text2)">
-        <strong style="color:${isCalibrated ? 'var(--green)' : '#7aabdf'}">${isCalibrated ? '✅ Calibration Complete' : '📊 Calibration In Progress'}</strong>
+        <strong style="color:${isCalibrated ? 'var(--green)' : '#2563C7'}">${isCalibrated ? '✅ Calibration Complete' : '📊 Calibration In Progress'}</strong>
         &nbsp;·&nbsp; ${gamesStored} of ${threshold} games stored &nbsp;·&nbsp; ${pct}% complete
       </div>
       <div style="font-size:11px;color:var(--muted)">${isCalibrated ? 'Punt detection active for this team' : 'Baseline data builds automatically / punt detection activates at 60 games'}</div>
@@ -9250,7 +9250,7 @@ function renderCalProgress() {
       'border-radius:5px', 'padding:4px 9px',
       'font-family:var(--font-mono)', 'font-size:10px', 'cursor:default'
     ].join(';');
-    pill.innerHTML = `<span style="color:${done ? 'var(--green)' : 'var(--text3)'};font-weight:700">${t.abbr}</span><span style="color:${done ? 'var(--green)' : '#7aabdf'};margin-left:3px">${stored}/60</span>`;
+    pill.innerHTML = `<span style="color:${done ? 'var(--green)' : 'var(--text3)'};font-weight:700">${t.abbr}</span><span style="color:${done ? 'var(--green)' : '#2563C7'};margin-left:3px">${stored}/60</span>`;
     grid.appendChild(pill);
   });
 }
