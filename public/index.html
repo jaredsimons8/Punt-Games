@@ -2849,6 +2849,7 @@ const REVIEW_THRESH = 28;  // out of 80 — flags borderline rest decisions wort
 let starredTeams = new Set();
 let activeDivFilter = 'ALL';
 let ciSortMode = 'rate'; // 'rate' (best CI first) | 'punts' (worst offenders first)
+let ciExpandedTeam = null; // team name whose punt-tile list is expanded in the CI rankings, or null
 
 // ── TEAM TIMEZONE MAP ─────────────────────────────────────
 // Used to detect West→East same-day travel / a structural rest signal.
@@ -9209,6 +9210,41 @@ function openMostRecentPuntForTeam(teamName) {
   if (latest?.id) openGameFromTeams(latest.id);
 }
 
+// Clicking a bar in the "Total Punts by Team" chart, or a row in the CI
+// rankings list, expands that team's individual punt games as clickable
+// tiles inline in the rankings — instead of jumping straight to a review.
+function toggleTeamPuntTiles(teamName) {
+  ciExpandedTeam = ciExpandedTeam === teamName ? null : teamName;
+  renderCILeaderboard();
+  if (ciExpandedTeam) {
+    setTimeout(() => {
+      document.getElementById('ci-row-' + abbr(teamName))?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 30);
+  }
+}
+
+// Clicking a punt tile in the expanded team list opens that specific game
+// in the Gameflow tab (inning-by-inning chart), not the review queue.
+async function openGameflowForTile(gameId, dateStr) {
+  const gamePk = String(gameId || '').split('_').pop();
+  if (!gamePk || isNaN(gamePk) || !dateStr) { showToast('Could not locate this game.', true); return; }
+  showPage('gameflow');
+  const dp = document.getElementById('gameflowDatePicker');
+  if (dp) dp.value = dateStr;
+  try {
+    await loadGameflowGames();
+    const sel = document.getElementById('gameflowGameSelect');
+    if (sel) {
+      sel.value = String(gamePk);
+      if (String(sel.value) === String(gamePk)) await renderGameflowChart();
+      else showToast('Could not load Gameflow for that game.', true);
+    }
+  } catch (e) {
+    console.error('[punt-tile→gameflow]', e);
+    showToast('Could not open Gameflow — see console.', true);
+  }
+}
+
 function aboutStatTopCard_click() {
   const card = document.getElementById('aboutStatTopCard');
   const teamName = card?.dataset?.team;
@@ -9335,13 +9371,29 @@ function renderCILeaderboard() {
           : `<span class="ci-logo-fb">${r.t.abbr}</span>`;
         const ci = (1 - r.rate) * 100;
         const nameJs = r.t.name.replace(/'/g, "\\'");
-        return `<div class="ci-row${r.punts >= 8 ? ' ci-offender' : ''}" onclick="openMostRecentPuntForTeam('${nameJs}')">
+        const isExpanded = ciExpandedTeam === r.t.name;
+        const row = `<div class="ci-row${r.punts >= 8 ? ' ci-offender' : ''}" id="ci-row-${r.t.abbr}" onclick="toggleTeamPuntTiles('${nameJs}')">
           <span class="ci-rank">${i + 1}</span>
           <span class="ci-team">${logoEl}<span><span class="ci-name">${r.t.name}</span><br><span class="ci-div">${r.t.abbr} · ${r.t.division}</span></span></span>
           <span class="ci-punts ${puntClass(r.punts)}">${r.punts}<span style="font-size:9px;color:var(--text3);font-weight:400"> / ${r.games}</span></span>
           <span class="ci-score ${ciColor(r.rate)}">${ci.toFixed(1)}%</span>
           <span><div class="ci-bar-wrap"><div class="ci-bar-fill" style="width:${ci.toFixed(1)}%;background:${barColor(r.rate)}"></div></div></span>
         </div>`;
+        if (!isExpanded) return row;
+        const history = (state.teamData[r.t.name]?.history || []).slice().reverse();
+        const tiles = history.length
+          ? history.map(h => {
+              const gidJs = String(h.id).replace(/'/g, "\\'");
+              const dateJs = String(h.date).replace(/'/g, "\\'");
+              const scoreColor = h.score >= 60 ? 'var(--red2)' : h.score >= 46 ? 'var(--gold)' : 'var(--text2)';
+              return `<div onclick="event.stopPropagation();openGameflowForTile('${gidJs}','${dateJs}')" style="cursor:pointer;background:var(--bg);border:1px solid var(--border2);border-radius:8px;padding:8px 12px;min-width:76px;text-align:center;transition:border-color 0.12s" onmouseenter="this.style.borderColor='var(--red2)'" onmouseleave="this.style.borderColor='var(--border2)'">
+                <div style="font-family:var(--font-display);font-size:18px;font-weight:800;color:${scoreColor};line-height:1">${h.score}</div>
+                <div style="font-size:9px;color:var(--text3);font-family:var(--font-mono);margin-top:3px">vs ${h.opp}</div>
+                <div style="font-size:8px;color:var(--text3);font-family:var(--font-mono)">${h.date ? h.date.slice(5).replace('-','/') : ''}</div>
+              </div>`;
+            }).join('')
+          : `<div style="font-size:11px;color:var(--text3);font-family:var(--font-mono)">No punt games logged for this team.</div>`;
+        return row + `<div onclick="event.stopPropagation()" style="padding:12px 18px 16px;background:rgba(255,255,255,0.02);border-bottom:1px solid rgba(255,255,255,0.04);display:flex;flex-wrap:wrap;gap:8px">${tiles}</div>`;
       }).join('')}
     </div>`;
 }
@@ -9589,10 +9641,10 @@ function renderPuntChart() {
       const y = baseY - h;
       const nameJs = t.name.replace(/'/g, "\\'");
       const clickable = t.punts > 0;
-      const clickAttr = clickable ? ` style="cursor:pointer" onclick="openMostRecentPuntForTeam('${nameJs}')"` : '';
+      const clickAttr = clickable ? ` style="cursor:pointer" onclick="toggleTeamPuntTiles('${nameJs}')"` : '';
       if (t.punts > 0) {
         const barColor = TEAM_COLORS[t.name] || 'var(--red)';
-        svg += `<rect class="pc-bar"${clickAttr} x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${barW.toFixed(1)}" height="${h.toFixed(1)}" rx="1.5" fill="${barColor}"><title>${t.name}: ${t.punts} punt${t.punts===1?'':'s'} · click to view latest</title></rect>`;
+        svg += `<rect class="pc-bar"${clickAttr} x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${barW.toFixed(1)}" height="${h.toFixed(1)}" rx="1.5" fill="${barColor}"><title>${t.name}: ${t.punts} punt${t.punts===1?'':'s'} · click to view its punt games</title></rect>`;
         svg += `<text class="pc-val-label"${clickAttr} x="${(x+barW/2).toFixed(1)}" y="${(y-3).toFixed(1)}" text-anchor="middle">${t.punts}</text>`;
       }
       svg += `<text class="pc-team-label"${clickAttr} x="${(x+barW/2).toFixed(1)}" y="${(baseY+11).toFixed(1)}" text-anchor="middle">${t.abbr}</text>`;
