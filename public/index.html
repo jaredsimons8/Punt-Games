@@ -638,16 +638,36 @@
     background: var(--bg3); border: 1px solid var(--border); border-radius: 50%;
     font-family: var(--font-display); font-size: 10px; font-weight: 800; color: var(--text2);
   }
-  .tp-meta { min-width: 0; flex: 1; }
-  .tp-name { font-family: var(--font-display); font-size: 14px; font-weight: 800; letter-spacing: -0.3px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .tp-name .tp-div { font-family: var(--font-mono); font-size: 9px; font-weight: 600; letter-spacing: 1px; color: var(--text3); margin-left: 6px; text-transform: uppercase; }
-  .tp-stats { font-family: var(--font-mono); font-size: 10px; color: var(--text3); margin-top: 3px; letter-spacing: 0.3px; }
+  .tp-meta { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 2px; }
+  .tp-name-row { display: flex; align-items: baseline; gap: 6px; min-width: 0; }
+  .tp-name { font-family: var(--font-display); font-size: 14px; font-weight: 800; letter-spacing: -0.3px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  .tp-div { font-family: var(--font-mono); font-size: 9px; font-weight: 600; letter-spacing: 1px; color: var(--text3); text-transform: uppercase; flex-shrink: 0; }
+  .tp-stats { font-family: var(--font-mono); font-size: 10px; color: var(--text3); letter-spacing: 0.3px; }
   .tp-stats .tp-count { font-weight: 800; }
   .tp-stats .tp-count.warm { color: var(--gold); }
   .tp-stats .tp-count.hot  { color: var(--red2); }
   .tp-star { background: none; border: none; color: var(--text3); font-size: 15px; cursor: pointer; padding: 2px; line-height: 1; transition: color 0.15s; flex-shrink: 0; }
   .tp-star:hover { color: var(--gold); }
   .tp-star.starred { color: var(--gold); }
+
+  /* Compact grid for teams with zero punt games — was a full-width row
+     with almost nothing in it, x20+; now a dense reference grid so the
+     punt-having teams above (the actually interesting content) aren't
+     buried under a long scroll of empty rows. */
+  .tp-clean-hdr { display: flex; align-items: center; gap: 10px; margin: 22px 0 10px; }
+  .tp-clean-hdr .lbl { font-family: var(--font-mono); font-size: 9px; text-transform: uppercase; letter-spacing: 2px; color: var(--text3); white-space: nowrap; }
+  .tp-clean-hdr .line { flex: 1; height: 1px; background: var(--border); }
+  .tp-clean-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+  .tp-clean-tile {
+    display: flex; align-items: center; gap: 8px; padding: 9px 11px;
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-md);
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .tp-clean-tile:hover { border-color: var(--border2); background: rgba(255,255,255,0.02); }
+  .tp-clean-logo { width: 22px; height: 22px; object-fit: contain; flex-shrink: 0; opacity: 0.85; }
+  .tp-clean-meta { min-width: 0; }
+  .tp-clean-abbr { font-family: var(--font-display); font-size: 12px; font-weight: 800; color: var(--text2); }
+  .tp-clean-games { font-family: var(--font-mono); font-size: 9px; color: var(--text3); }
 
   /* Punt games — the focal content */
   .tp-games { display: flex; flex-wrap: wrap; gap: 7px; }
@@ -2247,6 +2267,12 @@
       <div id="ciLeaderboard"><!-- populated by JS --></div>
       <div class="tp-list" id="teamsGrid">
         <!-- populated by JS -->
+      </div>
+      <div id="teamsCleanSection">
+        <div class="tp-clean-hdr"><span class="lbl">No Punt Games This Season</span><div class="line"></div></div>
+        <div class="tp-clean-grid" id="teamsCleanGrid">
+          <!-- populated by JS -->
+        </div>
       </div>
     </div>
   </div>
@@ -9550,14 +9576,18 @@ function renderTeamBreakdown() {
 
   const fmtWhen = (d) => { const p = d.split('-'); return `${+p[1]}/${+p[2]}`; };
 
-  grid.innerHTML = filtered.map((t, i) => {
+  // Teams with at least one punt get the full rich row (the actually
+  // interesting content). Teams with none get a compact reference tile
+  // instead — previously every team got an identical full-width row, so a
+  // season with far more clean teams than punt teams meant scrolling past
+  // 20+ nearly-empty rows to find the ones that mattered.
+  const puntTeams = filtered.filter(t => (state.teamData[t.name]?.punts || 0) > 0);
+  const cleanTeams = filtered.filter(t => !(state.teamData[t.name]?.punts || 0));
+
+  grid.innerHTML = puntTeams.map((t, i) => {
     const td = state.teamData[t.name] || { punts: 0, games: 0, puntW: 0, puntL: 0, history: [] };
-    // "Games tracked" = stored baseline games collected (lineupHistory), not the
-    // scored-game log — during calibration the engine hasn't scored them yet.
     const tracked = teamGamesStored(t.name) || td.games;
     const rate = tracked ? ((td.punts / tracked) * 100).toFixed(1) : '0.0';
-    const hasPunts = td.punts > 0;
-
     const countClass = td.punts >= 5 ? 'hot' : td.punts >= 2 ? 'warm' : '';
 
     const logoUrl = getTeamLogo(t.name);
@@ -9566,36 +9596,32 @@ function renderTeamBreakdown() {
       : `<span class="tp-logo-fallback">${t.abbr}</span>`;
 
     // Punt games are the focal content — newest first, each shown as a score chip.
-    const gamesHTML = hasPunts
-      ? [...td.history].reverse().map(h => {
-          const sev = h.score >= 60 ? 'sev-hi' : h.score >= PUNT_THRESH ? 'sev-mid' : 'sev-lo';
-          const idJs = (h.id || '').replace(/'/g, "\\'");
-          return `
-            <div class="tp-game ${sev}" title="${h.date} vs ${h.opp} — punt score ${h.score} · click to view" style="cursor:pointer" onclick="openGameFromTeams('${idJs}')">
-              <span class="tpg-score">${h.score}</span>
-              <span class="tpg-when">${fmtWhen(h.date)}</span>
-              <span class="tpg-opp">${h.opp}</span>
-            </div>`;
-        }).join('')
-      : `<div class="tp-empty">No punt games detected this season</div>`;
+    const gamesHTML = [...td.history].reverse().map(h => {
+      const sev = h.score >= 60 ? 'sev-hi' : h.score >= PUNT_THRESH ? 'sev-mid' : 'sev-lo';
+      const idJs = (h.id || '').replace(/'/g, "\\'");
+      return `
+        <div class="tp-game ${sev}" title="${h.date} vs ${h.opp} — punt score ${h.score} · click to view" style="cursor:pointer" onclick="openGameFromTeams('${idJs}')">
+          <span class="tpg-score">${h.score}</span>
+          <span class="tpg-when">${fmtWhen(h.date)}</span>
+          <span class="tpg-opp">${h.opp}</span>
+        </div>`;
+    }).join('');
 
-    const record = (td.puntW || td.puntL) ? ` &middot; ${td.puntW}\u2013${td.puntL} in punts` : '';
+    const record = (td.puntW || td.puntL) ? ` &middot; ${td.puntW}–${td.puntL} in punts` : '';
     const streak = teamStreaks[t.name];
     const streakBadge = streak?.type === 'punt'
-      ? ` &middot; <span style="color:var(--red2);font-weight:700">\ud83d\udea9 ${streak.count} straight</span>`
+      ? ` &middot; <span style="color:var(--red2);font-weight:700">🚩 ${streak.count} straight</span>`
       : streak?.type === 'clean' && streak.count >= 8
-        ? ` &middot; <span style="color:var(--green);font-weight:700">\u2713 ${streak.count} clean</span>`
+        ? ` &middot; <span style="color:var(--green);font-weight:700">✓ ${streak.count} clean</span>`
         : '';
-    const statsLine = hasPunts
-      ? `<span class="tp-count ${countClass}">${td.punts}</span> punt ${td.punts === 1 ? 'game' : 'games'} &middot; ${rate}% rate${record}${streakBadge}`
-      : `${tracked} game${tracked === 1 ? '' : 's'} tracked &middot; clean`;
+    const statsLine = `<span class="tp-count ${countClass}">${td.punts}</span> punt ${td.punts === 1 ? 'game' : 'games'} &middot; ${rate}% rate${record}${streakBadge}`;
 
     return `
-      <div class="tp-row ${hasPunts ? 'has-punts' : 'is-empty'}" data-team="${t.name}" style="animation-delay:${i * 18}ms">
+      <div class="tp-row has-punts" data-team="${t.name}" style="animation-delay:${i * 18}ms">
         <div class="tp-team">
           ${logoHTML}
           <div class="tp-meta">
-            <div class="tp-name">${t.name}<span class="tp-div">${t.abbr} &middot; ${t.division}</span></div>
+            <div class="tp-name-row"><span class="tp-name">${t.name}</span><span class="tp-div">${t.abbr} &middot; ${t.division}</span></div>
             <div class="tp-stats">${statsLine}</div>
           </div>
         </div>
@@ -9603,6 +9629,27 @@ function renderTeamBreakdown() {
       </div>
     `;
   }).join('');
+
+  const cleanSection = document.getElementById('teamsCleanSection');
+  const cleanGrid = document.getElementById('teamsCleanGrid');
+  if (cleanSection) cleanSection.style.display = cleanTeams.length ? '' : 'none';
+  if (cleanGrid) {
+    cleanGrid.innerHTML = cleanTeams.map(t => {
+      const tracked = teamGamesStored(t.name) || state.teamData[t.name]?.games || 0;
+      const logoUrl = getTeamLogo(t.name);
+      const logoHTML = logoUrl
+        ? `<img class="tp-clean-logo" src="${logoUrl}" alt="${t.abbr}" loading="lazy" onerror="this.style.display='none'">`
+        : '';
+      return `
+        <div class="tp-clean-tile" title="${t.name} — ${tracked} games tracked, no punts detected">
+          ${logoHTML}
+          <div class="tp-clean-meta">
+            <div class="tp-clean-abbr">${t.abbr}</div>
+            <div class="tp-clean-games">${tracked}g tracked</div>
+          </div>
+        </div>`;
+    }).join('');
+  }
 
   renderPuntChart();
 }
