@@ -646,6 +646,33 @@
     transition:left 0.4s ease;
   }
 
+  /* FanGraphs-style dense data rows: tight, hairline-bordered, subtle
+     zebra striping — used for the Scaling page's signal-contribution
+     reference tables. */
+  .fg-row:nth-child(even) { background:rgba(15,25,40,0.014); }
+  .fg-row:hover { background:rgba(15,25,40,0.03); }
+
+  /* MLB.com-style scoreboard ticker: compact team-logo + score cards in
+     a horizontally scrolling strip, above the detailed game cards. */
+  .scoreboard-strip { display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; margin-bottom:28px; scrollbar-width:thin; }
+  .sbs-card {
+    flex-shrink:0; width:132px; background:var(--surface); border:1px solid var(--border);
+    border-radius:var(--r-md); padding:8px 10px; cursor:pointer; transition:border-color 0.15s, box-shadow 0.15s;
+  }
+  .sbs-card:hover { border-color:var(--border2); box-shadow:var(--shadow-sm); }
+  .sbs-card.sbs-live { border-color:rgba(217,73,31,0.4); }
+  .sbs-status { font-family:var(--font-mono); font-size:8.5px; font-weight:700; letter-spacing:0.5px; color:var(--text3); text-transform:uppercase; margin-bottom:6px; display:flex; align-items:center; gap:5px; }
+  .sbs-card.sbs-live .sbs-status { color:var(--red2); }
+  .sbs-dot { width:6px; height:6px; border-radius:50%; display:inline-block; margin-left:auto; }
+  .sbs-dot.punt { background:var(--red2); }
+  .sbs-dot.review { background:var(--gold); }
+  .sbs-row { display:flex; align-items:center; gap:6px; padding:2px 0; }
+  .sbs-row img { width:18px; height:18px; object-fit:contain; flex-shrink:0; }
+  .sbs-logo-fb { width:18px; height:18px; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:7px; font-weight:800; color:var(--text3); }
+  .sbs-abbr { font-family:var(--font-display); font-size:12px; font-weight:700; color:var(--text2); flex:1; }
+  .sbs-runs { font-family:var(--font-mono); font-size:13px; font-weight:700; color:var(--text3); min-width:14px; text-align:right; }
+  .sbs-row.sbs-won .sbs-abbr, .sbs-row.sbs-won .sbs-runs { color:var(--text); }
+
   /* ── TEAM PUNTS (punt-game-first layout) ── */
   .tp-list { display: flex; flex-direction: column; gap: 10px; }
   .tp-row {
@@ -1969,6 +1996,9 @@
       </div>
     </div>
 
+    <!-- SCOREBOARD STRIP (MLB.com-style at-a-glance ticker) -->
+    <div class="scoreboard-strip" id="scoreboardStrip"></div>
+
     <!-- SEASON LEADERS -->
     <div class="leaders-section" id="leadersSection">
       <div class="section-hdr">
@@ -2413,91 +2443,91 @@
           <span style="font-size:10px;color:var(--text3);font-family:var(--font-mono);letter-spacing:1px;text-transform:uppercase">Signal</span>
           <span style="font-size:10px;color:var(--text3);font-family:var(--font-mono);letter-spacing:1px;text-transform:uppercase">Score</span>
         </div>
-                <div style="display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center">
+                <div class="fg-row" style="display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center">
           <span style="font-size:12px;color:var(--text2)">2 starters benched</span>
           <span style="font-size:11px;color:var(--green);font-family:var(--font-mono)">~23 pts</span>
         </div>
-        <div style="display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center">
+        <div class="fg-row" style="display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center">
           <span style="font-size:12px;color:var(--text2)">3 starters benched</span>
           <span style="font-size:11px;color:var(--green);font-family:var(--font-mono)">~30 pts</span>
         </div>
-        <div style="display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center">
+        <div class="fg-row" style="display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center">
           <span style="font-size:12px;color:var(--text2)">4+ starters benched</span>
           <span style="font-size:11px;color:var(--green);font-family:var(--font-mono)">~40–50 pts</span>
         </div>
-        <div style="display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center">
+        <div class="fg-row" style="display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center">
           <span style="font-size:12px;color:var(--text2)">ERA gap vs opponent SP (relative, blended w/ FIP)</span>
           <span style="font-size:11px;color:var(--green);font-family:var(--font-mono)">up to +14 × effMot</span>
         </div>
-        <div style="display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center">
+        <div class="fg-row" style="display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center">
           <span style="font-size:12px;color:var(--text2)">High ERA (own SP ≥ 6.00, absolute — objectively poor arm)</span>
           <span style="font-size:11px;color:var(--green);font-family:var(--font-mono)">up to +6 × effMot</span>
         </div>
-        <div style="display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center">
+        <div class="fg-row" style="display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center">
           <span style="font-size:12px;color:var(--text2)">Short-starter pattern (&lt; 4.5 IP/start avg, ≥4 GS)</span>
           <span style="font-size:11px;color:var(--green);font-family:var(--font-mono)">up to +3 × effMot</span>
         </div>
-        <div style="display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center">
+        <div class="fg-row" style="display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center">
           <span style="font-size:12px;color:var(--text2)">Spot starter (≤2 GS this season, ERA &gt; 5.00 or unknown)</span>
           <span style="font-size:11px;color:var(--green);font-family:var(--font-mono)">+7 × effMot</span>
         </div>
-        <div style="display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center">
+        <div class="fg-row" style="display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center">
           <span style="font-size:12px;color:var(--text2)">Ace on the mound (ERA ≤ 3.00, ≥6 starts) — reduces whole score</span>
           <span style="font-size:11px;color:var(--red2);font-family:var(--font-mono)">×0.75 (×0.88 if clinched)</span>
         </div>
-        <div style="display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center">
+        <div class="fg-row" style="display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center">
           <span style="font-size:12px;color:var(--text2)">Series finale, series clinched by punting team (G3+ series)</span>
           <span style="font-size:11px;color:var(--green);font-family:var(--font-mono)">+9 pts flat</span>
         </div>
-        <div style="display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center">
+        <div class="fg-row" style="display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center">
           <span style="font-size:12px;color:var(--text2)">+ finale bonus if it's a 4-game series</span>
           <span style="font-size:11px;color:var(--green);font-family:var(--font-mono)">+4 pts flat</span>
         </div>
-        <div style="display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center">
+        <div class="fg-row" style="display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center">
           <span style="font-size:12px;color:var(--text2)">Series finale, NOT clinched (tied or trailing) or series result unknown</span>
           <span style="font-size:11px;color:var(--text3);font-family:var(--font-mono)">no bonus — never guessed</span>
         </div>
-        <div style="display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center">
+        <div class="fg-row" style="display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center">
           <span style="font-size:12px;color:var(--text2)">G1 suppression (game 1 of a 3+ game series)</span>
           <span style="font-size:11px;color:var(--green);font-family:var(--font-mono)">×0.65 on lineup + pitching signals</span>
         </div>
-        <div style="display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center">
+        <div class="fg-row" style="display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center">
           <span style="font-size:12px;color:var(--text2)">Clinched division</span>
           <span style="font-size:11px;color:var(--green);font-family:var(--font-mono)">+22 pts flat</span>
         </div>
-        <div style="display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center">
+        <div class="fg-row" style="display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center">
           <span style="font-size:12px;color:var(--text2)">Eliminated from playoffs</span>
           <span style="font-size:11px;color:var(--green);font-family:var(--font-mono)">+22 pts flat</span>
         </div>
-        <div style="display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center">
+        <div class="fg-row" style="display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center">
           <span style="font-size:12px;color:var(--text2)">Clinched/Eliminated + finale</span>
           <span style="font-size:11px;color:var(--green);font-family:var(--font-mono)">+6 pts flat</span>
         </div>
-        <div style="display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center">
+        <div class="fg-row" style="display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center">
           <span style="font-size:12px;color:var(--text2)">Doubleheader nightcap</span>
           <span style="font-size:11px;color:var(--green);font-family:var(--font-mono)">+14 pts flat</span>
         </div>
-        <div style="display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center">
+        <div class="fg-row" style="display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center">
           <span style="font-size:12px;color:var(--text2)">Back-to-back game (unilateral; ×0.43 if both teams are)</span>
           <span style="font-size:11px;color:var(--green);font-family:var(--font-mono)">up to +3.5 × effMot</span>
         </div>
-        <div style="display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center">
+        <div class="fg-row" style="display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center">
           <span style="font-size:12px;color:var(--text2)">Day game after night game (unilateral; ×0.40 if both teams are)</span>
           <span style="font-size:11px;color:var(--green);font-family:var(--font-mono)">up to +2.5 × effMot</span>
         </div>
-        <div style="display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center">
+        <div class="fg-row" style="display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center">
           <span style="font-size:12px;color:var(--text2)">Cross-timezone travel (West→East; halved if opp. also fatigued)</span>
           <span style="font-size:11px;color:var(--green);font-family:var(--font-mono)">up to +3.0 × effMot</span>
         </div>
-        <div style="display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center">
+        <div class="fg-row" style="display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center">
           <span style="font-size:12px;color:var(--text2)">Cross-timezone travel (East→West; halved if opp. also fatigued)</span>
           <span style="font-size:11px;color:var(--green);font-family:var(--font-mono)">up to +1.5 × effMot</span>
         </div>
-        <div style="display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center">
+        <div class="fg-row" style="display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center">
           <span style="font-size:12px;color:var(--text2)">Consecutive streak ≥ 7 games (no day off)</span>
           <span style="font-size:11px;color:var(--green);font-family:var(--font-mono)">up to +8 × effMot</span>
         </div>
-        <div style="display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center">
+        <div class="fg-row" style="display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center">
           <span style="font-size:12px;color:var(--text2)">Road trip ≥ 5 consecutive away games (away team only)</span>
           <span style="font-size:11px;color:var(--green);font-family:var(--font-mono)">up to +6 × effMot</span>
         </div>
@@ -2513,35 +2543,35 @@
           <span style="font-size:10px;color:var(--text3);font-family:var(--font-mono);letter-spacing:1px;text-transform:uppercase">Signal</span>
           <span style="font-size:10px;color:var(--text3);font-family:var(--font-mono);letter-spacing:1px;text-transform:uppercase">Points</span>
         </div>
-                <div style="display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center">
+                <div class="fg-row" style="display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center">
           <span style="font-size:12px;color:var(--text2)">Position player pitching</span>
           <span style="font-size:11px;color:var(--red2);font-family:var(--font-mono)">+45 pts (near-certain punt)</span>
         </div>
-        <div style="display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center">
+        <div class="fg-row" style="display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center">
           <span style="font-size:12px;color:var(--text2)">Down 5+ after 6th inning</span>
           <span style="font-size:11px;color:var(--red2);font-family:var(--font-mono)">+18–50 pts (scaled by deficit × inning)</span>
         </div>
-        <div style="display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center">
+        <div class="fg-row" style="display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center">
           <span style="font-size:12px;color:var(--text2)">Down 5+ in 4th–5th inning</span>
           <span style="font-size:11px;color:var(--red2);font-family:var(--font-mono)">+14 pts</span>
         </div>
-        <div style="display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center">
+        <div class="fg-row" style="display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center">
           <span style="font-size:12px;color:var(--text2)">3+ pitching changes before 5th inning</span>
           <span style="font-size:11px;color:var(--red2);font-family:var(--font-mono)">+15–22 pts</span>
         </div>
-        <div style="display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center">
+        <div class="fg-row" style="display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center">
           <span style="font-size:12px;color:var(--text2)">2+ offensive subs before 7th, down 4+</span>
           <span style="font-size:11px;color:var(--red2);font-family:var(--font-mono)">+10–18 pts</span>
         </div>
-        <div style="display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center">
+        <div class="fg-row" style="display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center">
           <span style="font-size:12px;color:var(--text2)">2+ regulars pulled early (≤1-2 PA), down 4+ (box-score fallback)</span>
           <span style="font-size:11px;color:var(--red2);font-family:var(--font-mono)">+10–14 pts</span>
         </div>
-        <div style="display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center">
+        <div class="fg-row" style="display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center">
           <span style="font-size:12px;color:var(--text2)">Mop-up arm (ERA 6.50+) in a game that isn't a comfortable win</span>
           <span style="font-size:11px;color:var(--red2);font-family:var(--font-mono)">+12 (1 arm) / +20 (2+ arms)</span>
         </div>
-        <div style="display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center">
+        <div class="fg-row" style="display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center">
           <span style="font-size:12px;color:var(--text2)">Inferior reliever used while losing, with clearly better arms unused</span>
           <span style="font-size:11px;color:var(--red2);font-family:var(--font-mono)">+10–14 pts</span>
         </div>
@@ -2554,27 +2584,27 @@
           <span style="font-size:10px;color:var(--text3);font-family:var(--font-mono);letter-spacing:1px;text-transform:uppercase">Period</span>
           <span style="font-size:10px;color:var(--text3);font-family:var(--font-mono);letter-spacing:1px;text-transform:uppercase">Multiplier</span>
         </div>
-                <div style="display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center">
+                <div class="fg-row" style="display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center">
           <span style="font-size:12px;color:var(--text2)">April–May (calibration)</span>
           <span style="font-size:11px;color:#2563C7;font-family:var(--font-mono)">0.60×</span>
         </div>
-        <div style="display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center">
+        <div class="fg-row" style="display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center">
           <span style="font-size:12px;color:var(--text2)">June</span>
           <span style="font-size:11px;color:#2563C7;font-family:var(--font-mono)">0.70×</span>
         </div>
-        <div style="display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center">
+        <div class="fg-row" style="display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center">
           <span style="font-size:12px;color:var(--text2)">July</span>
           <span style="font-size:11px;color:#2563C7;font-family:var(--font-mono)">0.82×</span>
         </div>
-        <div style="display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center">
+        <div class="fg-row" style="display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center">
           <span style="font-size:12px;color:var(--text2)">Aug 1–15</span>
           <span style="font-size:11px;color:#2563C7;font-family:var(--font-mono)">0.90×</span>
         </div>
-        <div style="display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center">
+        <div class="fg-row" style="display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center">
           <span style="font-size:12px;color:var(--text2)">Aug 15–Sep 1</span>
           <span style="font-size:11px;color:#2563C7;font-family:var(--font-mono)">0.96×</span>
         </div>
-        <div style="display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center">
+        <div class="fg-row" style="display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center">
           <span style="font-size:12px;color:var(--text2)">September</span>
           <span style="font-size:11px;color:#2563C7;font-family:var(--font-mono)">1.00×</span>
         </div>
@@ -3918,6 +3948,7 @@ async function fetchGames() {
     state.lastAnalyzed = analyzed; // kept so loadLineupBaselines can re-render the banner
     logPuntDistribution(analyzed);
     renderGames(analyzed);
+    renderScoreboardStrip(analyzed);
     updateStats(analyzed, dateVal);
     renderPuntWatch(analyzed);
     renderWatchList(analyzed);
@@ -6447,6 +6478,36 @@ function renderScoreRing(score, preGame, inGame, puntSource) {
       <span class="score-num ${cls}">${displayScore}</span>
     </div>
   `;
+}
+
+// MLB.com-style at-a-glance scoreboard ticker — team logos + live/final
+// score + status, in a horizontal strip above the detailed game cards.
+function renderScoreboardStrip(games) {
+  const el = document.getElementById('scoreboardStrip');
+  if (!el) return;
+  if (!games.length) { el.innerHTML = ''; return; }
+
+  el.innerHTML = games.map(g => {
+    const awayLogo = getTeamLogo(g.away.name);
+    const homeLogo = getTeamLogo(g.home.name);
+    const awayLogoHTML = awayLogo ? `<img src="${awayLogo}" alt="${abbr(g.away.name)}" loading="lazy">` : `<span class="sbs-logo-fb">${abbr(g.away.name)}</span>`;
+    const homeLogoHTML = homeLogo ? `<img src="${homeLogo}" alt="${abbr(g.home.name)}" loading="lazy">` : `<span class="sbs-logo-fb">${abbr(g.home.name)}</span>`;
+    const bd = g.boxData;
+    const hasScore = (g.isLive || g.isFinal) && bd;
+    const awayRuns = hasScore ? bd.awayRuns : null;
+    const homeRuns = hasScore ? bd.homeRuns : null;
+    const awayWon = hasScore && awayRuns > homeRuns;
+    const homeWon = hasScore && homeRuns > awayRuns;
+    const status = g.isFinal ? 'FINAL' : g.isLive ? `${g.inGameHalf === 'Top' ? '▲' : '▼'} ${g.inGameInning}` : (formatGameTime(g.gameTime) || 'Scheduled');
+    const flagDot = g.flag === 'punt' ? '<span class="sbs-dot punt" title="Punt detected"></span>'
+      : g.flag === 'review' ? '<span class="sbs-dot review" title="Worth reviewing"></span>' : '';
+    return `
+      <div class="sbs-card${g.isLive ? ' sbs-live' : ''}" onclick="document.getElementById('gamesGrid')?.scrollIntoView({behavior:'smooth',block:'start'})" title="${g.away.name} @ ${g.home.name}">
+        <div class="sbs-status">${status}${flagDot}</div>
+        <div class="sbs-row${awayWon ? ' sbs-won' : ''}">${awayLogoHTML}<span class="sbs-abbr">${abbr(g.away.name)}</span><span class="sbs-runs">${awayRuns ?? ''}</span></div>
+        <div class="sbs-row${homeWon ? ' sbs-won' : ''}">${homeLogoHTML}<span class="sbs-abbr">${abbr(g.home.name)}</span><span class="sbs-runs">${homeRuns ?? ''}</span></div>
+      </div>`;
+  }).join('');
 }
 
 // ── STATS + LEADERBOARD ─────────────────────────────────────
