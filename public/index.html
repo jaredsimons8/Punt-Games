@@ -1724,20 +1724,25 @@
   }
   .top-nav-tab .nav-badge { font-size: 8.5px !important; padding: 1px 5px !important; }
 
-  /* ── SECTION HEADERS: less aggressive ── */
-  .section-hdr { margin-bottom: 18px !important; gap: 14px !important; }
+  /* ── SECTION HEADERS: bold display title (was "less aggressive" —
+     9.5px muted mono that fought the 2026-07-08 bold-overhaul pass since
+     this block wins the cascade as the last !important rule in the file.
+     This IS now the source of truth for section-header sizing.) ── */
+  .section-hdr { margin-bottom: 24px !important; gap: 16px !important; }
   .section-hdr h2 {
-    font-size: 9.5px !important; letter-spacing: 1.8px !important;
-    font-weight: 600 !important; color: rgba(61,80,106,0.95) !important;
+    font-size: 22px !important; letter-spacing: -0.6px !important;
+    font-weight: 700 !important; color: var(--text) !important;
+    font-family: var(--font-display) !important; text-transform: none !important;
   }
   .section-hdr .divider { background: rgba(30,45,66,0.55) !important; }
 
-  /* ── STAT STRIP: refined numbers and backgrounds ── */
-  .stat-strip { gap: 8px !important; margin-bottom: 40px !important; }
-  .stat-card { padding: 18px 22px 16px !important; border-radius: 14px !important; }
-  .stat-card .label { font-size: 8.5px !important; letter-spacing: 1.5px !important; margin-bottom: 8px !important; }
-  .stat-card .value { font-size: 34px !important; letter-spacing: -1.5px !important; }
-  .stat-card .sub { margin-top: 6px !important; font-size: 9.5px !important; }
+  /* ── STAT STRIP: bold hero numbers (was 34px "refined" — same cascade
+     conflict as section headers above) ── */
+  .stat-strip { gap: 0 !important; margin-bottom: 40px !important; }
+  .stat-card { padding: 30px 30px 26px 26px !important; border-radius: 14px !important; }
+  .stat-card .label { font-size: 9.5px !important; letter-spacing: 3.5px !important; margin-bottom: 16px !important; }
+  .stat-card .value { font-size: 68px !important; letter-spacing: -3.5px !important; }
+  .stat-card .sub { margin-top: 13px !important; font-size: 9.5px !important; }
   .stat-card.red  { background: linear-gradient(150deg, rgba(224,92,42,0.10) 0%, var(--surface) 60%) !important; }
   .stat-card.gold { background: linear-gradient(150deg, rgba(232,184,75,0.08) 0%, var(--surface) 60%) !important; }
   .stat-card.green{ background: linear-gradient(150deg, rgba(52,211,153,0.08) 0%, var(--surface) 60%) !important; }
