@@ -6480,6 +6480,17 @@ function renderScoreRing(score, preGame, inGame, puntSource) {
   `;
 }
 
+// scrollIntoView({behavior:'smooth'}) was silently a no-op here (root
+// cause unclear — plain window.scrollTo works fine on the same page),
+// so the scoreboard strip's "click to jump to game cards" used this
+// confirmed-working scrollTo instead.
+function scrollToGamesGrid() {
+  const el = document.getElementById('gamesGrid');
+  if (!el) return;
+  const top = el.getBoundingClientRect().top + window.scrollY - 84;
+  window.scrollTo({ top, behavior: 'smooth' });
+}
+
 // MLB.com-style at-a-glance scoreboard ticker — team logos + live/final
 // score + status, in a horizontal strip above the detailed game cards.
 function renderScoreboardStrip(games) {
@@ -6504,7 +6515,7 @@ function renderScoreboardStrip(games) {
     const flagDot = g.flag === 'punt' ? '<span class="sbs-dot punt" title="Punt detected"></span>'
       : g.flag === 'review' ? '<span class="sbs-dot review" title="Worth reviewing"></span>' : '';
     return `
-      <div class="sbs-card${isLive ? ' sbs-live' : ''}" onclick="document.getElementById('gamesGrid')?.scrollIntoView({behavior:'smooth',block:'start'})" title="${g.away.name} @ ${g.home.name}">
+      <div class="sbs-card${isLive ? ' sbs-live' : ''}" onclick="scrollToGamesGrid()" title="${g.away.name} @ ${g.home.name}">
         <div class="sbs-status">${status}${flagDot}</div>
         <div class="sbs-row${awayWon ? ' sbs-won' : ''}">${awayLogoHTML}<span class="sbs-abbr">${abbr(g.away.name)}</span><span class="sbs-runs">${awayRuns ?? ''}</span></div>
         <div class="sbs-row${homeWon ? ' sbs-won' : ''}">${homeLogoHTML}<span class="sbs-abbr">${abbr(g.home.name)}</span><span class="sbs-runs">${homeRuns ?? ''}</span></div>
