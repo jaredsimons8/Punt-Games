@@ -621,7 +621,7 @@
   /* ── TEAM PUNTS (punt-game-first layout) ── */
   .tp-list { display: flex; flex-direction: column; gap: 10px; }
   .tp-row {
-    display: grid; grid-template-columns: 230px 1fr; gap: 18px; align-items: center;
+    display: grid; grid-template-columns: 250px 1fr; gap: 18px; align-items: center;
     background: var(--surface); border: 1px solid var(--border);
     border-radius: var(--r-lg); padding: 14px 18px;
     animation: fadeUp 0.3s ease both; transition: border-color 0.18s;
@@ -638,10 +638,10 @@
     background: var(--bg3); border: 1px solid var(--border); border-radius: 50%;
     font-family: var(--font-display); font-size: 10px; font-weight: 800; color: var(--text2);
   }
-  .tp-meta { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 2px; }
-  .tp-name-row { display: flex; align-items: baseline; gap: 6px; min-width: 0; }
-  .tp-name { font-family: var(--font-display); font-size: 14px; font-weight: 800; letter-spacing: -0.3px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
-  .tp-div { font-family: var(--font-mono); font-size: 9px; font-weight: 600; letter-spacing: 1px; color: var(--text3); text-transform: uppercase; flex-shrink: 0; }
+  .tp-meta { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 3px; }
+  .tp-name-row { min-width: 0; }
+  .tp-name { display: block; font-family: var(--font-display); font-size: 14px; font-weight: 800; letter-spacing: -0.3px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tp-div { display: block; font-family: var(--font-mono); font-size: 9px; font-weight: 600; letter-spacing: 1px; color: var(--text3); text-transform: uppercase; margin-top: 1px; }
   .tp-stats { font-family: var(--font-mono); font-size: 10px; color: var(--text3); letter-spacing: 0.3px; }
   .tp-stats .tp-count { font-weight: 800; }
   .tp-stats .tp-count.warm { color: var(--gold); }
