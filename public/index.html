@@ -5222,23 +5222,34 @@ async function analyzeGame(game, normalLineups) {
   const inGameWeight  = isPreGamePunt ? 0.0 : (status === 'Final' ? 0.35 : 0.0);
 
   // If in-game evidence pushed the score above what the pre-game factors
-  // alone explain, record that as an explicit breakdown line — otherwise the
-  // stored breakdown (pre-game only) would sum to less than topScore. The
-  // full blow-by-blow in-game signals are already shown in their own UI
-  // section (loaded live from box score data); this is a single summary
-  // line so the "what contributed" breakdown always adds up to the total.
+  // alone explain, record that as explicit breakdown lines — otherwise the
+  // stored breakdown (pre-game only) would sum to less than topScore.
+  //
+  // Previously this collapsed every in-game signal into one summary line
+  // naming only the top 2 (by weight) — a low-leverage-arm signal that
+  // wasn't in the top 2 for a given game was tracked internally and scored,
+  // but invisible in the persisted/reloaded review view (only ever visible
+  // live, right after the game, from unpersisted box-score data). Now each
+  // signal gets its own itemized line — same visibility pre-game factors
+  // already have — with its share of inGameContribution distributed
+  // proportional to its raw weight, so the lines still sum exactly to the
+  // total (last line absorbs any rounding remainder).
   const inGameContribution = Math.round(finalScore) - Math.round(topPreGame);
   const fullBreakdown = inGameContribution > 0
     ? (() => {
-        const topSignalLabels = (inGameData.signals || [])
-          .filter(s => s && s.weight > 0)
-          .sort((a, b) => b.weight - a.weight)
-          .slice(0, 2)
-          .map(s => s.label);
-        const label = topSignalLabels.length
-          ? `In-game signals (${topSignalLabels.join(', ')})`
-          : 'In-game signals';
-        return [...preGameBreakdown, { label, val: inGameContribution, max: inGameContribution, isInGame: true }];
+        const rawSignals = (inGameData.signals || []).filter(s => s && s.weight > 0).sort((a, b) => b.weight - a.weight);
+        if (!rawSignals.length) {
+          return [...preGameBreakdown, { label: 'In-game signals', val: inGameContribution, max: inGameContribution, isInGame: true }];
+        }
+        const totalRawWeight = rawSignals.reduce((sum, s) => sum + s.weight, 0);
+        let allocated = 0;
+        const inGameLines = rawSignals.map((s, i) => {
+          const isLast = i === rawSignals.length - 1;
+          const val = isLast ? (inGameContribution - allocated) : Math.round(inGameContribution * (s.weight / totalRawWeight));
+          allocated += val;
+          return { label: s.label, val, max: val, isInGame: true };
+        }).filter(l => l.val > 0);
+        return [...preGameBreakdown, ...inGameLines];
       })()
     : preGameBreakdown;
 
@@ -10492,10 +10503,15 @@ async function renderGameflowChart(silent = false, inlineOpts = null) {
     // the live-only fields aren't available.
     const totalScore = logEntry?.topScore ?? logEntry?.score ?? 0;
     const storedBreakdownArr = normalizeBreakdown(logEntry?.breakdown);
-    const storedInGameLine = storedBreakdownArr.find(f => f && f.isInGame);
-    const preGameScore = logEntry?.preGameScore ?? (storedInGameLine ? totalScore - storedInGameLine.val : totalScore);
+    // Each in-game signal now persists as its own itemized line (see
+    // analyzeGame) instead of one combined summary — sum them all rather
+    // than reading just the first, which would previously undercount
+    // whenever more than one in-game signal fired for the same game.
+    const storedInGameLines = storedBreakdownArr.filter(f => f && f.isInGame);
+    const storedInGameTotal = storedInGameLines.reduce((sum, f) => sum + (f.val || 0), 0);
+    const preGameScore = logEntry?.preGameScore ?? (storedInGameLines.length ? totalScore - storedInGameTotal : totalScore);
     const inGameSignals = logEntry?.inGameSignals || [];
-    const hasKnownInGameContribution = inGameSignals.length > 0 || !!storedInGameLine;
+    const hasKnownInGameContribution = inGameSignals.length > 0 || storedInGameLines.length > 0;
 
     // ── Step 4: build inning-by-inning punt score timeline ──
     // Pre-game score is the baseline at inning 0.
@@ -10880,11 +10896,11 @@ async function renderGameflowChart(silent = false, inlineOpts = null) {
             <span style="font-size:12px;color:var(--text2)">Inning ${s.inning}: ${s.label}</span>
             <span style="font-family:var(--font-mono);font-size:11px;color:var(--red2);font-weight:700">${s.ptsLabel}</span>
           </div>`).join('')}
-          ${(!allSigs.length && storedInGameLine) ? `
+          ${(!allSigs.length && storedInGameLines.length) ? storedInGameLines.map(l => `
           <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 14px;border-bottom:1px solid var(--border)">
-            <span style="font-size:12px;color:var(--text2)">${storedInGameLine.label}</span>
-            <span style="font-family:var(--font-mono);font-size:11px;color:var(--red2);font-weight:700">+${storedInGameLine.val}</span>
-          </div>` : ''}
+            <span style="font-size:12px;color:var(--text2)">${l.label}</span>
+            <span style="font-family:var(--font-mono);font-size:11px;color:var(--red2);font-weight:700">+${l.val}</span>
+          </div>`).join('') : ''}
           <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 14px;background:var(--bg3)">
             <span style="font-size:12px;color:var(--text);font-weight:600">Final Score</span>
             <span style="font-family:var(--font-mono);font-size:13px;color:${totalScore >= PUNT_THRESH ? 'var(--red2)' : totalScore >= REVIEW_THRESH ? 'var(--gold)' : 'var(--text2)'};font-weight:700">${totalScore} / 80</span>
