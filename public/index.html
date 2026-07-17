@@ -2374,6 +2374,7 @@
         </select>
         <span id="gameflowMeta" style="font-size:11px;color:var(--text3);font-family:var(--font-mono)"></span>
       </div>
+      <div id="gameflowBoxScoreWrap"></div>
       <div id="gameflowContainer" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:24px;min-height:320px;display:flex;align-items:center;justify-content:center">
         <span style="font-size:13px;color:var(--text3)">Select a date above to load games</span>
       </div>
@@ -8943,7 +8944,7 @@ async function loadReviewBoxScore(gamePk, e) {
       const hint = msg.includes('429') ? 'rate limit — try again in a moment'
         : msg.includes('404') ? 'game not found on MLB API'
         : msg.slice(0, 80);
-      box.innerHTML = `<span style="color:var(--text3);font-size:12px;font-family:var(--font-mono)">Could not load box score (${hint}). <a onclick="retryReviewBox()" style="color:var(--red2);cursor:pointer;text-decoration:underline">Retry</a></span>`;
+      box.innerHTML = `<span style="color:var(--text3);font-size:12px;font-family:var(--font-mono)">Could not load box score (${hint}). <a onclick="retryReviewBox('${gamePk}')" style="color:var(--red2);cursor:pointer;text-decoration:underline">Retry</a></span>`;
       console.error('[reviewBox]', err2);
       return;
     }
@@ -9242,11 +9243,27 @@ async function loadReviewBoxScore(gamePk, e) {
   box.insertAdjacentHTML('beforeend', pitchTable);
 }
 
-function retryReviewBox() {
-  if (!reviewDetailId) return;
-  const e = state.gameLog.find(x => x.id === reviewDetailId);
+// Reusable by both the Reviews detail panel (no arg — resolves from
+// reviewDetailId, the original behavior) and the standalone Gameflow page's
+// box score (explicit gamePk — reviewDetailId belongs to Reviews and would
+// be null or referencing a different game there).
+function retryReviewBox(gamePk) {
+  let e;
+  if (gamePk) {
+    e = state.gameLog.find(x => x.gid && String(x.gid).includes(String(gamePk)));
+    if (!e) {
+      const sel = document.getElementById('gameflowGameSelect');
+      const dp = document.getElementById('gameflowDatePicker');
+      const games = gameflowGamesCache[dp?.value] || [];
+      const gameInfo = games.find(g => String(g.gamePk) === String(gamePk));
+      if (gameInfo) e = { away: gameInfo.awayTeam, home: gameInfo.homeTeam, date: dp?.value };
+    }
+  } else {
+    if (!reviewDetailId) return;
+    e = state.gameLog.find(x => x.id === reviewDetailId);
+    gamePk = String(reviewDetailId).split('_').pop();
+  }
   if (!e) return;
-  const gamePk = String(reviewDetailId).split('_').pop();
   const box = document.getElementById('reviewBox-' + gamePk);
   if (box) box.innerHTML = '<span style="color:var(--text3);font-size:12px;font-family:var(--font-mono)">Loading box score…</span>';
   loadReviewBoxScore(gamePk, e);
@@ -10503,6 +10520,23 @@ async function renderGameflowChart(silent = false, inlineOpts = null) {
       puntSide = (logEntry.puntTeam === eHome || abbr(logEntry.puntTeam) === abbr(eHome)) ? 'home' : 'away';
     }
     puntSide = puntSide || 'home';
+
+    // ── Box score + starting lineups (standalone Gameflow page only —
+    // the Reviews detail panel already builds its own via openReviewDetail)
+    // reusing loadReviewBoxScore unmodified: it only needs a gamePk-suffixed
+    // #reviewBox-<gamePk> container and a { away, home, puntSide, date }
+    // shaped entry, both of which are already resolved above. ──
+    if (!inlineOpts) {
+      const boxWrap = document.getElementById('gameflowBoxScoreWrap');
+      if (boxWrap) {
+        boxWrap.innerHTML = `
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:16px 18px;margin-bottom:16px">
+            <div style="font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);font-family:var(--font-mono);margin-bottom:10px">Box Score</div>
+            <div id="reviewBox-${gamePk}" style="overflow-x:auto"><span style="color:var(--text3);font-size:12px;font-family:var(--font-mono)">Loading box score…</span></div>
+          </div>`;
+        loadReviewBoxScore(gamePk, { away: awayName, home: homeName, puntSide, date });
+      }
+    }
 
     // preGameScore/inGameSignals are live-only fields on a freshly analyzed
     // game — neither is persisted to Supabase, so a reloaded entry has
