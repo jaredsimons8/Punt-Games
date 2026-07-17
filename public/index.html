@@ -5245,10 +5245,22 @@ async function analyzeGame(game, normalLineups) {
         let allocated = 0;
         const inGameLines = rawSignals.map((s, i) => {
           const isLast = i === rawSignals.length - 1;
-          const val = isLast ? (inGameContribution - allocated) : Math.round(inGameContribution * (s.weight / totalRawWeight));
+          // Clamp to 0 — with several signals, cumulative rounding on the
+          // non-last shares could in theory push allocated slightly past
+          // inGameContribution, which would otherwise make the last item's
+          // "remainder" negative.
+          const val = isLast ? Math.max(0, inGameContribution - allocated) : Math.round(inGameContribution * (s.weight / totalRawWeight));
           allocated += val;
           return { label: s.label, val, max: val, isInGame: true };
         }).filter(l => l.val > 0);
+        // A small inGameContribution spread across many low-weight signals
+        // can round every single one down to 0, leaving inGameLines empty —
+        // silently dropping real points from the stored breakdown and
+        // breaking the "sums to total" guarantee. Fall back to crediting the
+        // single highest-weight signal with the full contribution.
+        if (!inGameLines.length) {
+          return [...preGameBreakdown, { label: rawSignals[0].label, val: inGameContribution, max: inGameContribution, isInGame: true }];
+        }
         return [...preGameBreakdown, ...inGameLines];
       })()
     : preGameBreakdown;
